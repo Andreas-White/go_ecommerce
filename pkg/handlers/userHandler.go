@@ -56,7 +56,7 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) GetUserByName(w http.ResponseWriter, r *http.Request) {
 	authUser := middleware.GetUserFromContext(r)
 
-	user, err := h.UserService.GetUserByName(authUser.Name)
+	user, err := h.UserService.GetUserByName(authUser.FirstName, authUser.LastName, authUser.MiddleName)
 	if err != nil {
 		utils.RespondWithError(w, http.StatusNotFound, err.Error())
 		return
@@ -88,9 +88,12 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var userPayload struct {
-		Name  string `json:"name"`
-		Email string `json:"email"`
-		Phone int64  `json:"phone"`
+		FirstName  string `json:"first_name"`
+		LastName   string `json:"last_name"`
+		MiddleName string `json:"middle_name"`
+		Email      string `json:"email"`
+		Phone      int64  `json:"phone"`
+		IsProducer bool   `json:"is_producer"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&userPayload); err != nil {
@@ -99,10 +102,13 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	updatedUser := &models.User{
-		ID:    authUser.ID,
-		Name:  userPayload.Name,
-		Email: userPayload.Email,
-		Phone: userPayload.Phone,
+		ID:         authUser.ID,
+		FirstName:  stringOrDefault(userPayload.FirstName, authUser.FirstName),
+		LastName:   stringOrDefault(userPayload.LastName, authUser.LastName),
+		MiddleName: stringOrDefault(userPayload.MiddleName, authUser.MiddleName),
+		Email:      stringOrDefault(userPayload.Email, authUser.Email),
+		Phone:      intOrDefault(userPayload.Phone, authUser.Phone),
+		IsProducer: boolOrDefault(userPayload.IsProducer, authUser.IsProducer),
 	}
 
 	err := h.UserService.UpdateUser(updatedUser)
@@ -154,4 +160,28 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"token": token})
+}
+
+func stringOrDefault(newValue string, oldValue string) string {
+	if newValue != "" {
+		return newValue
+	}
+
+	return oldValue
+}
+
+func intOrDefault(newValue int64, oldValue int64) int64 {
+	if newValue != 0 {
+		return newValue
+	}
+
+	return oldValue
+}
+
+func boolOrDefault(newValue bool, oldValue bool) bool {
+	if newValue {
+		return newValue
+	}
+
+	return oldValue
 }

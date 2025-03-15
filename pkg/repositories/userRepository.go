@@ -38,22 +38,22 @@ func (r *UserRepository) CreateUser(user *models.UserRegister) error {
 	userID := uuid.New().String()
 
 	_, err = tx.Exec(`
-        INSERT INTO users (id, name, email, phone)
-        VALUES ($1, $2, $3, $4)`,
-		userID, user.Name, user.Email, user.Phone)
+        INSERT INTO users (id, first_name, last_name, middle_name, email, phone, is_producer)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		userID, user.FirstName, user.LastName, user.MiddleName, user.Email, user.Phone, user.IsProducer)
 
 	if err != nil {
 		return fmt.Errorf("error inserting user: %w", err)
 	}
 
 	authID := uuid.New().String()
-	creationDate := time.Now().Format("2006-01-02")
+	created_at := time.Now()
 	active := true
 
 	_, err = tx.Exec(`
-	INSERT INTO auths (id, user_id, creation_date, active, password)
+	INSERT INTO auths (id, user_id, created_at, active, password)
 	VALUES ($1, $2, $3, $4, $5)`,
-		authID, userID, creationDate, active, hashedPassword)
+		authID, userID, created_at, active, hashedPassword)
 
 	if err != nil {
 		return fmt.Errorf("error inserting auth: %w", err)
@@ -76,16 +76,20 @@ func (r *UserRepository) GetUserByID(id string) (*models.User, error) {
 }
 
 // GetUserByName retrieves a user by their name
-func (r *UserRepository) GetUserByName(name string) (*models.User, error) {
+func (r *UserRepository) GetUserByFullName(firstName string, lastName string, middleName string) (*models.User, error) {
 	query := `
-		SELECT * FROM users WHERE name = $1
+		SELECT * FROM users WHERE first_name = $1 AND last_name = $2 AND middle_name = $3 
 	`
-	user, err := r.fetchUserByValue(query, name)
+	var user models.User
+	err := r.DB.QueryRow(query, firstName, lastName, middleName).Scan(&user.ID, &user.FirstName, &user.Email, &user.Phone, &user.LastName, &user.MiddleName, &user.IsProducer)
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("user not found")
+		}
+		return nil, fmt.Errorf("error retrieving user: %v", err)
 	}
 
-	return user, nil
+	return &user, nil
 }
 
 // GetUserByEmail retrieves a user by their email
@@ -114,35 +118,42 @@ func (r *UserRepository) GetAuthedUserByEmail(email string) (*models.AuthedUser,
 	`
 
 	var user models.User
-	err = r.DB.QueryRow(queryUsers, email).Scan(&user.ID, &user.Name, &user.Email, &user.Phone)
+	err = r.DB.QueryRow(queryUsers, email).Scan(&user.ID, &user.FirstName, &user.Email, &user.Phone, &user.LastName, &user.MiddleName, &user.IsProducer)
 	if err != nil {
 		if err == sql.ErrNoRows {
+			log.Println("user not found")
 			return nil, fmt.Errorf("user not found")
 		}
+		log.Printf("error retrieving user: %v", err)
 		return nil, fmt.Errorf("error retrieving user: %v", err)
 	}
 
 	defer utils.HandleTransaction(tx, &err)
 
 	queryAuths := `
-		SELECT * FROM auths WHERE user_id = $1
+		SELECT * FROM auths WHERE user_id = $1 AND active = $2
 	`
 
 	var auth models.Auth
-	err = r.DB.QueryRow(queryAuths, user.ID).Scan(&auth.ID, &auth.UserID, &auth.CreationDate, &auth.Active, &auth.Password)
+	err = r.DB.QueryRow(queryAuths, user.ID, true).Scan(&auth.ID, &auth.UserID, &auth.CreatedAt, &auth.Active, &auth.Password)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("user not found")
+			log.Printf("auth not found %v", err)
+			return nil, fmt.Errorf("auth not found")
 		}
-		return nil, fmt.Errorf("error retrieving user: %v", err)
+		log.Printf("error retrieving auth: %v", err)
+		return nil, fmt.Errorf("error retrieving auth: %v", err)
 	}
 
 	authedUser := &models.AuthedUser{
-		ID:    user.ID,
-		Name:  user.Name,
-		Email: user.Email,
-		Phone: user.Phone,
-		Auth:  auth,
+		ID:         user.ID,
+		FirstName:  user.FirstName,
+		LastName:   user.LastName,
+		MiddleName: user.MiddleName,
+		Email:      user.Email,
+		Phone:      user.Phone,
+		IsProducer: user.IsProducer,
+		Auth:       auth,
 	}
 	return authedUser, nil
 }
@@ -150,15 +161,15 @@ func (r *UserRepository) GetAuthedUserByEmail(email string) (*models.AuthedUser,
 // UpdateUser updates an existing user's information
 func (r *UserRepository) UpdateUser(user *models.User) error {
 	query := `
-		UPDATE users SET name = $2, email = $3, phone = $4 WHERE id = $1
+		UPDATE users SET first_name = $2, last_name = $3, middle_name = $4, email = $5, phone = $6, is_producer = $7 WHERE id = $1
 	`
 
-	_, err := r.DB.Exec(query, user.ID, user.Name, user.Email, user.Phone)
+	_, err := r.DB.Exec(query, user.ID, user.FirstName, user.LastName, user.MiddleName, user.Email, user.Phone, user.IsProducer)
 	if err != nil {
 		return fmt.Errorf("error updating user: %v", err)
 	}
 
-	log.Printf("User %s updated successfully\n", user.Name)
+	log.Printf("User %s %s updated successfully\n", user.FirstName, user.LastName)
 	return nil
 }
 
@@ -195,7 +206,7 @@ func (r *UserRepository) DeleteUser(id string) error {
 
 func (r *UserRepository) fetchUserByValue(query string, value string) (*models.User, error) {
 	var user models.User
-	err := r.DB.QueryRow(query, value).Scan(&user.ID, &user.Name, &user.Email, &user.Phone)
+	err := r.DB.QueryRow(query, value).Scan(&user.ID, &user.FirstName, &user.Email, &user.Phone, &user.LastName, &user.MiddleName, &user.IsProducer)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")

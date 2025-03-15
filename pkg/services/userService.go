@@ -23,8 +23,8 @@ func NewUserService(userRepo *repositories.UserRepository) *UserService {
 
 // CreateUser calls the repository to insert a new user into the database
 func (s *UserService) CreateUser(user *models.UserRegister) error {
-	if user.Name == "" || user.Email == "" {
-		return errors.New("name and email are required")
+	if user.FirstName == "" || user.LastName == "" || user.Email == "" {
+		return errors.New("full name and email are required")
 	}
 
 	return s.UserRepo.CreateUser(user)
@@ -36,8 +36,8 @@ func (s *UserService) GetUserByID(id string) (*models.User, error) {
 }
 
 // GetUserByName fetches a user by name from the repository
-func (s *UserService) GetUserByName(name string) (*models.User, error) {
-	return s.UserRepo.GetUserByName(name)
+func (s *UserService) GetUserByName(firstName string, lastName string, middleName string) (*models.User, error) {
+	return s.UserRepo.GetUserByFullName(firstName, lastName, middleName)
 }
 
 // GetUserByEmail fetches a user by email from the repository
@@ -71,10 +71,13 @@ func (s *UserService) AuthenticateUser(email, password string) (*models.User, er
 	}
 
 	user := &models.User{
-		ID:    authedUser.ID,
-		Name:  authedUser.Name,
-		Email: authedUser.Email,
-		Phone: authedUser.Phone,
+		ID:         authedUser.ID,
+		FirstName:  authedUser.FirstName,
+		LastName:   authedUser.LastName,
+		MiddleName: authedUser.MiddleName,
+		Email:      authedUser.Email,
+		Phone:      authedUser.Phone,
+		IsProducer: authedUser.IsProducer,
 	}
 
 	return user, nil
