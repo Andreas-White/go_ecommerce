@@ -3,7 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"go_ecommerce/pkg/middleware"
-	models "go_ecommerce/pkg/models/user"
+	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/services"
 	"go_ecommerce/pkg/utils"
 	"net/http"
@@ -94,6 +94,10 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		Email      string `json:"email"`
 		Phone      int64  `json:"phone"`
 		IsProducer bool   `json:"is_producer"`
+		Address    string `json:"address"`
+		City       string `json:"city"`
+		Country    string `json:"country"`
+		ZipCode    int32  `json:"zip_code"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&userPayload); err != nil {
@@ -107,8 +111,12 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		LastName:   stringOrDefault(userPayload.LastName, authUser.LastName),
 		MiddleName: stringOrDefault(userPayload.MiddleName, authUser.MiddleName),
 		Email:      stringOrDefault(userPayload.Email, authUser.Email),
-		Phone:      intOrDefault(userPayload.Phone, authUser.Phone),
+		Phone:      int64OrDefault(userPayload.Phone, authUser.Phone),
 		IsProducer: boolOrDefault(userPayload.IsProducer, authUser.IsProducer),
+		Address:    stringOrDefault(userPayload.Address, authUser.Address),
+		City:       stringOrDefault(userPayload.City, authUser.City),
+		Country:    stringOrDefault(userPayload.Country, authUser.Country),
+		ZipCode:    int32OrDefault(userPayload.ZipCode, authUser.ZipCode),
 	}
 
 	err := h.UserService.UpdateUser(updatedUser)
@@ -170,7 +178,15 @@ func stringOrDefault(newValue string, oldValue string) string {
 	return oldValue
 }
 
-func intOrDefault(newValue int64, oldValue int64) int64 {
+func int64OrDefault(newValue int64, oldValue int64) int64 {
+	if newValue != 0 {
+		return newValue
+	}
+
+	return oldValue
+}
+
+func int32OrDefault(newValue int32, oldValue int32) int32 {
 	if newValue != 0 {
 		return newValue
 	}

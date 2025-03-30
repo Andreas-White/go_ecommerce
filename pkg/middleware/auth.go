@@ -3,7 +3,7 @@ package middleware
 import (
 	"context"
 	"go_ecommerce/internal/config"
-	models "go_ecommerce/pkg/models/user"
+	"go_ecommerce/pkg/models"
 	"log"
 	"net/http"
 	"strings"

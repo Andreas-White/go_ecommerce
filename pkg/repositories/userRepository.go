@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"go_ecommerce/pkg/database"
-	models "go_ecommerce/pkg/models/user"
+	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/utils"
 	"log"
 	"time"
@@ -36,18 +36,18 @@ func (r *UserRepository) CreateUser(user *models.UserRegister) error {
 	hashedPassword := utils.HashPassword(user.Password)
 
 	userID := uuid.New().String()
+	created_at := time.Now()
 
 	_, err = tx.Exec(`
-        INSERT INTO users (id, first_name, last_name, middle_name, email, phone, is_producer)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		userID, user.FirstName, user.LastName, user.MiddleName, user.Email, user.Phone, user.IsProducer)
+        INSERT INTO users (id, first_name, last_name, middle_name, email, phone, is_producer, address, city, country, zip_code, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+		userID, user.FirstName, user.LastName, user.MiddleName, user.Email, user.Phone, user.IsProducer, user.Address, user.City, user.Country, user.ZipCode, created_at)
 
 	if err != nil {
 		return fmt.Errorf("error inserting user: %w", err)
 	}
 
 	authID := uuid.New().String()
-	created_at := time.Now()
 	active := true
 
 	_, err = tx.Exec(`
@@ -81,7 +81,7 @@ func (r *UserRepository) GetUserByFullName(firstName string, lastName string, mi
 		SELECT * FROM users WHERE first_name = $1 AND last_name = $2 AND middle_name = $3 
 	`
 	var user models.User
-	err := r.DB.QueryRow(query, firstName, lastName, middleName).Scan(&user.ID, &user.FirstName, &user.Email, &user.Phone, &user.LastName, &user.MiddleName, &user.IsProducer)
+	err := r.DB.QueryRow(query, firstName, lastName, middleName).Scan(&user.ID, &user.FirstName, &user.Email, &user.Phone, &user.LastName, &user.MiddleName, &user.IsProducer, &user.Address, &user.City, &user.Country, &user.ZipCode, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")
@@ -118,7 +118,7 @@ func (r *UserRepository) GetAuthedUserByEmail(email string) (*models.AuthedUser,
 	`
 
 	var user models.User
-	err = r.DB.QueryRow(queryUsers, email).Scan(&user.ID, &user.FirstName, &user.Email, &user.Phone, &user.LastName, &user.MiddleName, &user.IsProducer)
+	err = r.DB.QueryRow(queryUsers, email).Scan(&user.ID, &user.FirstName, &user.Email, &user.Phone, &user.LastName, &user.MiddleName, &user.IsProducer, &user.Address, &user.City, &user.Country, &user.ZipCode, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Println("user not found")
@@ -135,7 +135,7 @@ func (r *UserRepository) GetAuthedUserByEmail(email string) (*models.AuthedUser,
 	`
 
 	var auth models.Auth
-	err = r.DB.QueryRow(queryAuths, user.ID, true).Scan(&auth.ID, &auth.UserID, &auth.CreatedAt, &auth.Active, &auth.Password)
+	err = r.DB.QueryRow(queryAuths, user.ID, true).Scan(&auth.ID, &auth.UserID, &auth.CreatedAt, &auth.Active, &auth.Password, &auth.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			log.Printf("auth not found %v", err)
@@ -153,6 +153,12 @@ func (r *UserRepository) GetAuthedUserByEmail(email string) (*models.AuthedUser,
 		Email:      user.Email,
 		Phone:      user.Phone,
 		IsProducer: user.IsProducer,
+		Address:    user.Address,
+		City:       user.City,
+		Country:    user.Country,
+		ZipCode:    user.ZipCode,
+		CreatedAt:  user.CreatedAt,
+		UpdatedAt:  user.UpdatedAt,
 		Auth:       auth,
 	}
 	return authedUser, nil
@@ -160,11 +166,12 @@ func (r *UserRepository) GetAuthedUserByEmail(email string) (*models.AuthedUser,
 
 // UpdateUser updates an existing user's information
 func (r *UserRepository) UpdateUser(user *models.User) error {
+	updated_at := time.Now()
 	query := `
-		UPDATE users SET first_name = $2, last_name = $3, middle_name = $4, email = $5, phone = $6, is_producer = $7 WHERE id = $1
+		UPDATE users SET first_name = $2, last_name = $3, middle_name = $4, email = $5, phone = $6, is_producer = $7, address = $8, city = $9, country = $10, zip_code = $11, created_at = $12, updated_at = $13 WHERE id = $1
 	`
 
-	_, err := r.DB.Exec(query, user.ID, user.FirstName, user.LastName, user.MiddleName, user.Email, user.Phone, user.IsProducer)
+	_, err := r.DB.Exec(query, user.ID, user.FirstName, user.LastName, user.MiddleName, user.Email, user.Phone, user.IsProducer, user.Address, user.City, user.Country, user.ZipCode, user.CreatedAt, updated_at)
 	if err != nil {
 		return fmt.Errorf("error updating user: %v", err)
 	}
@@ -206,7 +213,7 @@ func (r *UserRepository) DeleteUser(id string) error {
 
 func (r *UserRepository) fetchUserByValue(query string, value string) (*models.User, error) {
 	var user models.User
-	err := r.DB.QueryRow(query, value).Scan(&user.ID, &user.FirstName, &user.Email, &user.Phone, &user.LastName, &user.MiddleName, &user.IsProducer)
+	err := r.DB.QueryRow(query, value).Scan(&user.ID, &user.FirstName, &user.Email, &user.Phone, &user.LastName, &user.MiddleName, &user.IsProducer, &user.Address, &user.City, &user.Country, &user.ZipCode, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found")

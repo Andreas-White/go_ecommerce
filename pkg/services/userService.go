@@ -2,7 +2,7 @@ package services
 
 import (
 	"errors"
-	models "go_ecommerce/pkg/models/user"
+	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/repositories"
 	"go_ecommerce/pkg/utils"
 
@@ -78,6 +78,12 @@ func (s *UserService) AuthenticateUser(email, password string) (*models.User, er
 		Email:      authedUser.Email,
 		Phone:      authedUser.Phone,
 		IsProducer: authedUser.IsProducer,
+		Address:    authedUser.Address,
+		City:       authedUser.City,
+		Country:    authedUser.Country,
+		ZipCode:    authedUser.ZipCode,
+		CreatedAt:  authedUser.CreatedAt,
+		UpdatedAt:  authedUser.UpdatedAt,
 	}
 
 	return user, nil

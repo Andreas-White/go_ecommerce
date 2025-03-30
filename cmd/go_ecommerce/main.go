@@ -25,12 +25,12 @@ func main() {
 
 	// Define routes
 	http.HandleFunc("/users/register", userHandler.Register)
+	http.HandleFunc("/users/login", userHandler.Login)
 	http.Handle("/users/get_by_id", middleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByID)))
 	http.Handle("/users/get_by_name", middleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByName)))
 	http.Handle("/users/get_by_email", middleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByEmail)))
 	http.Handle("/users/update", middleware.AuthenticateJWT(http.HandlerFunc(userHandler.UpdateUser)))
 	http.Handle("/users/delete", middleware.AuthenticateJWT(http.HandlerFunc(userHandler.DeleteUser)))
-	http.HandleFunc("/users/login", userHandler.Login)
 
 	// server
 	fmt.Println("Server is listening on port 8080")
