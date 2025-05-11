@@ -1,12 +1,17 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"go_ecommerce/pkg/middleware"
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/services"
 	"go_ecommerce/pkg/utils"
+	"log"
 	"net/http"
+
+	"github.com/google/uuid"
 )
 
 // UserHandler struct
@@ -23,6 +28,7 @@ func NewUserHandler(userService *services.UserService) *UserHandler {
 // CreateUser handles the creation of a new user
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var user models.UserRegister
+	ctx := r.Context()
 
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
@@ -30,9 +36,21 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.UserService.CreateUser(&user)
+	err = h.UserService.CreateUser(ctx, &user)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		if errors.Is(err, context.Canceled) {
+			log.Printf("{handler/CreateUser - Request cancelled during user registration: %v}", err)
+			utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled")
+			return
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.Printf("{handler/CreateUser - Request timed out during user registration: %v}", err)
+			utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out")
+			return
+		}
+
+		log.Printf("{handler/CreateUser - Error registering user: %v}", err)
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to register user")
 		return
 	}
 
@@ -41,11 +59,25 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 // GetUserByID handles retrieving a user by their ID
 func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
-	authUser := middleware.GetUserFromContext(r)
+	ctx := r.Context()
 
-	user, err := h.UserService.GetUserByID(authUser.ID.String())
+	authUser := checkUserFromContext(w, r)
+
+	user, err := h.UserService.GetUserByID(ctx, authUser.ID.String())
 	if err != nil {
-		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		if errors.Is(err, context.Canceled) {
+			log.Printf("{handler/GetUserByID - Request cancelled during GetUserByID: %v}", err)
+			utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled")
+			return
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.Printf("{handler/GetUserByID - Request timed out during GetUserByID: %v}", err)
+			utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out")
+			return
+		}
+
+		log.Printf("{handler/GetUserByID - Error getting user by ID: %v}", err)
+		utils.RespondWithError(w, http.StatusNotFound, "Failed to retrieve user")
 		return
 	}
 
@@ -54,11 +86,25 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 
 // GetUserByName handles retrieving a user by their name
 func (h *UserHandler) GetUserByName(w http.ResponseWriter, r *http.Request) {
-	authUser := middleware.GetUserFromContext(r)
+	ctx := r.Context()
 
-	user, err := h.UserService.GetUserByName(authUser.FirstName, authUser.LastName, authUser.MiddleName)
+	authUser := checkUserFromContext(w, r)
+
+	user, err := h.UserService.GetUserByName(ctx, authUser.FirstName, authUser.LastName, authUser.MiddleName)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		if errors.Is(err, context.Canceled) {
+			log.Printf("{handler/GetUserByName - Request cancelled during GetUserByName %v}", err)
+			utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled")
+			return
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.Printf("{handler/GetUserByName - Request timed out during GetUserByName %v}", err)
+			utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out")
+			return
+		}
+
+		log.Printf("{handler/GetUserByName - Error getting user by name: %v}", err)
+		utils.RespondWithError(w, http.StatusNotFound, "Failed to retrieve user")
 		return
 	}
 
@@ -67,11 +113,25 @@ func (h *UserHandler) GetUserByName(w http.ResponseWriter, r *http.Request) {
 
 // GetUserByEmail handles retrieving a user by their email
 func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
-	authUser := middleware.GetUserFromContext(r)
+	ctx := r.Context()
 
-	user, err := h.UserService.GetUserByEmail(authUser.Email)
+	authUser := checkUserFromContext(w, r)
+
+	user, err := h.UserService.GetUserByEmail(ctx, authUser.Email)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		if errors.Is(err, context.Canceled) {
+			log.Printf("{handler/GetUserByEmail - Request cancelled during GetUserByEmail %v}", err)
+			utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled")
+			return
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.Printf("{handler/GetUserByEmail - Request timed out during GetUserByEmail %v}", err)
+			utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out")
+			return
+		}
+
+		log.Printf("{handler/GetUserByEmail - Error getting user by email: %v}", err)
+		utils.RespondWithError(w, http.StatusNotFound, "Failed to retrieve user")
 		return
 	}
 
@@ -80,12 +140,9 @@ func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 
 // UpdateUser handles updating user details
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
-	authUser := middleware.GetUserFromContext(r)
+	ctx := r.Context()
 
-	if (authUser == &models.User{}) {
-		utils.RespondWithError(w, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
+	authUser := checkUserFromContext(w, r)
 
 	var userPayload struct {
 		FirstName  string `json:"first_name"`
@@ -119,9 +176,21 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		ZipCode:    int32OrDefault(userPayload.ZipCode, authUser.ZipCode),
 	}
 
-	err := h.UserService.UpdateUser(updatedUser)
+	err := h.UserService.UpdateUser(ctx, updatedUser)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		if errors.Is(err, context.Canceled) {
+			log.Printf("{handler/UpdateUser - Request cancelled during UpdateUser %v}", err)
+			utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled")
+			return
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.Printf("{handler/UpdateUser - Request timed out during UpdateUser %v}", err)
+			utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out")
+			return
+		}
+
+		log.Printf("{handler/UpdateUser - Error updating user: %v}", err)
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to update user")
 		return
 	}
 
@@ -130,11 +199,26 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 // DeleteUser handles deleting a user
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
-	authUser := middleware.GetUserFromContext(r)
+	ctx := r.Context()
 
-	err := h.UserService.DeleteUser(authUser.ID.String())
+	authUser := checkUserFromContext(w, r)
+
+	err := h.UserService.DeleteUser(ctx, authUser.ID.String())
 	if err != nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		// Handle errors, check for context errors specifically
+		if errors.Is(err, context.Canceled) {
+			log.Printf("{handler/DeleteUser - Request cancelled during DeleteUser: %v}", err)
+			utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled") // 408
+			return
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.Printf("{handler/DeleteUser - Request timed out during DeleteUser: %v}", err)
+			utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out") // 504
+			return
+		}
+
+		log.Printf("{handler/DeleteUser - Error deleting user: %v}", err)
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to delete user")
 		return
 	}
 
@@ -153,9 +237,20 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Authenticate user using the service
-	user, err := h.UserService.AuthenticateUser(loginRequest.Email, loginRequest.Password)
+	ctx := r.Context()
+	user, err := h.UserService.AuthenticateUser(ctx, loginRequest.Email, loginRequest.Password)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			log.Printf("{handler/Login - Request cancelled during Login: %v}", err)
+			utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled") // 408
+			return
+		}
+		if errors.Is(err, context.DeadlineExceeded) {
+			log.Printf("{handler/Login - Request timed out during Login: %v}", err)
+			utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out") // 504
+			return
+		}
+		log.Printf("{handler/Login - Error authenticating user: %v}", err)
 		utils.RespondWithError(w, http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
@@ -163,11 +258,22 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	// Generate JWT token for authenticated user
 	token, err := middleware.GenerateJWT(user)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, "Could not generate token")
+		log.Printf("{handler/Login - Error generating JWT token: %v}", err)
+		utils.RespondWithError(w, http.StatusInternalServerError, "Internal server error")
 		return
 	}
 
 	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"token": token})
+}
+
+func checkUserFromContext(w http.ResponseWriter, r *http.Request) models.User {
+	authUser := middleware.GetUserFromContext(r)
+	if authUser == nil || authUser.ID == uuid.Nil {
+		log.Println("{handler/DeleteUser - User not found in context}")
+		utils.RespondWithError(w, http.StatusUnauthorized, "Unauthorized user")
+	}
+
+	return *authUser
 }
 
 func stringOrDefault(newValue string, oldValue string) string {

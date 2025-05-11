@@ -25,7 +25,12 @@ func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 
 // HandleTransaction is a reusable function to handle transaction commit or rollback
 func HandleTransaction(tx *sql.Tx, err *error) {
-	if *err != nil {
+	if p := recover(); p != nil {
+		rollbackErr := tx.Rollback()
+		if rollbackErr != nil {
+			*err = fmt.Errorf("transaction rollback failed: %v, original error: %w", rollbackErr, *err)
+		}
+	} else if *err != nil {
 		rollbackErr := tx.Rollback()
 		if rollbackErr != nil {
 			*err = fmt.Errorf("transaction rollback failed: %v, original error: %w", rollbackErr, *err)

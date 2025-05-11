@@ -16,4 +16,5 @@ type Product struct {
 	ImageUrl    string     `json:"image_url"`
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   *time.Time `json:"updated_at"`
+	UserID      uuid.UUID  `json:"user_id"`
 }

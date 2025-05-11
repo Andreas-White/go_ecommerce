@@ -8,6 +8,7 @@ import (
 	"go_ecommerce/pkg/middleware"
 	"go_ecommerce/pkg/repositories"
 	"go_ecommerce/pkg/services"
+	"log"
 	"net/http"
 
 	_ "github.com/lib/pq"
@@ -33,6 +34,9 @@ func main() {
 	http.Handle("/users/delete", middleware.AuthenticateJWT(http.HandlerFunc(userHandler.DeleteUser)))
 
 	// server
-	fmt.Println("Server is listening on port 8080")
-	http.ListenAndServe(config.AppPort, nil)
+	fmt.Printf("Server is listening on port %v", config.AppPort)
+	err := http.ListenAndServe(config.AppPort, nil)
+	if err != nil {
+		log.Fatal("Server failed: ", err)
+	}
 }
