@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"go_ecommerce/pkg/database"
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/utils"
 	"time"
@@ -12,15 +11,25 @@ import (
 	"github.com/google/uuid"
 )
 
+type IUserRepository interface {
+	CreateUser(ctx context.Context, user *models.UserRegister) error
+	GetUserByID(ctx context.Context, id string) (*models.User, error)
+	GetUserByFullName(ctx context.Context, firstName string, lastName string, middleName string) (*models.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	GetAuthedUserByEmail(ctx context.Context, email string) (*models.AuthedUser, error)
+	UpdateUser(ctx context.Context, user *models.User) error
+	DeleteUser(ctx context.Context, id string) error
+}
+
 // UserRepository struct
 type UserRepository struct {
 	DB *sql.DB
 }
 
 // NewUserRepository creates a new instance of UserRepository
-func NewUserRepository() *UserRepository {
+func NewUserRepository(db *sql.DB) *UserRepository {
 	return &UserRepository{
-		DB: database.DB,
+		DB: db,
 	}
 }
 

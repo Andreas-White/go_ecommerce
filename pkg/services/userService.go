@@ -10,13 +10,23 @@ import (
 	"github.com/google/uuid"
 )
 
+type IUserService interface {
+	CreateUser(ctx context.Context, user *models.UserRegister) error
+	GetUserByID(ctx context.Context, id string) (*models.User, error)
+	GetUserByName(ctx context.Context, firstName string, lastName string, middleName string) (*models.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	UpdateUser(ctx context.Context, user *models.User) error
+	DeleteUser(ctx context.Context, id string) error
+	AuthenticateUser(ctx context.Context, email, password string) (*models.User, error)
+}
+
 // UserService struct
 type UserService struct {
-	UserRepo *repositories.UserRepository
+	UserRepo repositories.IUserRepository
 }
 
 // NewUserService creates a new UserService
-func NewUserService(userRepo *repositories.UserRepository) *UserService {
+func NewUserService(userRepo repositories.IUserRepository) IUserService {
 	return &UserService{
 		UserRepo: userRepo,
 	}

@@ -16,12 +16,14 @@ import (
 
 // UserHandler struct
 type UserHandler struct {
-	UserService *services.UserService
+	UserService    services.IUserService
+	TokenGenerator middleware.TokenGenerator
 }
 
-func NewUserHandler(userService *services.UserService) *UserHandler {
+func NewUserHandler(userService services.IUserService, tokenGenerator middleware.TokenGenerator) *UserHandler {
 	return &UserHandler{
-		UserService: userService,
+		UserService:    userService,
+		TokenGenerator: tokenGenerator,
 	}
 }
 
@@ -172,7 +174,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Generate JWT token for authenticated user
-	token, err := middleware.GenerateJWT(user)
+	token, err := h.TokenGenerator.GenerateJWT(user)
 	if err != nil {
 		log.Printf("{handler/Login - Error generating JWT token: %v}", err)
 		utils.RespondWithError(w, http.StatusInternalServerError, "Internal server error")
