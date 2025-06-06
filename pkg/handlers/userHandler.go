@@ -38,19 +38,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	err = h.UserService.CreateUser(ctx, &user)
 	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			log.Printf("{handler/CreateUser - Request cancelled during user registration: %v}", err)
-			utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled")
-			return
-		}
-		if errors.Is(err, context.DeadlineExceeded) {
-			log.Printf("{handler/CreateUser - Request timed out during user registration: %v}", err)
-			utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out")
-			return
-		}
-
-		log.Printf("{handler/CreateUser - Error registering user: %v}", err)
-		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to register user")
+		h.handleErrors(err, w, "handler/CreateUser", "Failed to create user")
 		return
 	}
 
@@ -65,19 +53,7 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.UserService.GetUserByID(ctx, authUser.ID.String())
 	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			log.Printf("{handler/GetUserByID - Request cancelled during GetUserByID: %v}", err)
-			utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled")
-			return
-		}
-		if errors.Is(err, context.DeadlineExceeded) {
-			log.Printf("{handler/GetUserByID - Request timed out during GetUserByID: %v}", err)
-			utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out")
-			return
-		}
-
-		log.Printf("{handler/GetUserByID - Error getting user by ID: %v}", err)
-		utils.RespondWithError(w, http.StatusNotFound, "Failed to retrieve user")
+		h.handleErrors(err, w, "handler/GetUserByID", "Failed to retrieve user")
 		return
 	}
 
@@ -92,19 +68,7 @@ func (h *UserHandler) GetUserByName(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.UserService.GetUserByName(ctx, authUser.FirstName, authUser.LastName, authUser.MiddleName)
 	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			log.Printf("{handler/GetUserByName - Request cancelled during GetUserByName %v}", err)
-			utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled")
-			return
-		}
-		if errors.Is(err, context.DeadlineExceeded) {
-			log.Printf("{handler/GetUserByName - Request timed out during GetUserByName %v}", err)
-			utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out")
-			return
-		}
-
-		log.Printf("{handler/GetUserByName - Error getting user by name: %v}", err)
-		utils.RespondWithError(w, http.StatusNotFound, "Failed to retrieve user")
+		h.handleErrors(err, w, "handler/GetUserByName", "Failed to retrieve user")
 		return
 	}
 
@@ -119,19 +83,7 @@ func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.UserService.GetUserByEmail(ctx, authUser.Email)
 	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			log.Printf("{handler/GetUserByEmail - Request cancelled during GetUserByEmail %v}", err)
-			utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled")
-			return
-		}
-		if errors.Is(err, context.DeadlineExceeded) {
-			log.Printf("{handler/GetUserByEmail - Request timed out during GetUserByEmail %v}", err)
-			utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out")
-			return
-		}
-
-		log.Printf("{handler/GetUserByEmail - Error getting user by email: %v}", err)
-		utils.RespondWithError(w, http.StatusNotFound, "Failed to retrieve user")
+		h.handleErrors(err, w, "handler/GetUserByEmail", "Failed to retrieve user")
 		return
 	}
 
@@ -178,19 +130,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	err := h.UserService.UpdateUser(ctx, updatedUser)
 	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			log.Printf("{handler/UpdateUser - Request cancelled during UpdateUser %v}", err)
-			utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled")
-			return
-		}
-		if errors.Is(err, context.DeadlineExceeded) {
-			log.Printf("{handler/UpdateUser - Request timed out during UpdateUser %v}", err)
-			utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out")
-			return
-		}
-
-		log.Printf("{handler/UpdateUser - Error updating user: %v}", err)
-		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to update user")
+		h.handleErrors(err, w, "handler/UpdateUser", "Failed to update user")
 		return
 	}
 
@@ -205,20 +145,7 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	err := h.UserService.DeleteUser(ctx, authUser.ID.String())
 	if err != nil {
-		// Handle errors, check for context errors specifically
-		if errors.Is(err, context.Canceled) {
-			log.Printf("{handler/DeleteUser - Request cancelled during DeleteUser: %v}", err)
-			utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled") // 408
-			return
-		}
-		if errors.Is(err, context.DeadlineExceeded) {
-			log.Printf("{handler/DeleteUser - Request timed out during DeleteUser: %v}", err)
-			utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out") // 504
-			return
-		}
-
-		log.Printf("{handler/DeleteUser - Error deleting user: %v}", err)
-		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to delete user")
+		h.handleErrors(err, w, "handler/DeleteUser", "Failed to delete user")
 		return
 	}
 
@@ -240,18 +167,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	user, err := h.UserService.AuthenticateUser(ctx, loginRequest.Email, loginRequest.Password)
 	if err != nil {
-		if errors.Is(err, context.Canceled) {
-			log.Printf("{handler/Login - Request cancelled during Login: %v}", err)
-			utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled") // 408
-			return
-		}
-		if errors.Is(err, context.DeadlineExceeded) {
-			log.Printf("{handler/Login - Request timed out during Login: %v}", err)
-			utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out") // 504
-			return
-		}
-		log.Printf("{handler/Login - Error authenticating user: %v}", err)
-		utils.RespondWithError(w, http.StatusUnauthorized, "Invalid email or password")
+		h.handleErrors(err, w, "handler/Login", "Failed to authenticate user")
 		return
 	}
 
@@ -306,4 +222,19 @@ func boolOrDefault(newValue bool, oldValue bool) bool {
 	}
 
 	return oldValue
+}
+
+func (h *UserHandler) handleErrors(err error, w http.ResponseWriter, sourceFuncName string, genericErrorMessage string) {
+	if errors.Is(err, context.Canceled) {
+		log.Printf("{handler/Login - Request cancelled: %v}", err)
+		utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled")
+		return
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		log.Printf("{handler/Login - Request timed out: %v}", err)
+		utils.RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out")
+		return
+	}
+	log.Printf("{%v - error: %v}", sourceFuncName, err)
+	utils.RespondWithError(w, http.StatusUnauthorized, genericErrorMessage)
 }

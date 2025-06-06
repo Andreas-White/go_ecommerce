@@ -30,9 +30,7 @@ func (s *UserService) CreateUser(ctx context.Context, user *models.UserRegister)
 
 	err := s.UserRepo.CreateUser(ctx, user)
 	if err != nil {
-		if ctx.Err() != nil {
-			return fmt.Errorf("{service/CreateUser - context error during CreateUser: %w}", ctx.Err())
-		}
+		err = s.handleErrors(ctx, err)
 		return fmt.Errorf("{service/CreateUser - failed to create user in repository: %w}", err)
 	}
 
@@ -43,9 +41,7 @@ func (s *UserService) CreateUser(ctx context.Context, user *models.UserRegister)
 func (s *UserService) GetUserByID(ctx context.Context, id string) (*models.User, error) {
 	user, err := s.UserRepo.GetUserByID(ctx, id)
 	if err != nil {
-		if ctx.Err() != nil {
-			return nil, fmt.Errorf("{service/GetUserByID - context error during GetUserByID: %w}", ctx.Err())
-		}
+		err = s.handleErrors(ctx, err)
 		return nil, fmt.Errorf("{service/GetUserByID - failed to get user by ID from repository: %w}", err)
 	}
 	return user, nil
@@ -55,9 +51,7 @@ func (s *UserService) GetUserByID(ctx context.Context, id string) (*models.User,
 func (s *UserService) GetUserByName(ctx context.Context, firstName string, lastName string, middleName string) (*models.User, error) {
 	user, err := s.UserRepo.GetUserByFullName(ctx, firstName, lastName, middleName)
 	if err != nil {
-		if ctx.Err() != nil {
-			return nil, fmt.Errorf("{service/GetUserByName - context error during GetUserByName: %w}", ctx.Err())
-		}
+		err = s.handleErrors(ctx, err)
 		return nil, fmt.Errorf("{service/GetUserByName - failed to get user by name from repository: %w}", err)
 	}
 	return user, nil
@@ -67,9 +61,7 @@ func (s *UserService) GetUserByName(ctx context.Context, firstName string, lastN
 func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	user, err := s.UserRepo.GetUserByEmail(ctx, email)
 	if err != nil {
-		if ctx.Err() != nil {
-			return nil, fmt.Errorf("{service/GetUserByEmail - context error during GetUserByEmail: %w}", ctx.Err())
-		}
+		err = s.handleErrors(ctx, err)
 		return nil, fmt.Errorf("{service/GetUserByEmail - failed to get user by email from repository: %w}", err)
 	}
 	return user, nil
@@ -83,9 +75,7 @@ func (s *UserService) UpdateUser(ctx context.Context, user *models.User) error {
 
 	err := s.UserRepo.UpdateUser(ctx, user)
 	if err != nil {
-		if ctx.Err() != nil {
-			return fmt.Errorf("{service/UpdateUser - context error during UpdateUser: %w}", ctx.Err())
-		}
+		err = s.handleErrors(ctx, err)
 		return fmt.Errorf("{service/UpdateUser - failed to update user in repository: %w}", err)
 	}
 	return nil
@@ -100,11 +90,7 @@ func (s *UserService) DeleteUser(ctx context.Context, id string) error {
 	// Pass the context down to the repository
 	err := s.UserRepo.DeleteUser(ctx, id)
 	if err != nil {
-		// Check if the error from the repository was a context error
-		if ctx.Err() != nil {
-			return fmt.Errorf("{service/DeleteUser - context error during DeleteUser: %w}", ctx.Err())
-		}
-		// Wrap other errors from the repository
+		err = s.handleErrors(ctx, err)
 		return fmt.Errorf("{service/DeleteUser - failed to delete user in repository: %w}", err)
 	}
 	return nil
@@ -113,9 +99,7 @@ func (s *UserService) DeleteUser(ctx context.Context, id string) error {
 func (s *UserService) AuthenticateUser(ctx context.Context, email, password string) (*models.User, error) {
 	authedUser, err := s.UserRepo.GetAuthedUserByEmail(ctx, email)
 	if err != nil {
-		if ctx.Err() != nil {
-			return nil, fmt.Errorf("{service/AuthenticateUser - context error during AuthenticateUser: %w}", ctx.Err())
-		}
+		err = s.handleErrors(ctx, err)
 		return nil, fmt.Errorf("{service/AuthenticateUser - error getting authed user: %w}", err)
 	}
 
@@ -141,4 +125,11 @@ func (s *UserService) AuthenticateUser(ctx context.Context, email, password stri
 	}
 
 	return user, nil
+}
+
+func (s *UserService) handleErrors(ctx context.Context, err error) error {
+	if ctx.Err() != nil {
+		return fmt.Errorf("{service/handleErrors - context error: %w}", ctx.Err())
+	}
+	return fmt.Errorf("{service/handleErrors - error: %w}", err)
 }

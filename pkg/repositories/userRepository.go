@@ -26,12 +26,9 @@ func NewUserRepository() *UserRepository {
 
 // CreateUser inserts a new user into the database
 func (r *UserRepository) CreateUser(ctx context.Context, user *models.UserRegister) error {
-	tx, err := r.DB.BeginTx(ctx, nil)
+	tx, err := r.startTransaction(ctx)
 	if err != nil {
-		if ctx.Err() != nil {
-			return fmt.Errorf("{repository/CreateUser - context error before starting transaction: %w}", ctx.Err())
-		}
-		return fmt.Errorf("{repository/CreateUser - error starting transaction: %w}", err)
+		return fmt.Errorf("{repository/CreateUser - error starting transaction for user with email %s: %w}", user.Email, err)
 	}
 
 	defer utils.HandleTransaction(tx, &err)
@@ -55,18 +52,14 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *models.UserRegist
 		userID, user.FirstName, user.LastName, user.MiddleName, user.Email, user.Phone, user.IsProducer, user.Address, user.City, user.Country, user.ZipCode, created_at)
 
 	if err != nil {
-		if ctx.Err() != nil {
-			return fmt.Errorf("{repository/CreateUser - context error inserting user: %w}", ctx.Err())
-		}
+		err = r.handleErrors(ctx, err)
 		return fmt.Errorf("{repository/CreateUser - error inserting user: %w}", err)
 	}
 
 	_, err = tx.ExecContext(ctx, authQuery, authID, userID, created_at, active, hashedPassword)
 
 	if err != nil {
-		if ctx.Err() != nil {
-			return fmt.Errorf("{repository/CreateUser - context error inserting auth: %w}", ctx.Err())
-		}
+		err = r.handleErrors(ctx, err)
 		return fmt.Errorf("{repository/CreateUser - error inserting auth: %w}", err)
 	}
 
@@ -91,19 +84,13 @@ func (r *UserRepository) GetUserByFullName(ctx context.Context, firstName string
 	query := `
 		SELECT * FROM users WHERE first_name = $1 AND last_name = $2 AND middle_name = $3 
 	`
-	var user models.User
-	err := r.DB.QueryRowContext(ctx, query, firstName, lastName, middleName).Scan(&user.ID, &user.FirstName, &user.Email, &user.Phone, &user.LastName, &user.MiddleName, &user.IsProducer, &user.Address, &user.City, &user.Country, &user.ZipCode, &user.CreatedAt, &user.UpdatedAt)
+	row := r.DB.QueryRowContext(ctx, query, firstName, lastName, middleName)
+	user, err := r.scanUser(ctx, row)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("{repository/GetUserByFullName - user not found: %w}", err)
-		}
-		if ctx.Err() != nil {
-			return nil, fmt.Errorf("{repository/GetUserByFullName - context error retrieving user by full name: %w}", ctx.Err())
-		}
-		return nil, fmt.Errorf("repository/GetUserByFullName - error retrieving user by full name: %w}", err)
+		return nil, fmt.Errorf("{repository/GetUserByFullName - error retrieving user by full name: %w}", err)
 	}
 
-	return &user, nil
+	return user, nil
 }
 
 // GetUserByEmail retrieves a user by their email
@@ -114,7 +101,7 @@ func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*mod
 
 	user, err := r.fetchUserByValue(ctx, query, email)
 	if err != nil {
-		return nil, fmt.Errorf("repository/GetUserByEmail - error retrieving user by email: %w}", err)
+		return nil, fmt.Errorf("{repository/GetUserByEmail - error retrieving user by email: %w}", err)
 	}
 
 	return user, nil
@@ -122,11 +109,8 @@ func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*mod
 
 // GetUserByEmail retrieves a user by their email
 func (r *UserRepository) GetAuthedUserByEmail(ctx context.Context, email string) (*models.AuthedUser, error) {
-	tx, err := r.DB.BeginTx(ctx, nil)
+	tx, err := r.startTransaction(ctx)
 	if err != nil {
-		if ctx.Err() != nil {
-			return nil, fmt.Errorf("{repository/GetAuthedUserByEmail - context error before starting transaction for authed user: %w}", ctx.Err())
-		}
 		return nil, fmt.Errorf("{repository/GetAuthedUserByEmail - error starting transaction for authed user with email %s: %w}", email, err)
 	}
 
@@ -137,16 +121,9 @@ func (r *UserRepository) GetAuthedUserByEmail(ctx context.Context, email string)
 		SELECT * FROM auths WHERE user_id = $1 AND active = $2
 	`
 
-	var user models.User
-	err = r.DB.QueryRowContext(ctx, queryUsers, email).Scan(&user.ID, &user.FirstName, &user.Email, &user.Phone, &user.LastName, &user.MiddleName, &user.IsProducer, &user.Address, &user.City, &user.Country, &user.ZipCode, &user.CreatedAt, &user.UpdatedAt)
+	user, err := r.fetchUserByValue(ctx, queryUsers, email)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("{repository/GetAuthedUserByEmail - user with id %s not found: %w}", user.ID, err)
-		}
-		if ctx.Err() != nil {
-			return nil, fmt.Errorf("{repository/GetAuthedUserByEmail - context error retrieving authed user: %w}", ctx.Err())
-		}
-		return nil, fmt.Errorf("{repository/GetAuthedUserByEmail - error retrieving authed user with id %s: %w}", user.ID, err)
+		return nil, fmt.Errorf("{repository/GetAuthedUserByEmail - error retrieving user by email: %w}", err)
 	}
 
 	defer utils.HandleTransaction(tx, &err)
@@ -154,12 +131,7 @@ func (r *UserRepository) GetAuthedUserByEmail(ctx context.Context, email string)
 	var auth models.Auth
 	err = r.DB.QueryRowContext(ctx, queryAuths, user.ID, true).Scan(&auth.ID, &auth.UserID, &auth.CreatedAt, &auth.Active, &auth.Password, &auth.UpdatedAt)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("{repository/GetAuthedUserByEmail - auth not found for user with id %s: %w}", user.ID, err)
-		}
-		if ctx.Err() != nil {
-			return nil, fmt.Errorf("{repository/GetAuthedUserByEmail - context error retrieving auth for user: %w}", ctx.Err())
-		}
+		err = r.handleErrors(ctx, err)
 		return nil, fmt.Errorf("{repository/GetAuthedUserByEmail - error retrieving auth for user with id %s: %w}", user.ID, err)
 	}
 
@@ -191,9 +163,7 @@ func (r *UserRepository) UpdateUser(ctx context.Context, user *models.User) erro
 
 	_, err := r.DB.ExecContext(ctx, query, user.ID, user.FirstName, user.LastName, user.MiddleName, user.Email, user.Phone, user.IsProducer, user.Address, user.City, user.Country, user.ZipCode, user.CreatedAt, updated_at)
 	if err != nil {
-		if ctx.Err() != nil {
-			return fmt.Errorf("{repository/UpdateUser - context error updating user: %w}", ctx.Err())
-		}
+		err = r.handleErrors(ctx, err)
 		return fmt.Errorf("{repository/UpdateUser - error updating user: %w}", err)
 	}
 
@@ -202,12 +172,9 @@ func (r *UserRepository) UpdateUser(ctx context.Context, user *models.User) erro
 
 // DeleteUser removes a user from the database
 func (r *UserRepository) DeleteUser(ctx context.Context, id string) error {
-	tx, err := r.DB.BeginTx(ctx, nil)
+	tx, err := r.startTransaction(ctx)
 	if err != nil {
-		if ctx.Err() != nil {
-			return fmt.Errorf("{repository/DeleteUser - context error before starting transaction for delete: %w}", ctx.Err())
-		}
-		return fmt.Errorf("{repository/DeleteUser - error starting transaction for delete: %w}", err)
+		return fmt.Errorf("{repository/DeleteUser - error starting transaction for user with id %s: %w}", id, err)
 	}
 
 	defer utils.HandleTransaction(tx, &err)
@@ -221,17 +188,13 @@ func (r *UserRepository) DeleteUser(ctx context.Context, id string) error {
 
 	_, err = r.DB.ExecContext(ctx, queryAuth, id)
 	if err != nil {
-		if ctx.Err() != nil {
-			return fmt.Errorf("{repository/DeleteUser - context error deleting auth for user: %w}", ctx.Err())
-		}
+		err = r.handleErrors(ctx, err)
 		return fmt.Errorf("{repository/DeleteUser - error deleting auth for user: %w}", err)
 	}
 
 	_, err = r.DB.ExecContext(ctx, queryUser, id)
 	if err != nil {
-		if ctx.Err() != nil {
-			return fmt.Errorf("{repository/DeleteUser - context error deleting user: %w}", ctx.Err())
-		}
+		err = r.handleErrors(ctx, err)
 		return fmt.Errorf("{repository/DeleteUser - error deleting user: %w}", err)
 	}
 
@@ -239,17 +202,42 @@ func (r *UserRepository) DeleteUser(ctx context.Context, id string) error {
 }
 
 func (r *UserRepository) fetchUserByValue(ctx context.Context, query string, value string) (*models.User, error) {
-	var user models.User
-	err := r.DB.QueryRowContext(ctx, query, value).Scan(&user.ID, &user.FirstName, &user.Email, &user.Phone, &user.LastName, &user.MiddleName, &user.IsProducer, &user.Address, &user.City, &user.Country, &user.ZipCode, &user.CreatedAt, &user.UpdatedAt)
+	user, err := r.scanUser(ctx, r.DB.QueryRowContext(ctx, query, value))
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("{repository/fetchUserByValue - user not found: %w}", err)
-		}
-		if ctx.Err() != nil {
-			return nil, fmt.Errorf("{repository/fetchUserByValue - context error fetching user by value: %w}", ctx.Err())
-		}
 		return nil, fmt.Errorf("{repository/fetchUserByValue - error fetching user by value: %w}", err)
+	}
+	return user, nil
+}
+
+func (r *UserRepository) scanUser(ctx context.Context, row *sql.Row) (*models.User, error) {
+	var user models.User
+	err := row.Scan(&user.ID, &user.FirstName, &user.Email, &user.Phone, &user.LastName, &user.MiddleName, &user.IsProducer,
+		&user.Address, &user.City, &user.Country, &user.ZipCode, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		err = r.handleErrors(ctx, err)
+		return nil, fmt.Errorf("{repository/scanUser - error scanning for user: %w}", err)
 	}
 
 	return &user, nil
+}
+
+func (r *UserRepository) startTransaction(ctx context.Context) (*sql.Tx, error) {
+	tx, err := r.DB.BeginTx(ctx, nil)
+	if err != nil {
+		err = r.handleErrors(ctx, err)
+		return nil, fmt.Errorf("{repository/startTransaction - error starting transaction: %w}", err)
+	}
+
+	return tx, nil
+}
+
+func (r *UserRepository) handleErrors(ctx context.Context, err error) error {
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("{repository/handleErrors - not found: %w}", err)
+	}
+	if ctx.Err() != nil {
+		return fmt.Errorf("{repository/handleErrors - context error : %w}", ctx.Err())
+	}
+	return fmt.Errorf("{repository/handleErrors - error : %w}", err)
+
 }
