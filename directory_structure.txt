@@ -4,9 +4,7 @@ go_ecommerce
 │   ├── /go_ecommerce/
 │   │   └── main.go                # Entry point for the application
 │
-├── /pkg/                         # Library code that's ok to use by external applications (e.g., `/pkg/util/`)
-│   ├── /config/
-│   │   └── config.go             # Configuration setup (e.g., reading env variables)
+├── /pkg/                         
 │   ├── /db/
 │   │   ├── db.go                 # Database connection setup
 │   │   └── migrations/           # Database migration files (SQL scripts)
@@ -14,7 +12,7 @@ go_ecommerce
 │   │   └── user.go               # Structs that represent database tables, etc.
 │   ├── /handlers/
 │   │   ├── user_handler.go       # HTTP handlers for user-related routes
-│   │   └── ...                   # Other handlers for different routes/resources
+│   │   └── ...                   # Other handlers for different routesresources
 │   ├── /repositories/
 │   │   └── user_repository.go    # Database query logic
 │   ├── /services/
@@ -25,8 +23,10 @@ go_ecommerce
 │   │   └── auth_middleware.go    # Custom middleware (e.g., for authentication)
 │
 ├── /internal/                    # Private application and library code
+│   ├── /config/
+│   │   └── config.go             # Configuration setup (reading env variables)
 │   ├── /app/
-│   │   └── app.go                # Application initialization (router setup, etc.)
+│   │   └── app.go                # Application initialization 
 │
 ├── /web/
 │   ├── /static/

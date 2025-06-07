@@ -7,75 +7,75 @@ import (
 )
 
 type User struct {
-	ID         uuid.UUID  `json:"id"`
-	FirstName  string     `json:"first_name"`
-	LastName   string     `json:"last_name"`
-	MiddleName string     `json:"middle_name"`
-	Email      string     `json:"email"`
-	Phone      int64      `json:"phone"`
-	IsProducer bool       `json:"is_producer"`
-	Address    string     `json:"addess"`
-	City       string     `json:"city"`
-	Country    string     `json:"country"`
-	ZipCode    int32      `json:"zip_code"`
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  *time.Time `json:"updated_at"`
+	ID         uuid.UUID  `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	FirstName  string     `gorm:"type:text;not null" json:"first_name"`
+	LastName   string     `gorm:"type:text;not null" json:"last_name"`
+	MiddleName string     `gorm:"type:text" json:"middle_name"`
+	Email      string     `gorm:"type:text;not null;uniqueIndex:idx_unique_email" json:"email"`
+	Phone      int64      `gorm:"type:integer" json:"phone"`
+	IsProducer bool       `gorm:"type:boolean;default:false" json:"is_producer"`
+	Address    string     `gorm:"type:text" json:"addess"`
+	City       string     `gorm:"type:text" json:"city"`
+	Country    string     `gorm:"type:text" json:"country"`
+	ZipCode    int32      `gorm:"type:integer" json:"zip_code"`
+	CreatedAt  time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt  *time.Time `gorm:"type:timestamp" json:"updated_at"`
 }
 
 type UserRegister struct {
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	MiddleName string `json:"middle_name"`
-	Email      string `json:"email"`
-	Phone      int64  `json:"phone"`
-	Password   string `json:"password"`
-	IsProducer bool   `json:"is_producer"`
-	Address    string `json:"addess"`
-	City       string `json:"city"`
-	Country    string `json:"country"`
-	ZipCode    int32  `json:"zip_code"`
+	FirstName  string `gorm:"type:text;not null" json:"first_name"`
+	LastName   string `gorm:"type:text;not null" json:"last_name"`
+	MiddleName string `gorm:"type:text" json:"middle_name"`
+	Email      string `gorm:"type:text;not null;uniqueIndex:idx_unique_email" json:"email"`
+	Phone      int64  `gorm:"type:integer" json:"phone"`
+	Password   string `gorm:"type:text;not null" json:"password"`
+	IsProducer bool   `gorm:"type:boolean;default:false" json:"is_producer"`
+	Address    string `gorm:"type:text" json:"addess"`
+	City       string `gorm:"type:text" json:"city"`
+	Country    string `gorm:"type:text" json:"country"`
+	ZipCode    int32  `gorm:"type:integer" json:"zip_code"`
 }
 
 type AuthedUser struct {
-	ID         uuid.UUID  `json:"id"`
-	FirstName  string     `json:"first_name"`
-	LastName   string     `json:"last_name"`
-	MiddleName string     `json:"middle_name"`
-	Email      string     `json:"email"`
-	Phone      int64      `json:"phone"`
-	IsProducer bool       `json:"is_producer"`
-	Address    string     `json:"addess"`
-	City       string     `json:"city"`
-	Country    string     `json:"country"`
-	ZipCode    int32      `json:"zip_code"`
-	CreatedAt  time.Time  `json:"created_at"`
-	UpdatedAt  *time.Time `json:"updated_at"`
-	Auth       Auth       `json:"auth"`
+	ID         uuid.UUID  `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	FirstName  string     `gorm:"type:text;not null" json:"first_name"`
+	LastName   string     `gorm:"type:text;not null" json:"last_name"`
+	MiddleName string     `gorm:"type:text" json:"middle_name"`
+	Email      string     `gorm:"type:text;not null;uniqueIndex:idx_unique_email" json:"email"`
+	Phone      int64      `gorm:"type:integer" json:"phone"`
+	IsProducer bool       `gorm:"type:boolean;default:false" json:"is_producer"`
+	Address    string     `gorm:"type:text" json:"addess"`
+	City       string     `gorm:"type:text" json:"city"`
+	Country    string     `gorm:"type:text" json:"country"`
+	ZipCode    int32      `gorm:"type:integer" json:"zip_code"`
+	CreatedAt  time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	UpdatedAt  *time.Time `gorm:"type:timestamp" json:"updated_at"`
+	Auth       Auth       `gorm:"foreignKey:UserID" json:"auth"`
 }
 
 type UpdateUser struct {
-	FirstName  string `json:"first_name"`
-	LastName   string `json:"last_name"`
-	MiddleName string `json:"middle_name"`
-	Email      string `json:"email"`
-	Phone      int64  `json:"phone"`
-	IsProducer bool   `json:"is_producer"`
-	Address    string `json:"addess"`
-	City       string `json:"city"`
-	Country    string `json:"country"`
-	ZipCode    int32  `json:"zip_code"`
+	FirstName  string `gorm:"type:text" json:"first_name"`
+	LastName   string `gorm:"type:text" json:"last_name"`
+	MiddleName string `gorm:"type:text" json:"middle_name"`
+	Email      string `gorm:"type:text;uniqueIndex:idx_unique_email" json:"email"`
+	Phone      int64  `gorm:"type:integer" json:"phone"`
+	IsProducer bool   `gorm:"type:boolean;default:false" json:"is_producer"`
+	Address    string `gorm:"type:text" json:"addess"`
+	City       string `gorm:"type:text" json:"city"`
+	Country    string `gorm:"type:text" json:"country"`
+	ZipCode    int32  `gorm:"type:integer" json:"zip_code"`
 }
 
 type UserLogin struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `gorm:"type:text;not null;uniqueIndex:idx_unique_email" json:"email"`
+	Password string `gorm:"type:text;not null" json:"password"`
 }
 
 type Auth struct {
-	ID        uuid.UUID  `json:"id"`
-	UserID    uuid.UUID  `json:"user_id"`
-	CreatedAt time.Time  `json:"created_at"`
-	Active    bool       `json:"active"`
-	Password  string     `json:"password"`
-	UpdatedAt *time.Time `json:"updated_at"`
+	ID        uuid.UUID  `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
+	UserID    uuid.UUID  `gorm:"type:uuid;not null" json:"user_id"`
+	CreatedAt time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	Active    bool       `gorm:"type:boolean;default:false" json:"active"`
+	Password  string     `gorm:"type:text;not null" json:"password"`
+	UpdatedAt *time.Time `gorm:"type:timestamp" json:"updated_at"`
 }
