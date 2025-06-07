@@ -12,7 +12,7 @@ import (
 )
 
 type IUserRepository interface {
-	CreateUser(ctx context.Context, user *models.UserRegister) error
+	CreateUser(ctx context.Context, user *models.UserDTO) error
 	GetUserByID(ctx context.Context, id string) (*models.User, error)
 	GetUserByFullName(ctx context.Context, firstName string, lastName string, middleName string) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
@@ -34,7 +34,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 }
 
 // CreateUser inserts a new user into the database
-func (r *UserRepository) CreateUser(ctx context.Context, user *models.UserRegister) error {
+func (r *UserRepository) CreateUser(ctx context.Context, user *models.UserDTO) error {
 	tx, err := r.startTransaction(ctx)
 	if err != nil {
 		return fmt.Errorf("{repository/CreateUser - error starting transaction for user with email %s: %w}", user.Email, err)

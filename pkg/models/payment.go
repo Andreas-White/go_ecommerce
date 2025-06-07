@@ -7,11 +7,11 @@ import (
 )
 
 type Payment struct {
-	ID            uuid.UUID `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	OrderID       uuid.UUID `gorm:"type:uuid;not null;uniqueIndex:idx_unique_payment_order" json:"order_id"`
-	Amount        float64   `gorm:"type:numeric;not null" json:"amount"`
-	PaymentMethod string    `gorm:"type:text;not null" json:"payment_method"`
-	Status        string    `gorm:"type:text;not null;default:'pending'" json:"status"`
-	TransactionID *string   `gorm:"type:text;uniqueIndex:idx_unique_transaction_id" json:"transaction_id,omitempty"`
-	CreatedAt     time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+	ID            uuid.UUID `json:"id" db:"id"`
+	OrderID       uuid.UUID `json:"order_id" db:"order_id"`
+	Amount        float64   `json:"amount" db:"amount"`
+	PaymentMethod string    `json:"payment_method" db:"payment_method"`
+	Status        string    `json:"status" db:"status"`
+	TransactionID *string   `json:"transaction_id,omitempty" db:"transaction_id"`
+	CreatedAt     time.Time `json:"created_at" db:"created_at"`
 }

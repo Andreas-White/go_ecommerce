@@ -5,9 +5,9 @@ import (
 )
 
 type OrderItem struct {
-	ID        uuid.UUID `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	OrderID   uuid.UUID `gorm:"type:uuid;not null" json:"order_id"`
-	ProductID uuid.UUID `gorm:"type:uuid;not null" json:"product_id"`
-	Quantity  int       `gorm:"type:integer;not null" json:"quantity"`
-	Price     float64   `gorm:"type:numeric;not null" json:"price"`
+	ID        uuid.UUID `json:"id" db:"id"`
+	OrderID   uuid.UUID `json:"order_id" db:"order_id"`
+	ProductID uuid.UUID `json:"product_id" db:"product_id"`
+	Quantity  int       `json:"quantity" db:"quantity"`
+	Price     float64   `json:"price" db:"price"`
 }

@@ -7,75 +7,57 @@ import (
 )
 
 type User struct {
-	ID         uuid.UUID  `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	FirstName  string     `gorm:"type:text;not null" json:"first_name"`
-	LastName   string     `gorm:"type:text;not null" json:"last_name"`
-	MiddleName string     `gorm:"type:text" json:"middle_name"`
-	Email      string     `gorm:"type:text;not null;uniqueIndex:idx_unique_email" json:"email"`
-	Phone      int64      `gorm:"type:integer" json:"phone"`
-	IsProducer bool       `gorm:"type:boolean;default:false" json:"is_producer"`
-	Address    string     `gorm:"type:text" json:"addess"`
-	City       string     `gorm:"type:text" json:"city"`
-	Country    string     `gorm:"type:text" json:"country"`
-	ZipCode    int32      `gorm:"type:integer" json:"zip_code"`
-	CreatedAt  time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt  *time.Time `gorm:"type:timestamp" json:"updated_at"`
+	ID         uuid.UUID  `json:"id" db:"id"`
+	FirstName  string     `json:"first_name" db:"first_name"`
+	LastName   string     `json:"last_name" db:"last_name"`
+	MiddleName string     `json:"middle_name,omitempty" db:"middle_name"`
+	Email      string     `json:"email" db:"email"`
+	Phone      int64      `json:"phone" db:"phone"`
+	IsProducer bool       `json:"is_producer" db:"is_producer"`
+	Address    string     `json:"address" db:"address"`
+	City       string     `json:"city" db:"city"`
+	Country    string     `json:"country" db:"country"`
+	ZipCode    int32      `json:"zip_code" db:"zip_code"`
+	CreatedAt  time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt  *time.Time `json:"updated_at,omitempty" db:"updated_at"`
 }
 
-type UserRegister struct {
-	FirstName  string `gorm:"type:text;not null" json:"first_name"`
-	LastName   string `gorm:"type:text;not null" json:"last_name"`
-	MiddleName string `gorm:"type:text" json:"middle_name"`
-	Email      string `gorm:"type:text;not null;uniqueIndex:idx_unique_email" json:"email"`
-	Phone      int64  `gorm:"type:integer" json:"phone"`
-	Password   string `gorm:"type:text;not null" json:"password"`
-	IsProducer bool   `gorm:"type:boolean;default:false" json:"is_producer"`
-	Address    string `gorm:"type:text" json:"addess"`
-	City       string `gorm:"type:text" json:"city"`
-	Country    string `gorm:"type:text" json:"country"`
-	ZipCode    int32  `gorm:"type:integer" json:"zip_code"`
+type UserDTO struct {
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	MiddleName string `json:"middle_name,omitempty"`
+	Email      string `json:"email"`
+	Phone      int64  `json:"phone,omitempty"`
+	Password   string `json:"password,omitempty"`
+	IsProducer bool   `json:"is_producer"`
+	Address    string `json:"address,omitempty"`
+	City       string `json:"city,omitempty"`
+	Country    string `json:"country,omitempty"`
+	ZipCode    int32  `json:"zip_code,omitempty"`
 }
 
 type AuthedUser struct {
-	ID         uuid.UUID  `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	FirstName  string     `gorm:"type:text;not null" json:"first_name"`
-	LastName   string     `gorm:"type:text;not null" json:"last_name"`
-	MiddleName string     `gorm:"type:text" json:"middle_name"`
-	Email      string     `gorm:"type:text;not null;uniqueIndex:idx_unique_email" json:"email"`
-	Phone      int64      `gorm:"type:integer" json:"phone"`
-	IsProducer bool       `gorm:"type:boolean;default:false" json:"is_producer"`
-	Address    string     `gorm:"type:text" json:"addess"`
-	City       string     `gorm:"type:text" json:"city"`
-	Country    string     `gorm:"type:text" json:"country"`
-	ZipCode    int32      `gorm:"type:integer" json:"zip_code"`
-	CreatedAt  time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
-	UpdatedAt  *time.Time `gorm:"type:timestamp" json:"updated_at"`
-	Auth       Auth       `gorm:"foreignKey:UserID" json:"auth"`
-}
-
-type UpdateUser struct {
-	FirstName  string `gorm:"type:text" json:"first_name"`
-	LastName   string `gorm:"type:text" json:"last_name"`
-	MiddleName string `gorm:"type:text" json:"middle_name"`
-	Email      string `gorm:"type:text;uniqueIndex:idx_unique_email" json:"email"`
-	Phone      int64  `gorm:"type:integer" json:"phone"`
-	IsProducer bool   `gorm:"type:boolean;default:false" json:"is_producer"`
-	Address    string `gorm:"type:text" json:"addess"`
-	City       string `gorm:"type:text" json:"city"`
-	Country    string `gorm:"type:text" json:"country"`
-	ZipCode    int32  `gorm:"type:integer" json:"zip_code"`
-}
-
-type UserLogin struct {
-	Email    string `gorm:"type:text;not null;uniqueIndex:idx_unique_email" json:"email"`
-	Password string `gorm:"type:text;not null" json:"password"`
+	ID         uuid.UUID  `json:"id"`
+	FirstName  string     `json:"first_name"`
+	LastName   string     `json:"last_name"`
+	MiddleName string     `json:"middle_name,omitempty"`
+	Email      string     `json:"email"`
+	Phone      int64      `json:"phone"`
+	IsProducer bool       `json:"is_producer"`
+	Address    string     `json:"address"`
+	City       string     `json:"city"`
+	Country    string     `json:"country"`
+	ZipCode    int32      `json:"zip_code"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  *time.Time `json:"updated_at,omitempty"`
+	Auth       Auth       `json:"auth"`
 }
 
 type Auth struct {
-	ID        uuid.UUID  `gorm:"type:uuid;primary_key;default:uuid_generate_v4()" json:"id"`
-	UserID    uuid.UUID  `gorm:"type:uuid;not null" json:"user_id"`
-	CreatedAt time.Time  `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
-	Active    bool       `gorm:"type:boolean;default:false" json:"active"`
-	Password  string     `gorm:"type:text;not null" json:"password"`
-	UpdatedAt *time.Time `gorm:"type:timestamp" json:"updated_at"`
+	ID        uuid.UUID  `json:"id" db:"id"`
+	UserID    uuid.UUID  `json:"user_id" db:"user_id"`
+	CreatedAt time.Time  `json:"created_at" db:"created_at"`
+	Active    bool       `json:"active" db:"active"`
+	Password  string     `json:"-" db:"password"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty" db:"updated_at"`
 }

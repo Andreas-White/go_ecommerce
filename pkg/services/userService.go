@@ -11,11 +11,11 @@ import (
 )
 
 type IUserService interface {
-	CreateUser(ctx context.Context, user *models.UserRegister) error
+	CreateUser(ctx context.Context, user *models.UserDTO) error
 	GetUserByID(ctx context.Context, id string) (*models.User, error)
 	GetUserByName(ctx context.Context, firstName string, lastName string, middleName string) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
-	UpdateUser(ctx context.Context, user *models.User, userPayload *models.UpdateUser) (*models.User, error)
+	UpdateUser(ctx context.Context, user *models.User, userPayload *models.UserDTO) (*models.User, error)
 	DeleteUser(ctx context.Context, id string) error
 	AuthenticateUser(ctx context.Context, email, password string) (*models.User, error)
 }
@@ -33,7 +33,7 @@ func NewUserService(userRepo repositories.IUserRepository) IUserService {
 }
 
 // CreateUser calls the repository to insert a new user into the database
-func (s *UserService) CreateUser(ctx context.Context, user *models.UserRegister) error {
+func (s *UserService) CreateUser(ctx context.Context, user *models.UserDTO) error {
 	if user.FirstName == "" || user.LastName == "" || user.Email == "" {
 		return fmt.Errorf("{service/CreateUser - full name and email are required}")
 	}
@@ -86,7 +86,7 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*models
 }
 
 // UpdateUser updates a user’s information in the database
-func (s *UserService) UpdateUser(ctx context.Context, authUser *models.User, userPayload *models.UpdateUser) (*models.User, error) {
+func (s *UserService) UpdateUser(ctx context.Context, authUser *models.User, userPayload *models.UserDTO) (*models.User, error) {
 	if authUser.ID == uuid.Nil {
 		return nil, fmt.Errorf("{service/UpdateUser - user ID is required}")
 	}

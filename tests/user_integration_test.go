@@ -96,7 +96,7 @@ func clearUserTables(t *testing.T) {
 func TestUserRegistration_Success(t *testing.T) {
 	clearUserTables(t)
 
-	registrationPayload := models.UserRegister{
+	registrationPayload := models.UserDTO{
 		FirstName:  "Test",
 		LastName:   "User",
 		Email:      "testuser@example.com",
@@ -137,7 +137,7 @@ func TestUserLogin_Success(t *testing.T) {
 
 	registeredEmail := "loginuser@example.com"
 	registeredPassword := "securepassword123"
-	registrationPayload := models.UserRegister{
+	registrationPayload := models.UserDTO{
 		FirstName: "Login", LastName: "User", Email: registeredEmail, Password: registeredPassword,
 		Phone: 9876543210, IsProducer: false, Address: "456 Login Ave", City: "Loginton", Country: "Testland", ZipCode: 54321,
 	}
@@ -192,7 +192,7 @@ func TestUserLogin_Failure(t *testing.T) {
 	// Register a user for the wrong password test
 	regEmail := "wrongpass@example.com"
 	regPassword := "correctpassword"
-	registrationPayload := models.UserRegister{
+	registrationPayload := models.UserDTO{
 		FirstName: "Wrong", LastName: "Pass", Email: regEmail, Password: regPassword,
 		Phone: 123, IsProducer: false, Address: "Addr", City: "City", Country: "Country", ZipCode: 123,
 	}
@@ -222,7 +222,7 @@ func TestGetUserByID_Success(t *testing.T) {
 	regPassword := "password123"
 	var registeredUser models.User
 
-	regPayload := models.UserRegister{
+	regPayload := models.UserDTO{
 		FirstName: "Get", LastName: "User", Email: regEmail, Password: regPassword,
 		Phone: 1112223333, IsProducer: false, Address: "789 Get St", City: "Getville", Country: "Testland", ZipCode: 67890,
 	}
@@ -285,7 +285,7 @@ func TestUpdateUser_Success(t *testing.T) {
 	regPassword := "password123"
 	originalFirstName := "OriginalFirst"
 
-	regPayload := models.UserRegister{
+	regPayload := models.UserDTO{
 		FirstName: originalFirstName, LastName: "User", Email: regEmail, Password: regPassword,
 		Phone: 2223334444, IsProducer: true, Address: "111 Update St", City: "Updateville", Country: "Testland", ZipCode: 11111,
 	}
@@ -361,7 +361,7 @@ func TestDeleteUser_Success(t *testing.T) {
 	regEmail := "deleteuser@example.com"
 	regPassword := "password123"
 
-	regPayload := models.UserRegister{
+	regPayload := models.UserDTO{
 		FirstName: "Delete", LastName: "Me", Email: regEmail, Password: regPassword,
 		Phone: 3334445555, IsProducer: false, Address: "777 Delete Ln", City: "Deleteville", Country: "Testland", ZipCode: 22222,
 	}
@@ -422,7 +422,7 @@ func TestGetUserByName(t *testing.T) {
 	regFirstName := "John"
 	regLastName := "Doe"
 
-	regPayload := models.UserRegister{
+	regPayload := models.UserDTO{
 		FirstName: regFirstName, LastName: regLastName, Email: regEmail, Password: "password123",
 		Phone: 1234567890, IsProducer: false, Address: "123 Name St", City: "Nameville", Country: "Testland", ZipCode: 12345,
 	}
@@ -471,7 +471,7 @@ func TestGetUserByEmail(t *testing.T) {
 	regFirstName := "Jane"
 	regLastName := "Smith"
 
-	regPayload := models.UserRegister{
+	regPayload := models.UserDTO{
 		FirstName: regFirstName, LastName: regLastName, Email: regEmail, Password: "password123",
 		Phone: 1234567890, IsProducer: false, Address: "123 Email St", City: "Emailville", Country: "Testland", ZipCode: 12345,
 	}
@@ -517,7 +517,7 @@ func TestGetUserByEmail(t *testing.T) {
 func TestDuplicateRegistration(t *testing.T) {
 	clearUserTables(t)
 	regEmail := "duplicate@example.com"
-	regPayload := models.UserRegister{
+	regPayload := models.UserDTO{
 		FirstName: "Duplicate", LastName: "User", Email: regEmail, Password: "password123",
 		Phone: 123, Address: "Addr", City: "City", Country: "Country", ZipCode: 123,
 	}
@@ -541,7 +541,7 @@ func TestDuplicateRegistration(t *testing.T) {
 
 func TestInvalidPasswordRegistration(t *testing.T) {
 	clearUserTables(t)
-	regPayload := models.UserRegister{
+	regPayload := models.UserDTO{
 		FirstName: "Short", LastName: "Pass", Email: "shortpass@example.com", Password: "123", // Invalid: too short
 		Phone: 123, Address: "Addr", City: "City", Country: "Country", ZipCode: 123,
 	}
@@ -560,7 +560,7 @@ func TestInvalidPasswordRegistration(t *testing.T) {
 
 func TestInvalidEmailRegistration(t *testing.T) {
 	clearUserTables(t)
-	regPayload := models.UserRegister{
+	regPayload := models.UserDTO{
 		FirstName: "Invalid", LastName: "Email", Email: "invalid-email-format", Password: "password123",
 		Phone: 123, Address: "Addr", City: "City", Country: "Country", ZipCode: 123,
 	}
@@ -583,7 +583,7 @@ func TestDeleteNonExistentUser_Returns404(t *testing.T) {
 	// 1. Register a user
 	regEmail := "deletecheck@example.com"
 	regPassword := "password123"
-	regPayload := models.UserRegister{
+	regPayload := models.UserDTO{
 		FirstName: "Delete", LastName: "Check", Email: regEmail, Password: regPassword,
 		Phone: 12345, Address: "123 Del St", City: "Del City", Country: "Del Land", ZipCode: 12345,
 	}
@@ -603,7 +603,7 @@ func TestDeleteNonExistentUser_Returns404(t *testing.T) {
 	require.NotEmpty(t, registeredUser.ID, "Registered user ID is empty")
 
 	// 2. Log in to get a token
-	loginPayload := models.UserLogin{Email: regEmail, Password: regPassword}
+	loginPayload := models.UserDTO{Email: regEmail, Password: regPassword}
 	loginPayloadBytes, err := json.Marshal(loginPayload)
 	require.NoError(t, err)
 	loginReq, err := http.NewRequest(http.MethodPost, "/users/login", bytes.NewBuffer(loginPayloadBytes))
@@ -651,7 +651,7 @@ func TestUserUpdate_GeneratesNewTokenAndUpdatesDetails(t *testing.T) {
 	initialFirstName := "InitialName"
 	initialLastName := "InitialLast"
 
-	regPayload := models.UserRegister{
+	regPayload := models.UserDTO{
 		FirstName: initialFirstName, LastName: initialLastName, Email: initialEmail, Password: initialPassword,
 		Phone: 123456, Address: "123 Update St", City: "Updateville", Country: "Updateland", ZipCode: 54321,
 	}
@@ -670,7 +670,7 @@ func TestUserUpdate_GeneratesNewTokenAndUpdatesDetails(t *testing.T) {
 	require.NoError(t, err, "Failed to query registered user ID")
 
 	// 2. Log in to get an initial JWT
-	loginPayload := models.UserLogin{Email: initialEmail, Password: initialPassword}
+	loginPayload := models.UserDTO{Email: initialEmail, Password: initialPassword}
 	loginPayloadBytes, err := json.Marshal(loginPayload)
 	require.NoError(t, err)
 	loginReq, err := http.NewRequest(http.MethodPost, "/users/login", bytes.NewBuffer(loginPayloadBytes))
@@ -688,7 +688,7 @@ func TestUserUpdate_GeneratesNewTokenAndUpdatesDetails(t *testing.T) {
 	// 3. Prepare an update request
 	updatedFirstName := "UpdatedName"
 	updatedLastName := "UpdatedLast"
-	updatePayload := models.UpdateUser{
+	updatePayload := models.UserDTO{
 		FirstName: updatedFirstName,
 		LastName:  updatedLastName,
 	}

@@ -30,7 +30,7 @@ func NewUserHandler(userService services.IUserService, tokenGenerator middleware
 
 // CreateUser handles the creation of a new user
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
-	var user models.UserRegister
+	var user models.UserDTO
 	ctx := r.Context()
 
 	err := json.NewDecoder(r.Body).Decode(&user)
@@ -107,7 +107,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	authUser := retrieveUserFromContext(w, r)
 
-	var userPayload models.UpdateUser
+	var userPayload models.UserDTO
 	if err := json.NewDecoder(r.Body).Decode(&userPayload); err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
@@ -151,10 +151,7 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 // Login handles user login and generates a JWT token
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var loginRequest struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
+	var loginRequest models.UserDTO
 
 	if err := json.NewDecoder(r.Body).Decode(&loginRequest); err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
