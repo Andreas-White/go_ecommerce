@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/mail"
+	"strings"
 )
 
 // RespondWithError sends an error response in JSON format
@@ -54,4 +56,58 @@ func HashPassword(password string) string {
 func CheckPasswordHash(password, hashedPassword string) bool {
 	hashedInputPassword := HashPassword(password)
 	return hashedInputPassword == hashedPassword
+}
+
+// IsValidEmail checks if the email format is valid
+func IsValidEmail(email string) bool {
+	trimmedEmail := strings.TrimSpace(email)
+	if trimmedEmail == "" {
+		return false
+	}
+
+	addr, err := mail.ParseAddress(trimmedEmail)
+	if err != nil {
+		return false
+	}
+
+	emailToValidate := addr.Address
+	if emailToValidate == "" {
+		return false
+	}
+
+	parts := strings.SplitN(emailToValidate, "@", 2)
+	if len(parts) != 2 {
+		return false
+	}
+	localPart := parts[0]
+	domainPart := parts[1]
+
+	if localPart == "" || domainPart == "" {
+		return false
+	}
+	if !strings.Contains(domainPart, ".") {
+		return false
+	}
+	if strings.HasPrefix(domainPart, "-") || strings.HasSuffix(domainPart, "-") ||
+		strings.HasPrefix(domainPart, ".") || strings.HasSuffix(domainPart, ".") {
+		return false
+	}
+	if strings.Contains(domainPart, "..") || strings.Contains(domainPart, ".-") || strings.Contains(domainPart, "-.") {
+		return false
+	}
+	if strings.Contains(domainPart, "..") || strings.Contains(domainPart, ".-") || strings.Contains(domainPart, "-.") {
+		return false
+	}
+
+	if len(localPart) > 64 {
+		return false
+	}
+	if len(domainPart) > 255 {
+		return false
+	}
+	if len(emailToValidate) > 254 {
+		return false
+	}
+
+	return true
 }

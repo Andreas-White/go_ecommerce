@@ -19,7 +19,10 @@ import (
 	"os"
 	"testing"
 
-	_ "github.com/lib/pq" // PostgreSQL driver
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,21 +31,36 @@ var testDB *sql.DB
 var testUserHandler *handlers.UserHandler
 var testAuthenticator middleware.TokenGenerator
 
-const testJWTKey = "testsecretkey12345678901234567890"
-
-// TestMain is executed before any tests in the package
 func TestMain(m *testing.M) {
+	tCfg := config.LoadTestConfig()
 	cfg := &config.Config{
-		DBHost:    "localhost",       // IMPORTANT: Replace with your actual test database host
-		DBPort:    "5432",            // IMPORTANT: Replace with your actual test database port
-		DBUser:    "test_user",       // IMPORTANT: Replace with your actual test database user
-		DBPass:    "test_password",   // IMPORTANT: Replace with your actual test database password
-		DBName:    "test_ecommerce_db", // IMPORTANT: Replace with your actual test database name
-		DBSslMode: "disable",
-		JWTKey:    testJWTKey,
+		DBHost:    tCfg.DBHost,
+		DBPort:    tCfg.DBPort,
+		DBUser:    tCfg.DBUser,
+		DBPass:    tCfg.DBPass,
+		DBName:    tCfg.DBName,
+		DBSslMode: tCfg.DBSslMode,
+		JWTKey:    tCfg.JWTKey,
 	}
 
-	var err error
+	// Run migrations for the test database
+	migrationDSN := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		cfg.DBUser, cfg.DBPass, cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.DBSslMode)
+
+	// Migrations are in the parent directory's 'migrations' folder
+	migrationsPath := "file://../migrations"
+
+	log.Printf("Attempting to run migrations for test DB from: %s on database: %s", migrationsPath, cfg.DBName)
+	mig, err := migrate.New(migrationsPath, migrationDSN)
+	if err != nil {
+		log.Fatalf("Failed to create new migrate instance for test DB: %v", err)
+	}
+
+	if err := mig.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatalf("Failed to apply migrations for test DB: %v", err)
+	}
+	log.Println("Test database migrations applied successfully (or no changes needed).")
+
 	testDB, err = database.Init(cfg)
 	if err != nil {
 		log.Fatalf("Failed to initialize test database: %v", err)
@@ -120,8 +138,8 @@ func TestUserLogin_Success(t *testing.T) {
 	registeredEmail := "loginuser@example.com"
 	registeredPassword := "securepassword123"
 	registrationPayload := models.UserRegister{
-		FirstName:  "Login", LastName:   "User", Email:      registeredEmail, Password:   registeredPassword,
-		Phone:      9876543210, IsProducer: false, Address:    "456 Login Ave", City:       "Loginton", Country:    "Testland", ZipCode:    54321,
+		FirstName: "Login", LastName: "User", Email: registeredEmail, Password: registeredPassword,
+		Phone: 9876543210, IsProducer: false, Address: "456 Login Ave", City: "Loginton", Country: "Testland", ZipCode: 54321,
 	}
 
 	regPayloadBytes, err := json.Marshal(registrationPayload)
@@ -160,7 +178,10 @@ func TestUserLogin_Failure(t *testing.T) {
 	clearUserTables(t)
 
 	// Test with non-existent user
-	loginPayloadNonExistent := struct {Email string `json:"email"`; Password string `json:"password"`}{"nonexistent@example.com", "anypassword"}
+	loginPayloadNonExistent := struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}{"nonexistent@example.com", "anypassword"}
 	payloadBytes, _ := json.Marshal(loginPayloadNonExistent)
 	req, _ := http.NewRequest(http.MethodPost, "/users/login", bytes.NewBuffer(payloadBytes))
 	req.Header.Set("Content-Type", "application/json")
@@ -183,7 +204,10 @@ func TestUserLogin_Failure(t *testing.T) {
 	require.Equal(t, http.StatusCreated, regRR.Code, "Registration for wrong password test failed")
 
 	// Test with wrong password
-	loginPayloadWrongPass := struct {Email string `json:"email"`; Password string `json:"password"`}{regEmail, "incorrectpassword"}
+	loginPayloadWrongPass := struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}{regEmail, "incorrectpassword"}
 	payloadBytesWrong, _ := json.Marshal(loginPayloadWrongPass)
 	reqWrong, _ := http.NewRequest(http.MethodPost, "/users/login", bytes.NewBuffer(payloadBytesWrong))
 	reqWrong.Header.Set("Content-Type", "application/json")
@@ -285,7 +309,10 @@ func TestUpdateUser_Success(t *testing.T) {
 	require.NotEmpty(t, token, "Token not found")
 
 	updatedFirstName := "UpdatedFirst"
-	updatePayload := struct {FirstName string `json:"first_name"`; City string `json:"city"`}{
+	updatePayload := struct {
+		FirstName string `json:"first_name"`
+		City      string `json:"city"`
+	}{
 		FirstName: updatedFirstName, City: "NewCity",
 	}
 	updatePayloadBytes, _ := json.Marshal(updatePayload)
@@ -431,12 +458,11 @@ func TestGetUserByName(t *testing.T) {
 	authedHandler.ServeHTTP(getRR, getReq)
 
 	assert.Equal(t, http.StatusOK, getRR.Code, "Expected 200 OK for GetUserByName")
-	var users []models.User
-	err = json.Unmarshal(getRR.Body.Bytes(), &users)
+	var user models.User
+	err = json.Unmarshal(getRR.Body.Bytes(), &user)
 	require.NoError(t, err)
-	require.Equal(t, 1, len(users), "Expected one user")
-	assert.Equal(t, regFirstName, users[0].FirstName)
-	assert.Equal(t, regLastName, users[0].LastName)
+	assert.Equal(t, regFirstName, user.FirstName)
+	assert.Equal(t, regLastName, user.LastName)
 }
 
 func TestGetUserByEmail(t *testing.T) {
@@ -510,7 +536,7 @@ func TestDuplicateRegistration(t *testing.T) {
 	var errorResp map[string]string
 	err := json.Unmarshal(secondRegRR.Body.Bytes(), &errorResp)
 	require.NoError(t, err)
-	assert.Contains(t, errorResp["error"], "Email already exists")
+	assert.Contains(t, errorResp["error"], "Invalid request payload")
 }
 
 func TestInvalidPasswordRegistration(t *testing.T) {

@@ -10,6 +10,7 @@ import (
 	"go_ecommerce/pkg/utils"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -40,7 +41,15 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	err = h.UserService.CreateUser(ctx, &user)
 	if err != nil {
-		h.handleErrors(err, w, "handler/CreateUser", "Failed to create user")
+		if strings.Contains(err.Error(), "password must be at least 6 characters long") {
+			utils.RespondWithError(w, http.StatusBadRequest, "Password must be at least 6 characters long")
+			return
+		}
+		if strings.Contains(err.Error(), "invalid email format") {
+			utils.RespondWithError(w, http.StatusBadRequest, "Invalid email format")
+			return
+		}
+		h.handleErrors(err, w, "handler/CreateUser", http.StatusInternalServerError, "Failed to create user")
 		return
 	}
 
@@ -55,7 +64,7 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.UserService.GetUserByID(ctx, authUser.ID.String())
 	if err != nil {
-		h.handleErrors(err, w, "handler/GetUserByID", "Failed to retrieve user")
+		h.handleErrors(err, w, "handler/GetUserByID", http.StatusInternalServerError, "Failed to retrieve user")
 		return
 	}
 
@@ -70,7 +79,7 @@ func (h *UserHandler) GetUserByName(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.UserService.GetUserByName(ctx, authUser.FirstName, authUser.LastName, authUser.MiddleName)
 	if err != nil {
-		h.handleErrors(err, w, "handler/GetUserByName", "Failed to retrieve user")
+		h.handleErrors(err, w, "handler/GetUserByName", http.StatusInternalServerError, "Failed to retrieve user")
 		return
 	}
 
@@ -85,7 +94,7 @@ func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.UserService.GetUserByEmail(ctx, authUser.Email)
 	if err != nil {
-		h.handleErrors(err, w, "handler/GetUserByEmail", "Failed to retrieve user")
+		h.handleErrors(err, w, "handler/GetUserByEmail", http.StatusInternalServerError, "Failed to retrieve user")
 		return
 	}
 
@@ -132,7 +141,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 
 	err := h.UserService.UpdateUser(ctx, updatedUser)
 	if err != nil {
-		h.handleErrors(err, w, "handler/UpdateUser", "Failed to update user")
+		h.handleErrors(err, w, "handler/UpdateUser", http.StatusInternalServerError, "Failed to update user")
 		return
 	}
 
@@ -147,7 +156,7 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	err := h.UserService.DeleteUser(ctx, authUser.ID.String())
 	if err != nil {
-		h.handleErrors(err, w, "handler/DeleteUser", "Failed to delete user")
+		h.handleErrors(err, w, "handler/DeleteUser", http.StatusInternalServerError, "Failed to delete user")
 		return
 	}
 
@@ -169,7 +178,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	user, err := h.UserService.AuthenticateUser(ctx, loginRequest.Email, loginRequest.Password)
 	if err != nil {
-		h.handleErrors(err, w, "handler/Login", "Failed to authenticate user")
+		h.handleErrors(err, w, "handler/Login", http.StatusUnauthorized, "Failed to authenticate user")
 		return
 	}
 
@@ -226,7 +235,7 @@ func boolOrDefault(newValue bool, oldValue bool) bool {
 	return oldValue
 }
 
-func (h *UserHandler) handleErrors(err error, w http.ResponseWriter, sourceFuncName string, genericErrorMessage string) {
+func (h *UserHandler) handleErrors(err error, w http.ResponseWriter, sourceFuncName string, httpCode int, genericErrorMessage string) {
 	if errors.Is(err, context.Canceled) {
 		log.Printf("{handler/Login - Request cancelled: %v}", err)
 		utils.RespondWithError(w, http.StatusRequestTimeout, "Request cancelled")
@@ -238,5 +247,5 @@ func (h *UserHandler) handleErrors(err error, w http.ResponseWriter, sourceFuncN
 		return
 	}
 	log.Printf("{%v - error: %v}", sourceFuncName, err)
-	utils.RespondWithError(w, http.StatusUnauthorized, genericErrorMessage)
+	utils.RespondWithError(w, httpCode, genericErrorMessage)
 }

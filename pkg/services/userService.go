@@ -38,6 +38,14 @@ func (s *UserService) CreateUser(ctx context.Context, user *models.UserRegister)
 		return fmt.Errorf("{service/CreateUser - full name and email are required}")
 	}
 
+	if len(user.Password) < 6 {
+		return fmt.Errorf("{service/CreateUser - password must be at least 6 characters long}")
+	}
+
+	if !utils.IsValidEmail(user.Email) {
+		return fmt.Errorf("{service/CreateUser - invalid email format}")
+	}
+
 	err := s.UserRepo.CreateUser(ctx, user)
 	if err != nil {
 		err = s.handleErrors(ctx, err)

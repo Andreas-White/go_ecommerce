@@ -1,7 +1,7 @@
-/your-app-name
+go_ecommerce
 │
 ├── /cmd/
-│   ├── /your-app-name/
+│   ├── /go_ecommerce/
 │   │   └── main.go                # Entry point for the application
 │
 ├── /pkg/                         # Library code that's ok to use by external applications (e.g., `/pkg/util/`)
