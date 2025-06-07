@@ -195,16 +195,25 @@ func (r *UserRepository) DeleteUser(ctx context.Context, id string) error {
 		DELETE FROM users WHERE id = $1
 	`
 
-	_, err = r.DB.ExecContext(ctx, queryAuth, id)
+	_, err = tx.ExecContext(ctx, queryAuth, id)
 	if err != nil {
 		err = r.handleErrors(ctx, err)
 		return fmt.Errorf("{repository/DeleteUser - error deleting auth for user: %w}", err)
 	}
 
-	_, err = r.DB.ExecContext(ctx, queryUser, id)
+	result, err := tx.ExecContext(ctx, queryUser, id)
 	if err != nil {
 		err = r.handleErrors(ctx, err)
 		return fmt.Errorf("{repository/DeleteUser - error deleting user: %w}", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		err = r.handleErrors(ctx, err)
+		return fmt.Errorf("{repository/DeleteUser - error getting rows affected: %w}", err)
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("{repository/DeleteUser - no rows affected}")
 	}
 
 	return nil

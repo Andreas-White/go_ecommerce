@@ -15,7 +15,7 @@ type IUserService interface {
 	GetUserByID(ctx context.Context, id string) (*models.User, error)
 	GetUserByName(ctx context.Context, firstName string, lastName string, middleName string) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
-	UpdateUser(ctx context.Context, user *models.User) error
+	UpdateUser(ctx context.Context, user *models.User, userPayload *models.UpdateUser) (*models.User, error)
 	DeleteUser(ctx context.Context, id string) error
 	AuthenticateUser(ctx context.Context, email, password string) (*models.User, error)
 }
@@ -86,17 +86,36 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*models
 }
 
 // UpdateUser updates a user’s information in the database
-func (s *UserService) UpdateUser(ctx context.Context, user *models.User) error {
-	if user.ID == uuid.Nil { // Use uuid.Nil for comparison with uuid.UUID
-		return fmt.Errorf("{service/UpdateUser - user ID is required}")
+func (s *UserService) UpdateUser(ctx context.Context, authUser *models.User, userPayload *models.UpdateUser) (*models.User, error) {
+	if authUser.ID == uuid.Nil {
+		return nil, fmt.Errorf("{service/UpdateUser - user ID is required}")
 	}
 
-	err := s.UserRepo.UpdateUser(ctx, user)
+	if !utils.IsValidEmail(authUser.Email) {
+		return nil, fmt.Errorf("{service/UpdateUser - invalid email format}")
+	}
+
+	updatedUser := &models.User{
+		ID:         authUser.ID,
+		FirstName:  stringOrDefault(userPayload.FirstName, authUser.FirstName),
+		LastName:   stringOrDefault(userPayload.LastName, authUser.LastName),
+		MiddleName: stringOrDefault(userPayload.MiddleName, authUser.MiddleName),
+		Email:      stringOrDefault(userPayload.Email, authUser.Email),
+		Phone:      int64OrDefault(userPayload.Phone, authUser.Phone),
+		IsProducer: boolOrDefault(userPayload.IsProducer, authUser.IsProducer),
+		Address:    stringOrDefault(userPayload.Address, authUser.Address),
+		City:       stringOrDefault(userPayload.City, authUser.City),
+		Country:    stringOrDefault(userPayload.Country, authUser.Country),
+		ZipCode:    int32OrDefault(userPayload.ZipCode, authUser.ZipCode),
+	}
+
+	err := s.UserRepo.UpdateUser(ctx, updatedUser)
 	if err != nil {
 		err = s.handleErrors(ctx, err)
-		return fmt.Errorf("{service/UpdateUser - failed to update user in repository: %w}", err)
+		return nil, fmt.Errorf("{service/UpdateUser - failed to update user in repository: %w}", err)
 	}
-	return nil
+
+	return updatedUser, nil
 }
 
 // DeleteUser deletes a user by ID
@@ -105,7 +124,6 @@ func (s *UserService) DeleteUser(ctx context.Context, id string) error {
 		return fmt.Errorf("{service/DeleteUser - user ID is required}")
 	}
 
-	// Pass the context down to the repository
 	err := s.UserRepo.DeleteUser(ctx, id)
 	if err != nil {
 		err = s.handleErrors(ctx, err)
@@ -121,7 +139,6 @@ func (s *UserService) AuthenticateUser(ctx context.Context, email, password stri
 		return nil, fmt.Errorf("{service/AuthenticateUser - error getting authed user: %w}", err)
 	}
 
-	// Check password hash - this is application logic, not a database call
 	if !utils.CheckPasswordHash(password, authedUser.Auth.Password) {
 		return nil, fmt.Errorf("{service/AuthenticateUser - incorrect password}")
 	}
@@ -143,6 +160,38 @@ func (s *UserService) AuthenticateUser(ctx context.Context, email, password stri
 	}
 
 	return user, nil
+}
+
+func stringOrDefault(newValue string, oldValue string) string {
+	if newValue != "" {
+		return newValue
+	}
+
+	return oldValue
+}
+
+func int64OrDefault(newValue int64, oldValue int64) int64 {
+	if newValue != 0 {
+		return newValue
+	}
+
+	return oldValue
+}
+
+func int32OrDefault(newValue int32, oldValue int32) int32 {
+	if newValue != 0 {
+		return newValue
+	}
+
+	return oldValue
+}
+
+func boolOrDefault(newValue bool, oldValue bool) bool {
+	if newValue {
+		return newValue
+	}
+
+	return oldValue
 }
 
 func (s *UserService) handleErrors(ctx context.Context, err error) error {

@@ -53,6 +53,24 @@ type AuthedUser struct {
 	Auth       Auth       `json:"auth"`
 }
 
+type UpdateUser struct {
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	MiddleName string `json:"middle_name"`
+	Email      string `json:"email"`
+	Phone      int64  `json:"phone"`
+	IsProducer bool   `json:"is_producer"`
+	Address    string `json:"addess"`
+	City       string `json:"city"`
+	Country    string `json:"country"`
+	ZipCode    int32  `json:"zip_code"`
+}
+
+type UserLogin struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 type Auth struct {
 	ID        uuid.UUID  `json:"id"`
 	UserID    uuid.UUID  `json:"user_id"`

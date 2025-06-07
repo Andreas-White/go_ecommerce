@@ -576,3 +576,169 @@ func TestInvalidEmailRegistration(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, errorResp["error"], "Invalid email format")
 }
+
+func TestDeleteNonExistentUser_Returns404(t *testing.T) {
+	clearUserTables(t)
+
+	// 1. Register a user
+	regEmail := "deletecheck@example.com"
+	regPassword := "password123"
+	regPayload := models.UserRegister{
+		FirstName: "Delete", LastName: "Check", Email: regEmail, Password: regPassword,
+		Phone: 12345, Address: "123 Del St", City: "Del City", Country: "Del Land", ZipCode: 12345,
+	}
+	regPayloadBytes, err := json.Marshal(regPayload)
+	require.NoError(t, err)
+	regReq, err := http.NewRequest(http.MethodPost, "/users/register", bytes.NewBuffer(regPayloadBytes))
+	require.NoError(t, err)
+	regReq.Header.Set("Content-Type", "application/json")
+	regRR := httptest.NewRecorder()
+	http.HandlerFunc(testUserHandler.Register).ServeHTTP(regRR, regReq)
+	require.Equal(t, http.StatusCreated, regRR.Code, "User registration failed")
+
+	// Get user ID after registration (needed for direct deletion if not inferable from login)
+	var registeredUser models.User
+	err = testDB.QueryRowContext(context.Background(), "SELECT id, email FROM users WHERE email = $1", regEmail).Scan(&registeredUser.ID, &registeredUser.Email)
+	require.NoError(t, err, "Failed to query registered user ID")
+	require.NotEmpty(t, registeredUser.ID, "Registered user ID is empty")
+
+	// 2. Log in to get a token
+	loginPayload := models.UserLogin{Email: regEmail, Password: regPassword}
+	loginPayloadBytes, err := json.Marshal(loginPayload)
+	require.NoError(t, err)
+	loginReq, err := http.NewRequest(http.MethodPost, "/users/login", bytes.NewBuffer(loginPayloadBytes))
+	require.NoError(t, err)
+	loginReq.Header.Set("Content-Type", "application/json")
+	loginRR := httptest.NewRecorder()
+	http.HandlerFunc(testUserHandler.Login).ServeHTTP(loginRR, loginReq)
+	require.Equal(t, http.StatusOK, loginRR.Code, "User login failed")
+	var loginResp map[string]string
+	err = json.Unmarshal(loginRR.Body.Bytes(), &loginResp)
+	require.NoError(t, err)
+	token := loginResp["token"]
+	require.NotEmpty(t, token, "Token not found in login response")
+
+	// 3. Delete the user (first time - should succeed)
+	deleteReq, err := http.NewRequest(http.MethodDelete, "/users/delete", nil) // No body needed
+	require.NoError(t, err)
+	deleteReq.Header.Set("Authorization", "Bearer "+token)
+	deleteRR := httptest.NewRecorder()
+	authedDeleteHandler := testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.DeleteUser))
+	authedDeleteHandler.ServeHTTP(deleteRR, deleteReq)
+	assert.Equal(t, http.StatusOK, deleteRR.Code, "Expected first delete to be successful")
+
+	// 4. Attempt to delete the same user again (should fail with 500)
+	secondDeleteReq, err := http.NewRequest(http.MethodDelete, "/users/delete", nil)
+	require.NoError(t, err)
+	secondDeleteReq.Header.Set("Authorization", "Bearer "+token) // Re-use token
+	secondDeleteRR := httptest.NewRecorder()
+	authedDeleteHandler.ServeHTTP(secondDeleteRR, secondDeleteReq) // Use the same authed handler
+
+	// Assert that the second delete attempt returns 500 Internal Server Error
+	assert.Equal(t, http.StatusInternalServerError, secondDeleteRR.Code, "Expected second delete attempt to return 500 Internal Server Error")
+	var errorResp map[string]string
+	err = json.Unmarshal(secondDeleteRR.Body.Bytes(), &errorResp)
+	require.NoError(t, err)
+	assert.Contains(t, errorResp["error"], "Failed to delete user", "Error message mismatch for 500")
+}
+
+func TestUserUpdate_GeneratesNewTokenAndUpdatesDetails(t *testing.T) {
+	clearUserTables(t)
+
+	// 1. Register a user
+	initialEmail := "updatejwt@example.com"
+	initialPassword := "password123"
+	initialFirstName := "InitialName"
+	initialLastName := "InitialLast"
+
+	regPayload := models.UserRegister{
+		FirstName: initialFirstName, LastName: initialLastName, Email: initialEmail, Password: initialPassword,
+		Phone: 123456, Address: "123 Update St", City: "Updateville", Country: "Updateland", ZipCode: 54321,
+	}
+	regPayloadBytes, err := json.Marshal(regPayload)
+	require.NoError(t, err)
+	regReq, err := http.NewRequest(http.MethodPost, "/users/register", bytes.NewBuffer(regPayloadBytes))
+	require.NoError(t, err)
+	regReq.Header.Set("Content-Type", "application/json")
+	regRR := httptest.NewRecorder()
+	http.HandlerFunc(testUserHandler.Register).ServeHTTP(regRR, regReq)
+	require.Equal(t, http.StatusCreated, regRR.Code, "User registration failed")
+
+	// Get registered user's ID
+	var registeredUser models.User
+	err = testDB.QueryRowContext(context.Background(), "SELECT id FROM users WHERE email = $1", initialEmail).Scan(&registeredUser.ID)
+	require.NoError(t, err, "Failed to query registered user ID")
+
+	// 2. Log in to get an initial JWT
+	loginPayload := models.UserLogin{Email: initialEmail, Password: initialPassword}
+	loginPayloadBytes, err := json.Marshal(loginPayload)
+	require.NoError(t, err)
+	loginReq, err := http.NewRequest(http.MethodPost, "/users/login", bytes.NewBuffer(loginPayloadBytes))
+	require.NoError(t, err)
+	loginReq.Header.Set("Content-Type", "application/json")
+	loginRR := httptest.NewRecorder()
+	http.HandlerFunc(testUserHandler.Login).ServeHTTP(loginRR, loginReq)
+	require.Equal(t, http.StatusOK, loginRR.Code, "User login failed")
+	var loginResp map[string]string
+	err = json.Unmarshal(loginRR.Body.Bytes(), &loginResp)
+	require.NoError(t, err)
+	initialToken := loginResp["token"]
+	require.NotEmpty(t, initialToken, "Initial token not found")
+
+	// 3. Prepare an update request
+	updatedFirstName := "UpdatedName"
+	updatedLastName := "UpdatedLast"
+	updatePayload := models.UpdateUser{
+		FirstName: updatedFirstName,
+		LastName:  updatedLastName,
+	}
+	updatePayloadBytes, err := json.Marshal(updatePayload)
+	require.NoError(t, err)
+
+	// 4. Call the update user endpoint
+	updateReq, err := http.NewRequest(http.MethodPut, "/users/update", bytes.NewBuffer(updatePayloadBytes)) // Assuming PUT for update
+	require.NoError(t, err)
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateReq.Header.Set("Authorization", "Bearer "+initialToken)
+	updateRR := httptest.NewRecorder()
+	authedUpdateHandler := testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.UpdateUser))
+	authedUpdateHandler.ServeHTTP(updateRR, updateReq)
+
+	// 5. Assert response from update
+	require.Equal(t, http.StatusOK, updateRR.Code, "User update failed. Body: "+updateRR.Body.String())
+	var updateResp struct {
+		Message string      `json:"message"`
+		User    models.User `json:"user"`
+		Token   string      `json:"token"`
+	}
+	err = json.Unmarshal(updateRR.Body.Bytes(), &updateResp)
+	require.NoError(t, err, "Failed to unmarshal update response. Body: "+updateRR.Body.String())
+
+	assert.Equal(t, "User updated successfully", updateResp.Message)
+	assert.Equal(t, updatedFirstName, updateResp.User.FirstName, "First name not updated in response")
+	assert.Equal(t, updatedLastName, updateResp.User.LastName, "Last name not updated in response")
+	assert.Equal(t, initialEmail, updateResp.User.Email, "Email should not have changed if not in update payload")
+	assert.NotEmpty(t, updateResp.Token, "New token not found in update response")
+	assert.NotEqual(t, initialToken, updateResp.Token, "New token should be different from the initial token")
+	newToken := updateResp.Token
+
+	// 6. Use the new JWT to get user by ID (or by name)
+	// Using GetUserByID as it's simpler and directly uses the ID from the updated user object
+	getReq, err := http.NewRequest(http.MethodGet, "/users/get_by_id", nil) // Endpoint expects ID from token context
+	require.NoError(t, err)
+	getReq.Header.Set("Authorization", "Bearer "+newToken) // Use the NEW token
+	getRR := httptest.NewRecorder()
+	authedGetHandler := testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.GetUserByID))
+	authedGetHandler.ServeHTTP(getRR, getReq)
+
+	// 7. Assert that the subsequent request is successful and returns updated info
+	require.Equal(t, http.StatusOK, getRR.Code, "GetUserByID with new token failed. Body: "+getRR.Body.String())
+	var fetchedUser models.User
+	err = json.Unmarshal(getRR.Body.Bytes(), &fetchedUser)
+	require.NoError(t, err)
+
+	assert.Equal(t, registeredUser.ID, fetchedUser.ID, "Fetched user ID mismatch")
+	assert.Equal(t, updatedFirstName, fetchedUser.FirstName, "Fetched user first name is not the updated one")
+	assert.Equal(t, updatedLastName, fetchedUser.LastName, "Fetched user last name is not the updated one")
+	assert.Equal(t, initialEmail, fetchedUser.Email, "Fetched user email mismatch")
+}

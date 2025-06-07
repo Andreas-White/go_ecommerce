@@ -60,7 +60,7 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	authUser := checkUserFromContext(w, r)
+	authUser := retrieveUserFromContext(w, r)
 
 	user, err := h.UserService.GetUserByID(ctx, authUser.ID.String())
 	if err != nil {
@@ -75,7 +75,7 @@ func (h *UserHandler) GetUserByID(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) GetUserByName(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	authUser := checkUserFromContext(w, r)
+	authUser := retrieveUserFromContext(w, r)
 
 	user, err := h.UserService.GetUserByName(ctx, authUser.FirstName, authUser.LastName, authUser.MiddleName)
 	if err != nil {
@@ -90,7 +90,7 @@ func (h *UserHandler) GetUserByName(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	authUser := checkUserFromContext(w, r)
+	authUser := retrieveUserFromContext(w, r)
 
 	user, err := h.UserService.GetUserByEmail(ctx, authUser.Email)
 	if err != nil {
@@ -105,54 +105,40 @@ func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	authUser := checkUserFromContext(w, r)
+	authUser := retrieveUserFromContext(w, r)
 
-	var userPayload struct {
-		FirstName  string `json:"first_name"`
-		LastName   string `json:"last_name"`
-		MiddleName string `json:"middle_name"`
-		Email      string `json:"email"`
-		Phone      int64  `json:"phone"`
-		IsProducer bool   `json:"is_producer"`
-		Address    string `json:"address"`
-		City       string `json:"city"`
-		Country    string `json:"country"`
-		ZipCode    int32  `json:"zip_code"`
-	}
-
+	var userPayload models.UpdateUser
 	if err := json.NewDecoder(r.Body).Decode(&userPayload); err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	updatedUser := &models.User{
-		ID:         authUser.ID,
-		FirstName:  stringOrDefault(userPayload.FirstName, authUser.FirstName),
-		LastName:   stringOrDefault(userPayload.LastName, authUser.LastName),
-		MiddleName: stringOrDefault(userPayload.MiddleName, authUser.MiddleName),
-		Email:      stringOrDefault(userPayload.Email, authUser.Email),
-		Phone:      int64OrDefault(userPayload.Phone, authUser.Phone),
-		IsProducer: boolOrDefault(userPayload.IsProducer, authUser.IsProducer),
-		Address:    stringOrDefault(userPayload.Address, authUser.Address),
-		City:       stringOrDefault(userPayload.City, authUser.City),
-		Country:    stringOrDefault(userPayload.Country, authUser.Country),
-		ZipCode:    int32OrDefault(userPayload.ZipCode, authUser.ZipCode),
-	}
-
-	err := h.UserService.UpdateUser(ctx, updatedUser)
+	updatedUser, err := h.UserService.UpdateUser(ctx, &authUser, &userPayload)
 	if err != nil {
 		h.handleErrors(err, w, "handler/UpdateUser", http.StatusInternalServerError, "Failed to update user")
 		return
 	}
 
-	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "User updated successfully"})
+	newToken, err := h.TokenGenerator.GenerateJWT(updatedUser)
+	if err != nil {
+		h.handleErrors(err, w, "handler/UpdateUser", http.StatusInternalServerError, "Failed to generate new token after update")
+		return
+	}
+
+	response := map[string]interface{}{
+		"message": "User updated successfully",
+		"user":    updatedUser,
+		"token":   newToken,
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, response)
 }
 
 // DeleteUser handles deleting a user
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	authUser := checkUserFromContext(w, r)
+	authUser := retrieveUserFromContext(w, r)
 
 	err := h.UserService.DeleteUser(ctx, authUser.ID.String())
 	if err != nil {
@@ -193,7 +179,7 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"token": token})
 }
 
-func checkUserFromContext(w http.ResponseWriter, r *http.Request) models.User {
+func retrieveUserFromContext(w http.ResponseWriter, r *http.Request) models.User {
 	authUser := middleware.GetUserFromContext(r)
 	if authUser == nil || authUser.ID == uuid.Nil {
 		log.Println("{handler/DeleteUser - User not found in context}")
@@ -201,38 +187,6 @@ func checkUserFromContext(w http.ResponseWriter, r *http.Request) models.User {
 	}
 
 	return *authUser
-}
-
-func stringOrDefault(newValue string, oldValue string) string {
-	if newValue != "" {
-		return newValue
-	}
-
-	return oldValue
-}
-
-func int64OrDefault(newValue int64, oldValue int64) int64 {
-	if newValue != 0 {
-		return newValue
-	}
-
-	return oldValue
-}
-
-func int32OrDefault(newValue int32, oldValue int32) int32 {
-	if newValue != 0 {
-		return newValue
-	}
-
-	return oldValue
-}
-
-func boolOrDefault(newValue bool, oldValue bool) bool {
-	if newValue {
-		return newValue
-	}
-
-	return oldValue
 }
 
 func (h *UserHandler) handleErrors(err error, w http.ResponseWriter, sourceFuncName string, httpCode int, genericErrorMessage string) {
