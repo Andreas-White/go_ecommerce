@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"go_ecommerce/pkg/models"
+	"go_ecommerce/pkg/utils"
 	"log"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/google/uuid"
 )
 
 // var jwtSecret = []byte(config.LoadConfig().JWTKey)
@@ -59,13 +61,13 @@ func (a *Authenticator) AuthenticateJWT(next http.Handler) http.Handler {
 		authHeader := r.Header.Get("Authorization")
 
 		if authHeader == "" {
-			http.Error(w, "Authorization header required", http.StatusUnauthorized)
+			utils.RespondWithError(w, http.StatusUnauthorized, "Authorization header required")
 			return
 		}
 
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		if tokenString == authHeader {
-			http.Error(w, "Authorization header must start with 'Bearer '", http.StatusUnauthorized)
+			utils.RespondWithError(w, http.StatusUnauthorized, "Authorization header must start with 'Bearer '")
 			return
 		}
 
@@ -88,7 +90,7 @@ func (a *Authenticator) AuthenticateJWT(next http.Handler) http.Handler {
 				log.Printf("{middleware/AuthenticateJWT - Couldn't handle this token: %v}", err)
 
 			}
-			http.Error(w, "Invalid or expired token", http.StatusUnauthorized)
+			utils.RespondWithError(w, http.StatusUnauthorized, "Invalid or expired token")
 			return
 		}
 
@@ -98,12 +100,15 @@ func (a *Authenticator) AuthenticateJWT(next http.Handler) http.Handler {
 	})
 }
 
-// GetUserIDFromContext is a helper function to extract the user ID from the request context
-func GetUserFromContext(r *http.Request) *models.User {
+// GetUserFromContext is a helper function to extract the user from the request context
+func GetUserFromContext(r *http.Request, w http.ResponseWriter) *models.User {
 	user, ok := r.Context().Value(userCtxKey).(*models.User)
 	if !ok {
 		log.Println("No valid user found in context")
 		return nil
+	}
+	if user == nil || user.ID == uuid.Nil {
+		utils.HandleAPIErrors(fmt.Errorf("user not found in context"), w, "middleware/GetUserFromContext", http.StatusUnauthorized, "Unauthorized user")
 	}
 	return user
 }

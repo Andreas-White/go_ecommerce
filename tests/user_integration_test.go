@@ -29,7 +29,9 @@ import (
 
 var testDB *sql.DB
 var testUserHandler *handlers.UserHandler
+var testAuthHandler handlers.IAuthHandler // Added for Auth routes, type changed to interface
 var testAuthenticator middleware.TokenGenerator
+var testRouter *http.ServeMux // Added for routing requests
 
 func TestMain(m *testing.M) {
 	tCfg := config.LoadTestConfig()
@@ -82,14 +84,36 @@ func TestMain(m *testing.M) {
 	userService := services.NewUserService(userRepo)
 	testUserHandler = handlers.NewUserHandler(userService, testAuthenticator)
 
+	// Initialize Auth components for auth routes
+	authRepo := repositories.NewAuthRepository(testDB)
+	authService := services.NewAuthService(authRepo)
+	testAuthHandler = handlers.NewAuthHandler(authService) // Initialize package-level testAuthHandler
+
+	// Initialize Router
+	testRouter = http.NewServeMux()
+
+	// Register routes on testRouter
+	// User public routes
+	testRouter.HandleFunc("/users/register", testUserHandler.Register)
+	testRouter.HandleFunc("/users/login", testUserHandler.Login)
+
+	// User authenticated routes
+	testRouter.Handle("/users/get-by-id", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.GetUserByID)))
+	testRouter.Handle("/users/get-by-name", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.GetUserByName)))
+	testRouter.Handle("/users/get-by-email", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.GetUserByEmail)))
+	testRouter.Handle("/users/update", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.UpdateUser)))
+	testRouter.Handle("/users/delete", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.DeleteUser)))
+
+	// Auth routes (e.g., change password)
+	testRouter.Handle("/auth/change-password", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testAuthHandler.ChangePassword)))
+
 	code := m.Run()
 	os.Exit(code)
 }
 
 func clearUserTables(t *testing.T) {
 	t.Helper()
-	// IMPORTANT: Adjust table names if they are different in your schema.
-	_, err := testDB.Exec("TRUNCATE TABLE users, auths RESTART IDENTITY CASCADE")
+	_, err := testDB.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
 	require.NoError(t, err, "Failed to truncate user tables")
 }
 
@@ -117,7 +141,7 @@ func TestUserRegistration_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(testUserHandler.Register).ServeHTTP(rr, req)
+	testRouter.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusCreated, rr.Code, "Expected status code 201 Created")
 
@@ -126,10 +150,15 @@ func TestUserRegistration_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "User created successfully", responseBody["message"])
 
-	var email string
-	err = testDB.QueryRow("SELECT email FROM users WHERE email = $1", registrationPayload.Email).Scan(&email)
+	var userID, email string
+	err = testDB.QueryRow("SELECT id, email FROM users WHERE email = $1", registrationPayload.Email).Scan(&userID, &email)
 	require.NoError(t, err, "User should exist in database after registration")
 	assert.Equal(t, registrationPayload.Email, email)
+
+	var cartCount int
+	err = testDB.QueryRow("SELECT COUNT(*) FROM carts WHERE user_id = $1", userID).Scan(&cartCount)
+	require.NoError(t, err, "Failed to query cart count for new user")
+	assert.Equal(t, 1, cartCount, "A cart should be created for the new user")
 }
 
 func TestUserLogin_Success(t *testing.T) {
@@ -186,7 +215,7 @@ func TestUserLogin_Failure(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodPost, "/users/login", bytes.NewBuffer(payloadBytes))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(testUserHandler.Login).ServeHTTP(rr, req)
+	testRouter.ServeHTTP(rr, req)
 	assert.Equal(t, http.StatusUnauthorized, rr.Code, "Expected 401 for non-existent user")
 
 	// Register a user for the wrong password test
@@ -249,11 +278,10 @@ func TestGetUserByID_Success(t *testing.T) {
 	token := loginRespBody["token"]
 	require.NotEmpty(t, token, "Token not found")
 
-	getReq, _ := http.NewRequest(http.MethodGet, "/users/get_by_id", nil)
+	getReq, _ := http.NewRequest(http.MethodGet, "/users/get-by-id", nil)
 	getReq.Header.Set("Authorization", "Bearer "+token)
 	getRR := httptest.NewRecorder()
-	authedHandler := testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.GetUserByID))
-	authedHandler.ServeHTTP(getRR, getReq)
+	testRouter.ServeHTTP(getRR, getReq)
 
 	assert.Equal(t, http.StatusOK, getRR.Code, "Expected 200 OK for GetUserByID")
 	var fetchedUser models.User
@@ -266,16 +294,15 @@ func TestGetUserByID_Success(t *testing.T) {
 
 func TestGetUserByID_Unauthorized(t *testing.T) {
 	clearUserTables(t)
-	getReqUnauth, _ := http.NewRequest(http.MethodGet, "/users/get_by_id", nil)
+	getReqUnauth, _ := http.NewRequest(http.MethodGet, "/users/get-by-id", nil)
 	getRRUnauth := httptest.NewRecorder()
-	authedHandler := testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.GetUserByID))
-	authedHandler.ServeHTTP(getRRUnauth, getReqUnauth)
+	testRouter.ServeHTTP(getRRUnauth, getReqUnauth)
 	assert.Equal(t, http.StatusUnauthorized, getRRUnauth.Code, "Expected 401 Unauthorized without token")
 
-	getReqInvalidToken, _ := http.NewRequest(http.MethodGet, "/users/get_by_id", nil)
+	getReqInvalidToken, _ := http.NewRequest(http.MethodGet, "/users/get-by-id", nil)
 	getReqInvalidToken.Header.Set("Authorization", "Bearer invalidtoken123")
 	getRRInvalidToken := httptest.NewRecorder()
-	authedHandler.ServeHTTP(getRRInvalidToken, getReqInvalidToken)
+	testRouter.ServeHTTP(getRRInvalidToken, getReqInvalidToken)
 	assert.Equal(t, http.StatusUnauthorized, getRRInvalidToken.Code, "Expected 401 Unauthorized with invalid token")
 }
 
@@ -321,8 +348,7 @@ func TestUpdateUser_Success(t *testing.T) {
 	updateReq.Header.Set("Authorization", "Bearer "+token)
 
 	updateRR := httptest.NewRecorder()
-	authedUpdateHandler := testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.UpdateUser))
-	authedUpdateHandler.ServeHTTP(updateRR, updateReq)
+	testRouter.ServeHTTP(updateRR, updateReq)
 
 	assert.Equal(t, http.StatusOK, updateRR.Code, "Expected 200 OK for UpdateUser")
 	var updateRespBody map[string]string
@@ -344,15 +370,14 @@ func TestUpdateUser_Unauthorized(t *testing.T) {
 	updateReqUnauth, _ := http.NewRequest(http.MethodPut, "/users/update", bytes.NewBuffer(updatePayloadBytes))
 	updateReqUnauth.Header.Set("Content-Type", "application/json")
 	updateRRUnauth := httptest.NewRecorder()
-	authedUpdateHandler := testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.UpdateUser))
-	authedUpdateHandler.ServeHTTP(updateRRUnauth, updateReqUnauth)
+	testRouter.ServeHTTP(updateRRUnauth, updateReqUnauth)
 	assert.Equal(t, http.StatusUnauthorized, updateRRUnauth.Code, "Expected 401 Unauthorized without token")
 
 	updateReqInvalidToken, _ := http.NewRequest(http.MethodPut, "/users/update", bytes.NewBuffer(updatePayloadBytes))
 	updateReqInvalidToken.Header.Set("Content-Type", "application/json")
 	updateReqInvalidToken.Header.Set("Authorization", "Bearer invalidtoken123")
 	updateRRInvalidToken := httptest.NewRecorder()
-	authedUpdateHandler.ServeHTTP(updateRRInvalidToken, updateReqInvalidToken)
+	testRouter.ServeHTTP(updateRRInvalidToken, updateReqInvalidToken)
 	assert.Equal(t, http.StatusUnauthorized, updateRRInvalidToken.Code, "Expected 401 Unauthorized with invalid token")
 }
 
@@ -384,11 +409,20 @@ func TestDeleteUser_Success(t *testing.T) {
 	token := loginRespBody["token"]
 	require.NotEmpty(t, token, "Token not found")
 
+	getReq, _ := http.NewRequest(http.MethodGet, "/users/get-by-id", nil)
+	getReq.Header.Set("Authorization", "Bearer "+token)
+	getRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(getRR, getReq)
+	require.Equal(t, http.StatusOK, getRR.Code, "GetUserByID failed")
+	var userRespBody map[string]interface{}
+	_ = json.Unmarshal(getRR.Body.Bytes(), &userRespBody)
+	userID := userRespBody["id"]
+	require.NotEmpty(t, userID, "User ID not found")
+
 	deleteReq, _ := http.NewRequest(http.MethodDelete, "/users/delete", nil)
 	deleteReq.Header.Set("Authorization", "Bearer "+token)
 	deleteRR := httptest.NewRecorder()
-	authedDeleteHandler := testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.DeleteUser))
-	authedDeleteHandler.ServeHTTP(deleteRR, deleteReq)
+	testRouter.ServeHTTP(deleteRR, deleteReq)
 
 	assert.Equal(t, http.StatusOK, deleteRR.Code, "Expected 200 OK for DeleteUser")
 	var deleteRespBody map[string]string
@@ -399,20 +433,27 @@ func TestDeleteUser_Success(t *testing.T) {
 	err := testDB.QueryRow("SELECT COUNT(*) FROM users WHERE email = $1", regEmail).Scan(&count)
 	require.NoError(t, err, "Failed to query user count from DB after delete")
 	assert.Equal(t, 0, count, "User should not exist in DB after deletion")
+
+	err = testDB.QueryRow("SELECT COUNT(*) FROM auths WHERE user_id = $1", userID).Scan(&count)
+	require.NoError(t, err, "Failed to query auth count from DB after delete")
+	assert.Equal(t, 0, count, "Auths should not exist in DB after deletion")
+
+	err = testDB.QueryRow("SELECT COUNT(*) FROM carts WHERE user_id = $1", userID).Scan(&count)
+	require.NoError(t, err, "Failed to query cart count from DB after user delete")
+	assert.Equal(t, 0, count, "Cart should not exist in DB after user deletion")
 }
 
 func TestDeleteUser_Unauthorized(t *testing.T) {
 	clearUserTables(t)
 	deleteReqUnauth, _ := http.NewRequest(http.MethodDelete, "/users/delete", nil)
 	deleteRRUnauth := httptest.NewRecorder()
-	authedDeleteHandler := testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.DeleteUser))
-	authedDeleteHandler.ServeHTTP(deleteRRUnauth, deleteReqUnauth)
+	testRouter.ServeHTTP(deleteRRUnauth, deleteReqUnauth)
 	assert.Equal(t, http.StatusUnauthorized, deleteRRUnauth.Code, "Expected 401 Unauthorized without token")
 
 	deleteReqInvalidToken, _ := http.NewRequest(http.MethodDelete, "/users/delete", nil)
 	deleteReqInvalidToken.Header.Set("Authorization", "Bearer invalidtoken123")
 	deleteRRInvalidToken := httptest.NewRecorder()
-	authedDeleteHandler.ServeHTTP(deleteRRInvalidToken, deleteReqInvalidToken)
+	testRouter.ServeHTTP(deleteRRInvalidToken, deleteReqInvalidToken)
 	assert.Equal(t, http.StatusUnauthorized, deleteRRInvalidToken.Code, "Expected 401 Unauthorized with invalid token")
 }
 
@@ -450,12 +491,11 @@ func TestGetUserByName(t *testing.T) {
 	token := loginRespBody["token"]
 	require.NotEmpty(t, token, "Token not found")
 
-	getReq, err := http.NewRequest(http.MethodGet, "/users/get_by_name?name=John%20Doe", nil)
+	getReq, err := http.NewRequest(http.MethodGet, "/users/get-by-name?name=John%20Doe", nil)
 	require.NoError(t, err)
 	getReq.Header.Set("Authorization", "Bearer "+token)
 	getRR := httptest.NewRecorder()
-	authedHandler := testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.GetUserByName))
-	authedHandler.ServeHTTP(getRR, getReq)
+	testRouter.ServeHTTP(getRR, getReq)
 
 	assert.Equal(t, http.StatusOK, getRR.Code, "Expected 200 OK for GetUserByName")
 	var user models.User
@@ -499,12 +539,11 @@ func TestGetUserByEmail(t *testing.T) {
 	token := loginRespBody["token"]
 	require.NotEmpty(t, token, "Token not found")
 
-	getReq, err := http.NewRequest(http.MethodGet, fmt.Sprintf("/users/get_by_email?email=%s", regEmail), nil)
+	getReq, err := http.NewRequest(http.MethodGet, fmt.Sprintf("/users/get-by-email?email=%s", regEmail), nil)
 	require.NoError(t, err)
 	getReq.Header.Set("Authorization", "Bearer "+token)
 	getRR := httptest.NewRecorder()
-	authedHandler := testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.GetUserByEmail))
-	authedHandler.ServeHTTP(getRR, getReq)
+	testRouter.ServeHTTP(getRR, getReq)
 
 	assert.Equal(t, http.StatusOK, getRR.Code, "Expected 200 OK for GetUserByEmail")
 	var user models.User
@@ -549,13 +588,13 @@ func TestInvalidPasswordRegistration(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodPost, "/users/register", bytes.NewBuffer(payloadBytes))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(testUserHandler.Register).ServeHTTP(rr, req)
+	testRouter.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code, "Expected 400 for invalid password")
 	var errorResp map[string]string
 	err := json.Unmarshal(rr.Body.Bytes(), &errorResp)
 	require.NoError(t, err)
-	assert.Contains(t, errorResp["error"], "Password must be at least 6 characters long")
+	assert.Contains(t, errorResp["error"], "Password must be at least 8 characters long")
 }
 
 func TestInvalidEmailRegistration(t *testing.T) {
@@ -568,7 +607,7 @@ func TestInvalidEmailRegistration(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodPost, "/users/register", bytes.NewBuffer(payloadBytes))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
-	http.HandlerFunc(testUserHandler.Register).ServeHTTP(rr, req)
+	testRouter.ServeHTTP(rr, req)
 
 	assert.Equal(t, http.StatusBadRequest, rr.Code, "Expected 400 for invalid email format")
 	var errorResp map[string]string
@@ -677,7 +716,7 @@ func TestUserUpdate_GeneratesNewTokenAndUpdatesDetails(t *testing.T) {
 	require.NoError(t, err)
 	loginReq.Header.Set("Content-Type", "application/json")
 	loginRR := httptest.NewRecorder()
-	http.HandlerFunc(testUserHandler.Login).ServeHTTP(loginRR, loginReq)
+	testRouter.ServeHTTP(loginRR, loginReq)
 	require.Equal(t, http.StatusOK, loginRR.Code, "User login failed")
 	var loginResp map[string]string
 	err = json.Unmarshal(loginRR.Body.Bytes(), &loginResp)
@@ -701,8 +740,7 @@ func TestUserUpdate_GeneratesNewTokenAndUpdatesDetails(t *testing.T) {
 	updateReq.Header.Set("Content-Type", "application/json")
 	updateReq.Header.Set("Authorization", "Bearer "+initialToken)
 	updateRR := httptest.NewRecorder()
-	authedUpdateHandler := testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.UpdateUser))
-	authedUpdateHandler.ServeHTTP(updateRR, updateReq)
+	testRouter.ServeHTTP(updateRR, updateReq)
 
 	// 5. Assert response from update
 	require.Equal(t, http.StatusOK, updateRR.Code, "User update failed. Body: "+updateRR.Body.String())
@@ -724,12 +762,11 @@ func TestUserUpdate_GeneratesNewTokenAndUpdatesDetails(t *testing.T) {
 
 	// 6. Use the new JWT to get user by ID (or by name)
 	// Using GetUserByID as it's simpler and directly uses the ID from the updated user object
-	getReq, err := http.NewRequest(http.MethodGet, "/users/get_by_id", nil) // Endpoint expects ID from token context
+	getReq, err := http.NewRequest(http.MethodGet, "/users/get-by-id", nil) // Endpoint expects ID from token context
 	require.NoError(t, err)
 	getReq.Header.Set("Authorization", "Bearer "+newToken) // Use the NEW token
 	getRR := httptest.NewRecorder()
-	authedGetHandler := testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.GetUserByID))
-	authedGetHandler.ServeHTTP(getRR, getReq)
+	testRouter.ServeHTTP(getRR, getReq)
 
 	// 7. Assert that the subsequent request is successful and returns updated info
 	require.Equal(t, http.StatusOK, getRR.Code, "GetUserByID with new token failed. Body: "+getRR.Body.String())

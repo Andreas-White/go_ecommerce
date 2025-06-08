@@ -1,11 +1,14 @@
 package utils
 
 import (
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/mail"
 	"strings"
@@ -110,4 +113,36 @@ func IsValidEmail(email string) bool {
 	}
 
 	return true
+}
+
+func HandleAPIErrors(err error, w http.ResponseWriter, sourceFunc string, httpCode int, genericErrorMessage string) {
+	if errors.Is(err, context.Canceled) {
+		log.Printf("\n{%s - Request cancelled: %v}", sourceFunc, err)
+		RespondWithError(w, http.StatusRequestTimeout, "Request cancelled")
+		return
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		log.Printf("\n{%s - Request timed out: %v}", sourceFunc, err)
+		RespondWithError(w, http.StatusGatewayTimeout, "Operation timed out")
+		return
+	}
+	log.Printf("\n{%s - error: %v}", sourceFunc, err)
+	RespondWithError(w, httpCode, genericErrorMessage)
+}
+
+func HandleServiceErrors(ctx context.Context, err error, sourceFunc string) error {
+	if ctx.Err() != nil {
+		return fmt.Errorf("\n{%s - context error: %w}", sourceFunc, ctx.Err())
+	}
+	return fmt.Errorf("\n{%s - error: %w}", sourceFunc, err)
+}
+
+func HandleRepositoryErrors(ctx context.Context, err error, sourceFunc string, userIdentifier string) error {
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("\n{%s - not found: %w, user_identifier: %s}", sourceFunc, err, userIdentifier)
+	}
+	if ctx.Err() != nil {
+		return fmt.Errorf("\n{%s - context error : %w, user_identifier: %s}", sourceFunc, ctx.Err(), userIdentifier)
+	}
+	return fmt.Errorf("\n{%s - error : %w, user_identifier: %s}", sourceFunc, err, userIdentifier)
 }

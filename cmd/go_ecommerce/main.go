@@ -32,18 +32,28 @@ func main() {
 		log.Fatal("Failed to initialize authenticator: ", err)
 	}
 
+	// auth
+	authRepo := repositories.NewAuthRepository(DB)
+	authService := services.NewAuthService(authRepo)
+	authHandler := handlers.NewAuthHandler(authService)
+
+	// user
 	userRepo := repositories.NewUserRepository(DB)
 	userService := services.NewUserService(userRepo)
 	userHandler := handlers.NewUserHandler(userService, authMiddleware)
 
 	// Define routes
+	//user basic routes
 	http.HandleFunc("/users/register", userHandler.Register)
 	http.HandleFunc("/users/login", userHandler.Login)
-	http.Handle("/users/get_by_id", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByID)))
-	http.Handle("/users/get_by_name", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByName)))
-	http.Handle("/users/get_by_email", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByEmail)))
+	http.Handle("/users/get-by-id", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByID)))
+	http.Handle("/users/get-by-name", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByName)))
+	http.Handle("/users/get-by-email", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByEmail)))
 	http.Handle("/users/update", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.UpdateUser)))
 	http.Handle("/users/delete", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.DeleteUser)))
+
+	//auth routes
+	http.Handle("/auth/change-password", authMiddleware.AuthenticateJWT(http.HandlerFunc(authHandler.ChangePassword)))
 
 	// server
 	log.Printf("Server is listening on port %v", cfg.AppPort)

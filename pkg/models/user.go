@@ -61,3 +61,8 @@ type Auth struct {
 	Password  string     `json:"-" db:"password"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty" db:"updated_at"`
 }
+
+type ChangePasswordDTO struct {
+	CurrentPassword string `json:"current_password" validate:"required"`
+	NewPassword     string `json:"new_password" validate:"required,min=8"`
+}

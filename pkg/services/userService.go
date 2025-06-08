@@ -35,21 +35,20 @@ func NewUserService(userRepo repositories.IUserRepository) IUserService {
 // CreateUser calls the repository to insert a new user into the database
 func (s *UserService) CreateUser(ctx context.Context, user *models.UserDTO) error {
 	if user.FirstName == "" || user.LastName == "" || user.Email == "" {
-		return fmt.Errorf("{service/CreateUser - full name and email are required}")
+		return utils.HandleServiceErrors(ctx, fmt.Errorf("full name and email are required"), "service/CreateUser")
 	}
 
-	if len(user.Password) < 6 {
-		return fmt.Errorf("{service/CreateUser - password must be at least 6 characters long}")
+	if len(user.Password) < 8 {
+		return utils.HandleServiceErrors(ctx, fmt.Errorf("password must be at least 8 characters long"), "service/CreateUser")
 	}
 
 	if !utils.IsValidEmail(user.Email) {
-		return fmt.Errorf("{service/CreateUser - invalid email format}")
+		return utils.HandleServiceErrors(ctx, fmt.Errorf("invalid email format"), "service/CreateUser")
 	}
 
 	err := s.UserRepo.CreateUser(ctx, user)
 	if err != nil {
-		err = s.handleErrors(ctx, err)
-		return fmt.Errorf("{service/CreateUser - failed to create user in repository: %w}", err)
+		return utils.HandleServiceErrors(ctx, err, "service/CreateUser")
 	}
 
 	return nil
@@ -59,8 +58,7 @@ func (s *UserService) CreateUser(ctx context.Context, user *models.UserDTO) erro
 func (s *UserService) GetUserByID(ctx context.Context, id string) (*models.User, error) {
 	user, err := s.UserRepo.GetUserByID(ctx, id)
 	if err != nil {
-		err = s.handleErrors(ctx, err)
-		return nil, fmt.Errorf("{service/GetUserByID - failed to get user by ID from repository: %w}", err)
+		return nil, utils.HandleServiceErrors(ctx, err, "service/GetUserByID")
 	}
 	return user, nil
 }
@@ -69,8 +67,7 @@ func (s *UserService) GetUserByID(ctx context.Context, id string) (*models.User,
 func (s *UserService) GetUserByName(ctx context.Context, firstName string, lastName string, middleName string) (*models.User, error) {
 	user, err := s.UserRepo.GetUserByFullName(ctx, firstName, lastName, middleName)
 	if err != nil {
-		err = s.handleErrors(ctx, err)
-		return nil, fmt.Errorf("{service/GetUserByName - failed to get user by name from repository: %w}", err)
+		return nil, utils.HandleServiceErrors(ctx, err, "service/GetUserByName")
 	}
 	return user, nil
 }
@@ -79,8 +76,7 @@ func (s *UserService) GetUserByName(ctx context.Context, firstName string, lastN
 func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	user, err := s.UserRepo.GetUserByEmail(ctx, email)
 	if err != nil {
-		err = s.handleErrors(ctx, err)
-		return nil, fmt.Errorf("{service/GetUserByEmail - failed to get user by email from repository: %w}", err)
+		return nil, utils.HandleServiceErrors(ctx, err, "service/GetUserByEmail")
 	}
 	return user, nil
 }
@@ -88,11 +84,11 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*models
 // UpdateUser updates a user’s information in the database
 func (s *UserService) UpdateUser(ctx context.Context, authUser *models.User, userPayload *models.UserDTO) (*models.User, error) {
 	if authUser.ID == uuid.Nil {
-		return nil, fmt.Errorf("{service/UpdateUser - user ID is required}")
+		return nil, utils.HandleServiceErrors(ctx, fmt.Errorf("user ID is required"), "service/UpdateUser")
 	}
 
 	if !utils.IsValidEmail(authUser.Email) {
-		return nil, fmt.Errorf("{service/UpdateUser - invalid email format}")
+		return nil, utils.HandleServiceErrors(ctx, fmt.Errorf("invalid email format"), "service/UpdateUser")
 	}
 
 	updatedUser := &models.User{
@@ -111,8 +107,7 @@ func (s *UserService) UpdateUser(ctx context.Context, authUser *models.User, use
 
 	err := s.UserRepo.UpdateUser(ctx, updatedUser)
 	if err != nil {
-		err = s.handleErrors(ctx, err)
-		return nil, fmt.Errorf("{service/UpdateUser - failed to update user in repository: %w}", err)
+		return nil, utils.HandleServiceErrors(ctx, err, "service/UpdateUser")
 	}
 
 	return updatedUser, nil
@@ -121,13 +116,12 @@ func (s *UserService) UpdateUser(ctx context.Context, authUser *models.User, use
 // DeleteUser deletes a user by ID
 func (s *UserService) DeleteUser(ctx context.Context, id string) error {
 	if id == "" {
-		return fmt.Errorf("{service/DeleteUser - user ID is required}")
+		return utils.HandleServiceErrors(ctx, fmt.Errorf("user ID is required"), "service/DeleteUser")
 	}
 
 	err := s.UserRepo.DeleteUser(ctx, id)
 	if err != nil {
-		err = s.handleErrors(ctx, err)
-		return fmt.Errorf("{service/DeleteUser - failed to delete user in repository: %w}", err)
+		return utils.HandleServiceErrors(ctx, err, "service/DeleteUser")
 	}
 	return nil
 }
@@ -135,12 +129,11 @@ func (s *UserService) DeleteUser(ctx context.Context, id string) error {
 func (s *UserService) AuthenticateUser(ctx context.Context, email, password string) (*models.User, error) {
 	authedUser, err := s.UserRepo.GetAuthedUserByEmail(ctx, email)
 	if err != nil {
-		err = s.handleErrors(ctx, err)
-		return nil, fmt.Errorf("{service/AuthenticateUser - error getting authed user: %w}", err)
+		return nil, utils.HandleServiceErrors(ctx, err, "service/AuthenticateUser")
 	}
 
 	if !utils.CheckPasswordHash(password, authedUser.Auth.Password) {
-		return nil, fmt.Errorf("{service/AuthenticateUser - incorrect password}")
+		return nil, utils.HandleServiceErrors(ctx, fmt.Errorf("incorrect password"), "service/AuthenticateUser")
 	}
 
 	user := &models.User{
@@ -192,11 +185,4 @@ func boolOrDefault(newValue bool, oldValue bool) bool {
 	}
 
 	return oldValue
-}
-
-func (s *UserService) handleErrors(ctx context.Context, err error) error {
-	if ctx.Err() != nil {
-		return fmt.Errorf("{service/handleErrors - context error: %w}", ctx.Err())
-	}
-	return fmt.Errorf("{service/handleErrors - error: %w}", err)
 }
