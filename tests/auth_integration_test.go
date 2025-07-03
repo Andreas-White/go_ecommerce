@@ -14,7 +14,7 @@ import (
 )
 
 func TestChangePassword_Success(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 
 	email := "change_pass_succ@example.com"
 	initialPassword := "OldSecurePassword123"
@@ -65,7 +65,7 @@ func TestChangePassword_Success(t *testing.T) {
 }
 
 func TestChangePassword_IncorrectCurrentPassword(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 
 	email := "change_pass_fail@example.com"
 	correctPassword := "CorrectPassword123"
@@ -99,7 +99,7 @@ func TestChangePassword_IncorrectCurrentPassword(t *testing.T) {
 }
 
 func TestChangePassword_InvalidNewPassword_TooShort(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 	email := "change_pass_short@example.com"
 	currentPassword := "ValidOldPassword123"
 	shortNewPassword := "short"
@@ -127,7 +127,7 @@ func TestChangePassword_InvalidNewPassword_TooShort(t *testing.T) {
 }
 
 func TestChangePassword_NewPasswordSameAsOld(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 	email := "change_pass_same@example.com"
 	currentPassword := "SameOldPassword123"
 
@@ -154,7 +154,7 @@ func TestChangePassword_NewPasswordSameAsOld(t *testing.T) {
 }
 
 func TestChangePassword_MissingFields(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 	email := "change_pass_missing@example.com"
 	currentPassword := "ValidPassword123"
 
@@ -199,7 +199,7 @@ func TestChangePassword_MissingFields(t *testing.T) {
 }
 
 func TestChangePassword_Unauthorized_NoToken(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 
 	changeDTO := models.ChangePasswordDTO{
 		CurrentPassword: "anyCurrentPassword",
@@ -221,7 +221,7 @@ func TestChangePassword_Unauthorized_NoToken(t *testing.T) {
 }
 
 func TestChangePassword_Unauthorized_InvalidToken(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 
 	changeDTO := models.ChangePasswordDTO{
 		CurrentPassword: "anyCurrentPassword",

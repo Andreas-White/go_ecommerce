@@ -42,6 +42,11 @@ func main() {
 	userService := services.NewUserService(userRepo)
 	userHandler := handlers.NewUserHandler(userService, authMiddleware)
 
+	// product
+	productRepo := repositories.NewProductRepository(DB)
+	productService := services.NewProductService(productRepo)
+	productHandler := handlers.NewProductHandler(productService)
+
 	// Define routes
 	//user basic routes
 	http.HandleFunc("/users/register", userHandler.Register)
@@ -54,6 +59,16 @@ func main() {
 
 	//auth routes
 	http.Handle("/auth/change-password", authMiddleware.AuthenticateJWT(http.HandlerFunc(authHandler.ChangePassword)))
+
+	//product routes
+	http.Handle("/products/create", authMiddleware.AuthenticateJWT(http.HandlerFunc(productHandler.CreateProduct)))
+	http.HandleFunc("/products", productHandler.GetProducts)
+	http.HandleFunc("/product", productHandler.GetProduct)
+	http.HandleFunc("/products/{id}", productHandler.GetProduct)
+	http.HandleFunc("/products/category", productHandler.GetProductsByCategory)
+	http.HandleFunc("/products/user-id", productHandler.GetProductsByUserID)
+	http.Handle("/products/update", authMiddleware.AuthenticateJWT(http.HandlerFunc(productHandler.UpdateProduct)))
+	http.Handle("/products/delete", authMiddleware.AuthenticateJWT(http.HandlerFunc(productHandler.DeleteProduct)))
 
 	// server
 	log.Printf("Server is listening on port %v", cfg.AppPort)

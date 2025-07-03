@@ -18,3 +18,14 @@ type Product struct {
 	UpdatedAt   *time.Time `json:"updated_at,omitempty" db:"updated_at"`
 	UserID      uuid.UUID  `json:"user_id" db:"user_id"`
 }
+
+type ProductDTO struct {
+	Name        string     `json:"name"`
+	Description string     `json:"description,omitempty"`
+	Price       float64    `json:"price"`
+	Stock       int32      `json:"stock"`
+	Category    string     `json:"category_id"`
+	ImageUrl    string     `json:"image_url,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   *time.Time `json:"updated_at,omitempty"`
+}

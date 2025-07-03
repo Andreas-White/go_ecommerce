@@ -18,6 +18,7 @@ import (
 var testDB *sql.DB
 var testUserHandler *handlers.UserHandler
 var testAuthHandler handlers.IAuthHandler
+var testProductHandler *handlers.ProductHandler
 var testAuthenticator middleware.TokenGenerator
 var testRouter *http.ServeMux
 

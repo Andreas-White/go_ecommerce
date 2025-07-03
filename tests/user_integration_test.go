@@ -80,6 +80,11 @@ func TestMain(m *testing.M) {
 	authService := services.NewAuthService(authRepo)
 	testAuthHandler = handlers.NewAuthHandler(authService) // Initialize package-level testAuthHandler
 
+	// Initialize Product components
+	productRepo := repositories.NewProductRepository(testDB)
+	productService := services.NewProductService(productRepo)
+	testProductHandler = handlers.NewProductHandler(productService)
+
 	// Initialize Router
 	testRouter = http.NewServeMux()
 
@@ -98,18 +103,27 @@ func TestMain(m *testing.M) {
 	// Auth routes (e.g., change password)
 	testRouter.Handle("/auth/change-password", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testAuthHandler.ChangePassword)))
 
+	// Product routes
+	testRouter.HandleFunc("/products", testProductHandler.GetProducts)
+	testRouter.HandleFunc("/product", testProductHandler.GetProduct)
+	testRouter.HandleFunc("/products/category", testProductHandler.GetProductsByCategory)
+	testRouter.HandleFunc("/products/user-id", testProductHandler.GetProductsByUserID)
+	testRouter.Handle("/products/create", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testProductHandler.CreateProduct)))
+	testRouter.Handle("/products/update", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testProductHandler.UpdateProduct)))
+	testRouter.Handle("/products/delete", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testProductHandler.DeleteProduct)))
+
 	code := m.Run()
 	os.Exit(code)
 }
 
-func clearUserTables(t *testing.T) {
+func clearTables(t *testing.T) {
 	t.Helper()
-	_, err := testDB.Exec("TRUNCATE TABLE users RESTART IDENTITY CASCADE")
-	require.NoError(t, err, "Failed to truncate user tables")
+	_, err := testDB.Exec("TRUNCATE TABLE users, products RESTART IDENTITY CASCADE")
+	require.NoError(t, err, "Failed to truncate tables")
 }
 
 func TestUserRegistration_Success(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 
 	registrationPayload := createUserDTO("testuser@example.com", "password123")
 
@@ -133,7 +147,7 @@ func TestUserRegistration_Success(t *testing.T) {
 }
 
 func TestUserLogin_Success(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 
 	registrationPayload := createUserDTO("loginuser@example.com", "securepassword123")
 
@@ -151,7 +165,7 @@ func TestUserLogin_Success(t *testing.T) {
 }
 
 func TestUserLogin_Failure(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 
 	rr, _, err := loginUserAndGetTokenAuth(t, "nonexistent@example.com", "anypassword")
 	require.ErrorContains(t, err, "login request failed with status 401")
@@ -167,7 +181,7 @@ func TestUserLogin_Failure(t *testing.T) {
 }
 
 func TestGetUserByID_Success(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 	var registeredUser models.User
 
 	regPayload := createUserDTO("getuser@example.com", "password123")
@@ -195,7 +209,7 @@ func TestGetUserByID_Success(t *testing.T) {
 }
 
 func TestGetUserByID_Unauthorized(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 	getRRUnauth := getUserById("")
 	assert.Equal(t, http.StatusUnauthorized, getRRUnauth.Code, "Expected 401 Unauthorized without token")
 
@@ -204,7 +218,7 @@ func TestGetUserByID_Unauthorized(t *testing.T) {
 }
 
 func TestUpdateUser_Success(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 	registrationPayload := createUserDTO("updateuser@example.com", "password123")
 	regRR := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "Registration failed")
@@ -233,7 +247,7 @@ func TestUpdateUser_Success(t *testing.T) {
 }
 
 func TestUpdateUser_Unauthorized(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 	updatePayload := models.UserDTO{FirstName: "AttemptUpdate"}
 
 	updateRRUnauth := updateUser("", updatePayload)
@@ -244,7 +258,7 @@ func TestUpdateUser_Unauthorized(t *testing.T) {
 }
 
 func TestDeleteUser_Success(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 	// Register a user for deletion test
 	registrationPayload := createUserDTO("deleteuser@example.com", "password123")
 	regRR := registerTestUserAuth(t, registrationPayload)
@@ -289,7 +303,7 @@ func TestDeleteUser_Success(t *testing.T) {
 }
 
 func TestDeleteUser_Unauthorized(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 	deleteRRUnauth := deleteUser("")
 	assert.Equal(t, http.StatusUnauthorized, deleteRRUnauth.Code, "Expected 401 Unauthorized without token")
 
@@ -298,7 +312,7 @@ func TestDeleteUser_Unauthorized(t *testing.T) {
 }
 
 func TestGetUserByName(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 	registrationPayload := createUserDTO("byname@example.com", "password123")
 
 	regRR := registerTestUserAuth(t, registrationPayload)
@@ -320,7 +334,7 @@ func TestGetUserByName(t *testing.T) {
 }
 
 func TestGetUserByEmail(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 	registrationPayload := createUserDTO("byemail@example.com", "password123")
 
 	regRR := registerTestUserAuth(t, registrationPayload)
@@ -342,7 +356,7 @@ func TestGetUserByEmail(t *testing.T) {
 }
 
 func TestDuplicateRegistration(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 	regPayload := createUserDTO("duplicate@example.com", "password123")
 	regRR := registerTestUserAuth(t, regPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "First registration failed")
@@ -357,7 +371,7 @@ func TestDuplicateRegistration(t *testing.T) {
 }
 
 func TestInvalidPasswordRegistration(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 	regPayload := createUserDTO("shortpass@example.com", "123")
 	regRR := registerTestUserAuth(t, regPayload)
 	assert.Equal(t, http.StatusBadRequest, regRR.Code, "Expected 400 for invalid password")
@@ -368,7 +382,7 @@ func TestInvalidPasswordRegistration(t *testing.T) {
 }
 
 func TestInvalidEmailRegistration(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 	regPayload := createUserDTO("invalid-email-format", "password123")
 	regRR := registerTestUserAuth(t, regPayload)
 	assert.Equal(t, http.StatusBadRequest, regRR.Code, "Expected 400 for invalid email format")
@@ -379,7 +393,7 @@ func TestInvalidEmailRegistration(t *testing.T) {
 }
 
 func TestDeleteNonExistentUser_Returns404(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 
 	// 1. Register a user
 	regPayload := createUserDTO("deletecheck@example.com", "password123")
@@ -414,7 +428,7 @@ func TestDeleteNonExistentUser_Returns404(t *testing.T) {
 }
 
 func TestUserUpdate_GeneratesNewTokenAndUpdatesDetails(t *testing.T) {
-	clearUserTables(t)
+	clearTables(t)
 
 	// 1. Register a user
 	regPayload := createUserDTO("updatejwt@example.com", "password123")
