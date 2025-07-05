@@ -39,8 +39,8 @@ func main() {
 
 	// user
 	userRepo := repositories.NewUserRepository(DB)
-	userService := services.NewUserService(userRepo)
-	userHandler := handlers.NewUserHandler(userService, authMiddleware)
+	userService := services.NewUserService(userRepo, authMiddleware)
+	userHandler := handlers.NewUserHandler(userService)
 
 	// product
 	productRepo := repositories.NewProductRepository(DB)

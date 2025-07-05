@@ -3,118 +3,13 @@ package tests
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"go_ecommerce/internal/config"
-	"go_ecommerce/pkg/database"
-	"go_ecommerce/pkg/handlers"
-	"go_ecommerce/pkg/middleware"
 	"go_ecommerce/pkg/models"
-	"go_ecommerce/pkg/repositories"
-	"go_ecommerce/pkg/services"
-	"log"
 	"net/http"
-	"os"
 	"testing"
 
-	"github.com/golang-migrate/migrate/v4"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestMain(m *testing.M) {
-	tCfg := config.LoadTestConfig()
-	cfg := &config.Config{
-		DBHost:    tCfg.DBHost,
-		DBPort:    tCfg.DBPort,
-		DBUser:    tCfg.DBUser,
-		DBPass:    tCfg.DBPass,
-		DBName:    tCfg.DBName,
-		DBSslMode: tCfg.DBSslMode,
-		JWTKey:    tCfg.JWTKey,
-	}
-
-	// Run migrations for the test database
-	migrationDSN := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		cfg.DBUser, cfg.DBPass, cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.DBSslMode)
-
-	// Migrations are in the parent directory's 'migrations' folder
-	migrationsPath := "file://../migrations"
-
-	log.Printf("Attempting to run migrations for test DB from: %s on database: %s", migrationsPath, cfg.DBName)
-	mig, err := migrate.New(migrationsPath, migrationDSN)
-	if err != nil {
-		log.Fatalf("Failed to create new migrate instance for test DB: %v", err)
-	}
-
-	if err := mig.Up(); err != nil && err != migrate.ErrNoChange {
-		log.Fatalf("Failed to apply migrations for test DB: %v", err)
-	}
-	log.Println("Test database migrations applied successfully (or no changes needed).")
-
-	testDB, err = database.Init(cfg)
-	if err != nil {
-		log.Fatalf("Failed to initialize test database: %v", err)
-	}
-	defer testDB.Close()
-
-	err = testDB.Ping()
-	if err != nil {
-		log.Fatalf("Failed to ping test database: %v", err)
-	}
-
-	auth, err := middleware.NewAuthenticator(cfg.JWTKey)
-	if err != nil {
-		log.Fatalf("Failed to create authenticator for tests: %v", err)
-	}
-	testAuthenticator = auth
-
-	userRepo := repositories.NewUserRepository(testDB)
-	userService := services.NewUserService(userRepo)
-	testUserHandler = handlers.NewUserHandler(userService, testAuthenticator)
-
-	// Initialize Auth components for auth routes
-	authRepo := repositories.NewAuthRepository(testDB)
-	authService := services.NewAuthService(authRepo)
-	testAuthHandler = handlers.NewAuthHandler(authService) // Initialize package-level testAuthHandler
-
-	// Initialize Product components
-	productRepo := repositories.NewProductRepository(testDB)
-	productService := services.NewProductService(productRepo)
-	testProductHandler = handlers.NewProductHandler(productService)
-
-	// Initialize Router
-	testRouter = http.NewServeMux()
-
-	// Register routes on testRouter
-	// User public routes
-	testRouter.HandleFunc("/users/register", testUserHandler.Register)
-	testRouter.HandleFunc("/users/login", testUserHandler.Login)
-
-	// User authenticated routes
-	testRouter.Handle("/users/get-by-id", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.GetUserByID)))
-	testRouter.Handle("/users/get-by-name", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.GetUserByName)))
-	testRouter.Handle("/users/get-by-email", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.GetUserByEmail)))
-	testRouter.Handle("/users/update", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.UpdateUser)))
-	testRouter.Handle("/users/delete", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testUserHandler.DeleteUser)))
-
-	// Auth routes (e.g., change password)
-	testRouter.Handle("/auth/change-password", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testAuthHandler.ChangePassword)))
-
-	// Product routes
-	testRouter.HandleFunc("/products", testProductHandler.GetProducts)
-	testRouter.HandleFunc("/product", testProductHandler.GetProduct)
-	testRouter.HandleFunc("/products/category", testProductHandler.GetProductsByCategory)
-	testRouter.HandleFunc("/products/user-id", testProductHandler.GetProductsByUserID)
-	testRouter.Handle("/products/create", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testProductHandler.CreateProduct)))
-	testRouter.Handle("/products/update", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testProductHandler.UpdateProduct)))
-	testRouter.Handle("/products/delete", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testProductHandler.DeleteProduct)))
-
-	code := m.Run()
-	os.Exit(code)
-}
 
 func clearTables(t *testing.T) {
 	t.Helper()
@@ -200,10 +95,9 @@ func TestGetUserByID_Success(t *testing.T) {
 	getRR := getUserById(token)
 
 	assert.Equal(t, http.StatusOK, getRR.Code, "Expected 200 OK for GetUserByID")
-	var fetchedUser models.User
+	var fetchedUser models.UserDTO
 	err = json.Unmarshal(getRR.Body.Bytes(), &fetchedUser)
 	require.NoError(t, err)
-	assert.Equal(t, registeredUser.ID, fetchedUser.ID)
 	assert.Equal(t, registeredUser.FirstName, fetchedUser.FirstName)
 	assert.Equal(t, registeredUser.Email, fetchedUser.Email)
 }
@@ -272,13 +166,10 @@ func TestDeleteUser_Success(t *testing.T) {
 	var loginRespBody map[string]string
 	_ = json.Unmarshal(loginRR.Body.Bytes(), &loginRespBody)
 
-	// Get user by ID to verify user exists
-	getRR := getUserById(token)
-	require.Equal(t, http.StatusOK, getRR.Code, "GetUserByID failed")
-	var userRespBody map[string]interface{}
-	_ = json.Unmarshal(getRR.Body.Bytes(), &userRespBody)
-	userID := userRespBody["id"]
-	require.NotEmpty(t, userID, "User ID not found")
+	// Query user to get user Id
+	var userId string
+	err = testDB.QueryRow("SELECT id FROM users WHERE email = $1", registrationPayload.Email).Scan(&userId)
+	require.NoError(t, err, "Failed to query user from DB after delete")
 
 	// Delete the user
 	deleteRR := deleteUser(token)
@@ -289,15 +180,15 @@ func TestDeleteUser_Success(t *testing.T) {
 	assert.Equal(t, "User deleted successfully", deleteRespBody["message"])
 
 	var count int
-	err = testDB.QueryRow("SELECT COUNT(*) FROM users WHERE email = $1", registrationPayload.Email).Scan(&count)
+	err = testDB.QueryRow("SELECT COUNT(*) FROM users WHERE id = $1", userId).Scan(&count)
 	require.NoError(t, err, "Failed to query user count from DB after delete")
 	assert.Equal(t, 0, count, "User should not exist in DB after deletion")
 
-	err = testDB.QueryRow("SELECT COUNT(*) FROM auths WHERE user_id = $1", userID).Scan(&count)
+	err = testDB.QueryRow("SELECT COUNT(*) FROM auths WHERE user_id = $1", userId).Scan(&count)
 	require.NoError(t, err, "Failed to query auth count from DB after delete")
 	assert.Equal(t, 0, count, "Auths should not exist in DB after deletion")
 
-	err = testDB.QueryRow("SELECT COUNT(*) FROM carts WHERE user_id = $1", userID).Scan(&count)
+	err = testDB.QueryRow("SELECT COUNT(*) FROM carts WHERE user_id = $1", userId).Scan(&count)
 	require.NoError(t, err, "Failed to query cart count from DB after user delete")
 	assert.Equal(t, 0, count, "Cart should not exist in DB after user deletion")
 }
@@ -482,11 +373,10 @@ func TestUserUpdate_GeneratesNewTokenAndUpdatesDetails(t *testing.T) {
 
 	// 7. Assert that the subsequent request is successful and returns updated info
 	require.Equal(t, http.StatusOK, getRR.Code, "GetUserByID with new token failed. Body: "+getRR.Body.String())
-	var fetchedUser models.User
+	var fetchedUser models.UserDTO
 	err = json.Unmarshal(getRR.Body.Bytes(), &fetchedUser)
 	require.NoError(t, err)
 
-	assert.Equal(t, registeredUser.ID, fetchedUser.ID, "Fetched user ID mismatch")
 	assert.Equal(t, updatedFirstName, fetchedUser.FirstName, "Fetched user first name is not the updated one")
 	assert.Equal(t, updatedLastName, fetchedUser.LastName, "Fetched user last name is not the updated one")
 	assert.Equal(t, regPayload.Email, fetchedUser.Email, "Fetched user email mismatch")

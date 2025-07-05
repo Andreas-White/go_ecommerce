@@ -13,7 +13,7 @@ import (
 )
 
 type IProductRepository interface {
-	CreateProduct(ctx context.Context, product *models.Product, userID string) error
+	CreateProduct(ctx context.Context, product *models.ProductDTO, userID string) error
 	GetProductByID(ctx context.Context, id string) (*models.Product, error)
 	GetProductsByCategory(ctx context.Context, category string) ([]models.Product, error)
 	GetProductsByUserID(ctx context.Context, userID string) ([]models.Product, error)
@@ -33,7 +33,7 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 	}
 }
 
-func (r *ProductRepository) CreateProduct(ctx context.Context, product *models.Product, userID string) error {
+func (r *ProductRepository) CreateProduct(ctx context.Context, product *models.ProductDTO, userID string) error {
 	productID := uuid.New()
 	now := time.Now()
 	query := `

@@ -3,32 +3,36 @@ package services
 import (
 	"context"
 	"fmt"
+	"go_ecommerce/pkg/middleware"
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/repositories"
 	"go_ecommerce/pkg/utils"
+	"log"
 
 	"github.com/google/uuid"
 )
 
 type IUserService interface {
 	CreateUser(ctx context.Context, user *models.UserDTO) error
-	GetUserByID(ctx context.Context, id string) (*models.User, error)
-	GetUserByName(ctx context.Context, firstName string, lastName string, middleName string) (*models.User, error)
-	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
-	UpdateUser(ctx context.Context, user *models.User, userPayload *models.UserDTO) (*models.User, error)
+	GetUserByID(ctx context.Context, id string) (*models.UserDTO, error)
+	GetUserByName(ctx context.Context, firstName string, lastName string, middleName string) (*models.UserDTO, error)
+	GetUserByEmail(ctx context.Context, email string) (*models.UserDTO, error)
+	UpdateUser(ctx context.Context, user *models.User, userPayload *models.UserDTO) (*models.User, string, error)
 	DeleteUser(ctx context.Context, id string) error
-	AuthenticateUser(ctx context.Context, email, password string) (*models.User, error)
+	AuthenticateUser(ctx context.Context, email, password string) (string, error)
 }
 
 // UserService struct
 type UserService struct {
-	UserRepo repositories.IUserRepository
+	UserRepo       repositories.IUserRepository
+	TokenGenerator middleware.TokenGenerator
 }
 
 // NewUserService creates a new UserService
-func NewUserService(userRepo repositories.IUserRepository) IUserService {
+func NewUserService(userRepo repositories.IUserRepository, tokenGenerator middleware.TokenGenerator) IUserService {
 	return &UserService{
-		UserRepo: userRepo,
+		UserRepo:       userRepo,
+		TokenGenerator: tokenGenerator,
 	}
 }
 
@@ -55,40 +59,40 @@ func (s *UserService) CreateUser(ctx context.Context, user *models.UserDTO) erro
 }
 
 // GetUserByID fetches a user by ID from the repository
-func (s *UserService) GetUserByID(ctx context.Context, id string) (*models.User, error) {
+func (s *UserService) GetUserByID(ctx context.Context, id string) (*models.UserDTO, error) {
 	user, err := s.UserRepo.GetUserByID(ctx, id)
 	if err != nil {
 		return nil, utils.HandleServiceErrors(ctx, err, "service/GetUserByID")
 	}
-	return user, nil
+	return toUserDTO(user), nil
 }
 
 // GetUserByName fetches a user by name from the repository
-func (s *UserService) GetUserByName(ctx context.Context, firstName string, lastName string, middleName string) (*models.User, error) {
+func (s *UserService) GetUserByName(ctx context.Context, firstName string, lastName string, middleName string) (*models.UserDTO, error) {
 	user, err := s.UserRepo.GetUserByFullName(ctx, firstName, lastName, middleName)
 	if err != nil {
 		return nil, utils.HandleServiceErrors(ctx, err, "service/GetUserByName")
 	}
-	return user, nil
+	return toUserDTO(user), nil
 }
 
 // GetUserByEmail fetches a user by email from the repository
-func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
+func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*models.UserDTO, error) {
 	user, err := s.UserRepo.GetUserByEmail(ctx, email)
 	if err != nil {
 		return nil, utils.HandleServiceErrors(ctx, err, "service/GetUserByEmail")
 	}
-	return user, nil
+	return toUserDTO(user), nil
 }
 
 // UpdateUser updates a user’s information in the database
-func (s *UserService) UpdateUser(ctx context.Context, authUser *models.User, userPayload *models.UserDTO) (*models.User, error) {
+func (s *UserService) UpdateUser(ctx context.Context, authUser *models.User, userPayload *models.UserDTO) (*models.User, string, error) {
 	if authUser.ID == uuid.Nil {
-		return nil, utils.HandleServiceErrors(ctx, fmt.Errorf("user ID is required"), "service/UpdateUser")
+		return nil, "", utils.HandleServiceErrors(ctx, fmt.Errorf("user ID is required"), "service/UpdateUser")
 	}
 
 	if !utils.IsValidEmail(authUser.Email) {
-		return nil, utils.HandleServiceErrors(ctx, fmt.Errorf("invalid email format"), "service/UpdateUser")
+		return nil, "", utils.HandleServiceErrors(ctx, fmt.Errorf("invalid email format"), "service/UpdateUser")
 	}
 
 	updatedUser := &models.User{
@@ -107,10 +111,15 @@ func (s *UserService) UpdateUser(ctx context.Context, authUser *models.User, use
 
 	err := s.UserRepo.UpdateUser(ctx, updatedUser)
 	if err != nil {
-		return nil, utils.HandleServiceErrors(ctx, err, "service/UpdateUser")
+		return nil, "", utils.HandleServiceErrors(ctx, err, "service/UpdateUser")
 	}
 
-	return updatedUser, nil
+	newToken, err := s.TokenGenerator.GenerateJWT(updatedUser)
+	if err != nil {
+		return nil, "", utils.HandleServiceErrors(ctx, err, "service/UpdateUser")
+	}
+
+	return updatedUser, newToken, nil
 }
 
 // DeleteUser deletes a user by ID
@@ -126,14 +135,14 @@ func (s *UserService) DeleteUser(ctx context.Context, id string) error {
 	return nil
 }
 
-func (s *UserService) AuthenticateUser(ctx context.Context, email, password string) (*models.User, error) {
+func (s *UserService) AuthenticateUser(ctx context.Context, email, password string) (string, error) {
 	authedUser, err := s.UserRepo.GetAuthedUserByEmail(ctx, email)
 	if err != nil {
-		return nil, utils.HandleServiceErrors(ctx, err, "service/AuthenticateUser")
+		return "", utils.HandleServiceErrors(ctx, err, "service/AuthenticateUser")
 	}
 
 	if !utils.CheckPasswordHash(password, authedUser.Auth.Password) {
-		return nil, utils.HandleServiceErrors(ctx, fmt.Errorf("incorrect password"), "service/AuthenticateUser")
+		return "", utils.HandleServiceErrors(ctx, fmt.Errorf("incorrect password"), "service/AuthenticateUser")
 	}
 
 	user := &models.User{
@@ -152,7 +161,29 @@ func (s *UserService) AuthenticateUser(ctx context.Context, email, password stri
 		UpdatedAt:  authedUser.UpdatedAt,
 	}
 
-	return user, nil
+	// Generate JWT token for authenticated user
+	token, err := s.TokenGenerator.GenerateJWT(user)
+	if err != nil {
+		log.Printf("{handler/Login - Error generating JWT token: %v}", err)
+		return "", utils.HandleServiceErrors(ctx, err, "service/AuthenticateUser")
+	}
+
+	return token, nil
+}
+
+func toUserDTO(user *models.User) *models.UserDTO {
+	return &models.UserDTO{
+		FirstName:  user.FirstName,
+		LastName:   user.LastName,
+		MiddleName: user.MiddleName,
+		Email:      user.Email,
+		Phone:      user.Phone,
+		IsProducer: user.IsProducer,
+		Address:    user.Address,
+		City:       user.City,
+		Country:    user.Country,
+		ZipCode:    user.ZipCode,
+	}
 }
 
 func stringOrDefault(newValue string, oldValue string) string {

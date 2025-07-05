@@ -5,22 +5,22 @@ go_ecommerce
 │   │   └── main.go                # Entry point for the application
 │
 ├── /pkg/                         
-│   ├── /db/
+│   ├── /database/
 │   │   ├── db.go                 # Database connection setup
 │   │   └── migrations/           # Database migration files (SQL scripts)
-│   ├── /models/
-│   │   └── user.go               # Structs that represent database tables, etc.
+│   ├── /middleware/
+│   │   └── auth_middleware.go    # Custom middleware (e.g., for authentication)
 │   ├── /handlers/
 │   │   ├── user_handler.go       # HTTP handlers for user-related routes
 │   │   └── ...                   # Other handlers for different routesresources
+│   ├── /models/
+│   │   └── user.go               # Structs that represent database tables, etc.
 │   ├── /repositories/
 │   │   └── user_repository.go    # Database query logic
 │   ├── /services/
 │   │   └── user_service.go       # Business logic related to users
 │   ├── /utils/
 │   │   └── utils.go              # Utility functions and helpers
-│   ├── /middleware/
-│   │   └── auth_middleware.go    # Custom middleware (e.g., for authentication)
 │
 ├── /internal/                    # Private application and library code
 │   ├── /config/

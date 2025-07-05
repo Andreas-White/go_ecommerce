@@ -6,21 +6,18 @@ import (
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/services"
 	"go_ecommerce/pkg/utils"
-	"log"
 	"net/http"
 	"strings"
 )
 
 // UserHandler struct
 type UserHandler struct {
-	UserService    services.IUserService
-	TokenGenerator middleware.TokenGenerator
+	UserService services.IUserService
 }
 
-func NewUserHandler(userService services.IUserService, tokenGenerator middleware.TokenGenerator) *UserHandler {
+func NewUserHandler(userService services.IUserService) *UserHandler {
 	return &UserHandler{
-		UserService:    userService,
-		TokenGenerator: tokenGenerator,
+		UserService: userService,
 	}
 }
 
@@ -101,7 +98,7 @@ func (h *UserHandler) GetUserByEmail(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	authUser := *middleware.GetUserFromContext(r, w)
+	authUser := middleware.GetUserFromContext(r, w)
 
 	var userPayload models.UserDTO
 	if err := json.NewDecoder(r.Body).Decode(&userPayload); err != nil {
@@ -109,15 +106,9 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedUser, err := h.UserService.UpdateUser(ctx, &authUser, &userPayload)
+	updatedUser, newToken, err := h.UserService.UpdateUser(ctx, authUser, &userPayload)
 	if err != nil {
 		utils.HandleAPIErrors(err, w, "handler/UpdateUser", http.StatusInternalServerError, "Failed to update user")
-		return
-	}
-
-	newToken, err := h.TokenGenerator.GenerateJWT(updatedUser)
-	if err != nil {
-		utils.HandleAPIErrors(err, w, "handler/UpdateUser", http.StatusInternalServerError, "Failed to generate new token after update")
 		return
 	}
 
@@ -134,7 +125,7 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	authUser := *middleware.GetUserFromContext(r, w)
+	authUser := middleware.GetUserFromContext(r, w)
 
 	err := h.UserService.DeleteUser(ctx, authUser.ID.String())
 	if err != nil {
@@ -155,17 +146,11 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	user, err := h.UserService.AuthenticateUser(ctx, loginRequest.Email, loginRequest.Password)
-	if err != nil {
-		utils.HandleAPIErrors(err, w, "handler/Login", http.StatusUnauthorized, "Failed to authenticate user")
-		return
-	}
 
 	// Generate JWT token for authenticated user
-	token, err := h.TokenGenerator.GenerateJWT(user)
+	token, err := h.UserService.AuthenticateUser(ctx, loginRequest.Email, loginRequest.Password)
 	if err != nil {
-		log.Printf("{handler/Login - Error generating JWT token: %v}", err)
-		utils.HandleAPIErrors(err, w, "handler/Login", http.StatusInternalServerError, "Internal server error")
+		utils.HandleAPIErrors(err, w, "handler/Login", http.StatusUnauthorized, "Invalid email or password")
 		return
 	}
 

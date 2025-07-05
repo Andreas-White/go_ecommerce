@@ -18,7 +18,7 @@ func NewProductHandler(service services.IProductService) *ProductHandler {
 }
 
 func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
-	var product models.Product
+	var product models.ProductDTO
 
 	if err := json.NewDecoder(r.Body).Decode(&product); err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
