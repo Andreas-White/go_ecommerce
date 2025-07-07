@@ -220,6 +220,41 @@ func TestCartFlow_GuestUser(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, addedItems, 2, "Guest cart should have 2 items after adding")
 
+	// 3b. Update cart items
+	cartItemsToUpdate := []models.CartItemDTO{
+		{CartID: cartID, ProductID: product1.ID, Quantity: 2, Price: product1.Price},
+		{CartID: cartID, ProductID: product2.ID, Quantity: 20, Price: product2.Price},
+	}
+	updateBody, _ := json.Marshal(cartItemsToUpdate)
+	updateReq, _ := http.NewRequest("POST", "/cart/update", bytes.NewBuffer(updateBody))
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateReq.AddCookie(sessionCookie)
+
+	updateRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(updateRR, updateReq)
+	require.Equal(t, http.StatusOK, updateRR.Code, "Failed to update guest cart items")
+
+	// 3c. Verify items were updated by getting the cart
+	getBodyAfterUpdate, _ := json.Marshal(cartID)
+	getReqAfterUpdate, _ := http.NewRequest("POST", "/cart/get", bytes.NewBuffer(getBodyAfterUpdate))
+	getReqAfterUpdate.Header.Set("Content-Type", "application/json")
+	getReqAfterUpdate.AddCookie(sessionCookie)
+
+	getRRAfterUpdate := httptest.NewRecorder()
+	testRouter.ServeHTTP(getRRAfterUpdate, getReqAfterUpdate)
+	require.Equal(t, http.StatusOK, getRRAfterUpdate.Code, "Failed to get guest cart items after update")
+
+	var updatedItems []models.CartItemProductDetails
+	err = json.Unmarshal(getRRAfterUpdate.Body.Bytes(), &updatedItems)
+	require.NoError(t, err)
+	require.Len(t, updatedItems, 2, "Guest cart should have 2 items after updating")
+	assert.Equal(t, product1.ID, updatedItems[0].ProductID)
+	assert.Equal(t, cartID, updatedItems[0].CartID)
+	assert.Equal(t, 2, updatedItems[0].Quantity)
+	assert.Equal(t, product2.ID, updatedItems[1].ProductID)
+	assert.Equal(t, cartID, updatedItems[1].CartID)
+	assert.Equal(t, 20, updatedItems[1].Quantity)
+
 	// 4. Guest removes one product from the cart
 	itemToRemove := []models.CartItemDTO{
 		{CartID: cartID, ProductID: product1.ID},

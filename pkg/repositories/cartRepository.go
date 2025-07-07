@@ -19,6 +19,7 @@ type ICartRepository interface {
 	AddProductsToCart(ctx context.Context, cartItems []models.CartItemDTO, cart *models.Cart) (*models.Cart, error)
 	RemoveProductsFromCart(ctx context.Context, cartItems []models.CartItemDTO) error
 	GetAllCartItemsByCartID(ctx context.Context, cartID uuid.UUID) ([]models.CartItemProductDetails, error)
+	UpdateCartItems(ctx context.Context, cartItems []models.CartItemDTO) error
 }
 
 type CartRepository struct {
@@ -136,7 +137,25 @@ func (r *CartRepository) GetAllCartItemsByCartID(ctx context.Context, cartID uui
 			return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetAllCartItemsByCartID", cartID.String())
 		}
 		cartItems = append(cartItems, item)
-		fmt.Println(item)
 	}
 	return cartItems, nil
+}
+
+func (r *CartRepository) UpdateCartItems(ctx context.Context, cartItems []models.CartItemDTO) error {
+	for _, item := range cartItems {
+		query := "UPDATE cart_items SET quantity = $1, price = $2 WHERE cart_id = $3 AND product_id = $4"
+		result, err := r.DB.ExecContext(ctx, query, item.Quantity, item.Price, item.CartID, item.ProductID)
+		if err != nil {
+			return utils.HandleRepositoryErrors(ctx, err, "repository/UpdateCartItems", item.ProductID.String())
+		}
+
+		affectedRows, err := result.RowsAffected()
+		if err != nil {
+			return utils.HandleRepositoryErrors(ctx, err, "repository/UpdateCartItems", item.ProductID.String())
+		}
+		if affectedRows == 0 {
+			return utils.HandleRepositoryErrors(ctx, fmt.Errorf("no rows affected"), "repository/UpdateCartItems", item.ProductID.String())
+		}
+	}
+	return nil
 }

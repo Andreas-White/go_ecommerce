@@ -80,6 +80,7 @@ func main() {
 	http.Handle("/cart/remove", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.RemoveFromCart)))
 	http.Handle("/cart/clear", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.ClearCart)))
 	http.Handle("/cart/get", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.GetCartItems)))
+	http.Handle("/cart/update", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.UpdateCartItems)))
 
 	// server
 	log.Printf("Server is listening on port %v", cfg.AppPort)

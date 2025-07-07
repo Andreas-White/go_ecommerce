@@ -117,6 +117,7 @@ func TestMain(m *testing.M) {
 	testRouter.Handle("/cart/remove", testAuthenticator.OptionalAuthenticateJWT(http.HandlerFunc(testCartHandler.RemoveFromCart)))
 	testRouter.Handle("/cart/clear", testAuthenticator.OptionalAuthenticateJWT(http.HandlerFunc(testCartHandler.ClearCart)))
 	testRouter.Handle("/cart/get", testAuthenticator.OptionalAuthenticateJWT(http.HandlerFunc(testCartHandler.GetCartItems)))
+	testRouter.Handle("/cart/update", testAuthenticator.OptionalAuthenticateJWT(http.HandlerFunc(testCartHandler.UpdateCartItems)))
 
 	code := m.Run()
 	os.Exit(code)

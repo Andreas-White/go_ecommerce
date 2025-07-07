@@ -126,3 +126,21 @@ func (h *CartHandler) GetCartItems(w http.ResponseWriter, r *http.Request) {
 
 	utils.RespondWithJSON(w, http.StatusOK, cartItems)
 }
+
+func (h *CartHandler) UpdateCartItems(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var cartItemDTO []models.CartItemDTO
+	if err := json.NewDecoder(r.Body).Decode(&cartItemDTO); err != nil {
+		utils.HandleAPIErrors(err, w, "handler/UpdateCartItems", http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	err := h.cartService.UpdateCartItems(ctx, cartItemDTO)
+	if err != nil {
+		utils.HandleAPIErrors(err, w, "handler/UpdateCartItems", http.StatusInternalServerError, "Failed to update cart items")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Cart items updated successfully"})
+}

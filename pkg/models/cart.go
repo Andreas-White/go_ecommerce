@@ -37,7 +37,7 @@ type CartItemProductDetails struct {
 }
 
 type CartItemDTO struct {
-	CartID    uuid.UUID `json:"cart_id"`
+	CartID    uuid.UUID `json:"cart_id" `
 	ProductID uuid.UUID `json:"product_id"`
 	Quantity  int       `json:"quantity"`
 	Price     float64   `json:"price"`
