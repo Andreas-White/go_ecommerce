@@ -11,13 +11,13 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/google/uuid"
 )
 
 // var jwtSecret = []byte(config.LoadConfig().JWTKey)
 type TokenGenerator interface {
 	GenerateJWT(user *models.User) (string, error)
 	AuthenticateJWT(next http.Handler) http.Handler
+	OptionalAuthenticateJWT(next http.Handler) http.Handler
 }
 
 type contextKey string
@@ -100,15 +100,41 @@ func (a *Authenticator) AuthenticateJWT(next http.Handler) http.Handler {
 	})
 }
 
+// OptionalAuthenticateJWT is a middleware function that checks for a valid JWT token, but does not fail if it is not present
+func (a *Authenticator) OptionalAuthenticateJWT(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+		if tokenString == authHeader {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		claims := &Claims{}
+		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+			return a.jwtSecret, nil
+		})
+
+		if err != nil || !token.Valid {
+			next.ServeHTTP(w, r) // Token is invalid or expired, but we proceed without user
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), userCtxKey, claims.User)
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 // GetUserFromContext is a helper function to extract the user from the request context
 func GetUserFromContext(r *http.Request, w http.ResponseWriter) *models.User {
 	user, ok := r.Context().Value(userCtxKey).(*models.User)
-	if !ok {
-		log.Println("No valid user found in context")
+	if !ok || user == nil {
 		return nil
-	}
-	if user == nil || user.ID == uuid.Nil {
-		utils.HandleAPIErrors(fmt.Errorf("user not found in context"), w, "middleware/GetUserFromContext", http.StatusUnauthorized, "Unauthorized user")
 	}
 	return user
 }

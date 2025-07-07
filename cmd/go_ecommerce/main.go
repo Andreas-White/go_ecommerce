@@ -47,6 +47,11 @@ func main() {
 	productService := services.NewProductService(productRepo)
 	productHandler := handlers.NewProductHandler(productService)
 
+	// cart
+	cartRepo := repositories.NewCartRepository(DB)
+	cartService := services.NewCartService(cartRepo, productRepo)
+	cartHandler := handlers.NewCartHandler(cartService)
+
 	// Define routes
 	//user basic routes
 	http.HandleFunc("/users/register", userHandler.Register)
@@ -69,6 +74,12 @@ func main() {
 	http.HandleFunc("/products/user-id", productHandler.GetProductsByUserID)
 	http.Handle("/products/update", authMiddleware.AuthenticateJWT(http.HandlerFunc(productHandler.UpdateProduct)))
 	http.Handle("/products/delete", authMiddleware.AuthenticateJWT(http.HandlerFunc(productHandler.DeleteProduct)))
+
+	// cart routes
+	http.Handle("/cart/add", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.AddToCart)))
+	http.Handle("/cart/remove", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.RemoveFromCart)))
+	http.Handle("/cart/clear", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.ClearCart)))
+	http.Handle("/cart/get", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.GetCartItems)))
 
 	// server
 	log.Printf("Server is listening on port %v", cfg.AppPort)

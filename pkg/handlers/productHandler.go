@@ -18,22 +18,22 @@ func NewProductHandler(service services.IProductService) *ProductHandler {
 }
 
 func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
-	var product models.ProductDTO
+	ctx := r.Context()
+	authUser := middleware.GetUserFromContext(r, w)
 
+	var product models.ProductDTO
 	if err := json.NewDecoder(r.Body).Decode(&product); err != nil {
 		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	ctx := r.Context()
-	authUser := middleware.GetUserFromContext(r, w)
-	err := h.Service.CreateProduct(ctx, &product, authUser.ID.String())
+	createdProduct, err := h.Service.CreateProduct(ctx, &product, authUser.ID.String())
 	if err != nil {
 		utils.HandleAPIErrors(err, w, "handler/CreateProduct", http.StatusInternalServerError, "Failed to create product")
 		return
 	}
 
-	utils.RespondWithJSON(w, http.StatusCreated, map[string]string{"message": "Product created successfully"})
+	utils.RespondWithJSON(w, http.StatusCreated, createdProduct)
 }
 
 func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) {

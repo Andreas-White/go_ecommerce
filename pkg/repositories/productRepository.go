@@ -13,7 +13,7 @@ import (
 )
 
 type IProductRepository interface {
-	CreateProduct(ctx context.Context, product *models.ProductDTO, userID string) error
+	CreateProduct(ctx context.Context, product *models.ProductDTO, userID string) (*models.Product, error)
 	GetProductByID(ctx context.Context, id string) (*models.Product, error)
 	GetProductsByCategory(ctx context.Context, category string) ([]models.Product, error)
 	GetProductsByUserID(ctx context.Context, userID string) ([]models.Product, error)
@@ -33,23 +33,42 @@ func NewProductRepository(db *sql.DB) *ProductRepository {
 	}
 }
 
-func (r *ProductRepository) CreateProduct(ctx context.Context, product *models.ProductDTO, userID string) error {
+func (r *ProductRepository) CreateProduct(ctx context.Context, productDTO *models.ProductDTO, userID string) (*models.Product, error) {
 	productID := uuid.New()
 	now := time.Now()
-	query := `
-		INSERT INTO products (id, name, description, price, stock, category, image_url, created_at, updated_at, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
-
-	_, err := r.DB.ExecContext(ctx, query, productID, product.Name, product.Description, product.Price, product.Stock, product.Category, product.ImageUrl, now, nil, userID)
+	userIDUUID, err := uuid.Parse(userID)
 	if err != nil {
-		return utils.HandleRepositoryErrors(ctx, err, "repository/CreateProduct", userID)
+		return nil, utils.HandleRepositoryErrors(ctx, err, "repository/CreateProduct.ParseUserID", userID)
 	}
 
-	return nil
+	query := `
+		INSERT INTO products (id, name, description, price, stock, category, image_url, created_at, updated_at, user_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`
+
+	_, err = r.DB.ExecContext(ctx, query, productID, productDTO.Name, productDTO.Description, productDTO.Price, productDTO.Stock, productDTO.Category, productDTO.ImageUrl, now, nil, userIDUUID)
+	if err != nil {
+		return nil, utils.HandleRepositoryErrors(ctx, err, "repository/CreateProduct.ExecContext", userID)
+	}
+
+	createdProduct := &models.Product{
+		ID:          productID,
+		Name:        productDTO.Name,
+		Description: productDTO.Description,
+		Price:       productDTO.Price,
+		Stock:       productDTO.Stock,
+		Category:    productDTO.Category,
+		ImageUrl:    productDTO.ImageUrl,
+		CreatedAt:   now,
+		UpdatedAt:   nil,
+		UserID:      userIDUUID,
+	}
+
+	return createdProduct, nil
 }
 
 func (r *ProductRepository) GetProductByID(ctx context.Context, id string) (*models.Product, error) {
 	query := `
-		SELECT * FROM products WHERE id = $1
+		SELECT id, name, description, price, stock, category, image_url, created_at, updated_at, user_id FROM products WHERE id = $1
 	`
 	var product models.Product
 	err := r.DB.QueryRowContext(ctx, query, id).Scan(&product.ID, &product.Name, &product.Description, &product.Price, &product.Stock, &product.Category, &product.ImageUrl, &product.CreatedAt, &product.UpdatedAt, &product.UserID)
@@ -62,7 +81,7 @@ func (r *ProductRepository) GetProductByID(ctx context.Context, id string) (*mod
 
 func (r *ProductRepository) GetProductsByCategory(ctx context.Context, category string) ([]models.Product, error) {
 	querry := `
-		SELECT * FROM products WHERE category = $1
+		SELECT id, name, description, price, stock, category, image_url, created_at, updated_at, user_id FROM products WHERE category = $1
 	`
 	products, err := r.getListOfProductsByValue(ctx, querry, category)
 	if err != nil {
@@ -74,7 +93,7 @@ func (r *ProductRepository) GetProductsByCategory(ctx context.Context, category 
 
 func (r *ProductRepository) GetProductsByUserID(ctx context.Context, userID string) ([]models.Product, error) {
 	querry := `
-		SELECT * FROM products WHERE user_id = $1
+		SELECT id, name, description, price, stock, category, image_url, created_at, updated_at, user_id FROM products WHERE user_id = $1
 	`
 	products, err := r.getListOfProductsByValue(ctx, querry, userID)
 	if err != nil {
@@ -86,7 +105,7 @@ func (r *ProductRepository) GetProductsByUserID(ctx context.Context, userID stri
 
 func (r *ProductRepository) SearchProductsByNameAndDescription(ctx context.Context, searchTerm string) ([]models.Product, error) {
 	query := `
-		SELECT * FROM products WHERE name ILIKE $1 OR description ILIKE $1
+		SELECT id, name, description, price, stock, category, image_url, created_at, updated_at, user_id FROM products WHERE name ILIKE $1 OR description ILIKE $1
 	`
 	searchValue := "%%" + searchTerm + "%%"
 
@@ -105,7 +124,7 @@ func (r *ProductRepository) SearchProductsByNameAndDescription(ctx context.Conte
 }
 
 func (r *ProductRepository) GetAllProducts(ctx context.Context, sortBy, sortOrder string) ([]models.Product, error) {
-	query := `SELECT * FROM products`
+	query := `SELECT id, name, description, price, stock, category, image_url, created_at, updated_at, user_id FROM products`
 
 	allowedSortBy := map[string]bool{
 		"price":      true,

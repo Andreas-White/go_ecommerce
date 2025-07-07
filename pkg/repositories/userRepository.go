@@ -60,8 +60,8 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *models.UserDTO) e
 		VALUES ($1, $2, $3, $4, $5)`
 
 	cartQuery := `
-		INSERT INTO carts (id, user_id, created_at)
-		VALUES ($1, $2, $3)`
+		INSERT INTO carts (id, user_id, session_id, created_at)
+		VALUES ($1, $2, $3, $4)`
 
 	_, err = tx.ExecContext(ctx, userQuery,
 		userID, user.FirstName, user.LastName, user.MiddleName, user.Email, user.Phone, user.IsProducer,
@@ -77,7 +77,7 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *models.UserDTO) e
 		return utils.HandleRepositoryErrors(ctx, err, "repository/CreateUser", user.Email)
 	}
 
-	_, err = tx.ExecContext(ctx, cartQuery, cartID, userID, created_at)
+	_, err = tx.ExecContext(ctx, cartQuery, cartID, userID, nil, created_at)
 	if err != nil {
 		return utils.HandleRepositoryErrors(ctx, err, "repository/CreateUser", user.Email)
 	}
@@ -88,7 +88,8 @@ func (r *UserRepository) CreateUser(ctx context.Context, user *models.UserDTO) e
 // GetUserByID retrieves a user by their ID
 func (r *UserRepository) GetUserByID(ctx context.Context, id string) (*models.User, error) {
 	query := `
-		SELECT * FROM users WHERE id = $1
+		SELECT id, first_name, last_name, middle_name, email, phone, is_producer, address,
+		city, country, zip_code, created_at, updated_at FROM users WHERE id = $1
 	`
 	user, err := r.fetchUserByValue(ctx, query, id)
 	if err != nil {
@@ -101,7 +102,8 @@ func (r *UserRepository) GetUserByID(ctx context.Context, id string) (*models.Us
 // GetUserByName retrieves a user by their name
 func (r *UserRepository) GetUserByFullName(ctx context.Context, firstName string, lastName string, middleName string) (*models.User, error) {
 	query := `
-		SELECT * FROM users WHERE first_name = $1 AND last_name = $2 AND middle_name = $3 
+		SELECT id, first_name, last_name, middle_name, email, phone, is_producer, address,
+		city, country, zip_code, created_at, updated_at FROM users WHERE first_name = $1 AND last_name = $2 AND middle_name = $3 
 	`
 	row := r.DB.QueryRowContext(ctx, query, firstName, lastName, middleName)
 	user, err := scanUser(ctx, row)
@@ -115,7 +117,8 @@ func (r *UserRepository) GetUserByFullName(ctx context.Context, firstName string
 // GetUserByEmail retrieves a user by their email
 func (r *UserRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
 	query := `
-		SELECT * FROM users WHERE email = $1
+		SELECT id, first_name, last_name, middle_name, email, phone, is_producer, address,
+		city, country, zip_code, created_at, updated_at FROM users WHERE email = $1
 	`
 
 	user, err := r.fetchUserByValue(ctx, query, email)
@@ -134,10 +137,11 @@ func (r *UserRepository) GetAuthedUserByEmail(ctx context.Context, email string)
 	}
 
 	queryUsers := `
-		SELECT * FROM users WHERE email = $1
+		SELECT id, first_name, last_name, middle_name, email, phone, is_producer, address,
+		city, country, zip_code, created_at, updated_at FROM users WHERE email = $1
 	`
 	queryAuths := `
-		SELECT * FROM auths WHERE user_id = $1 AND active = $2
+		SELECT id, user_id, created_at, active, password, updated_at FROM auths WHERE user_id = $1 AND active = $2
 	`
 
 	user, err := r.fetchUserByValue(ctx, queryUsers, email)
@@ -225,7 +229,7 @@ func (r *UserRepository) fetchUserByValue(ctx context.Context, query string, val
 
 func scanUser(ctx context.Context, row *sql.Row) (*models.User, error) {
 	var user models.User
-	err := row.Scan(&user.ID, &user.FirstName, &user.Email, &user.Phone, &user.LastName, &user.MiddleName, &user.IsProducer,
+	err := row.Scan(&user.ID, &user.FirstName, &user.LastName, &user.MiddleName, &user.Email, &user.Phone, &user.IsProducer,
 		&user.Address, &user.City, &user.Country, &user.ZipCode, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
 		err = utils.HandleRepositoryErrors(ctx, err, "repository/ScanUser", "")

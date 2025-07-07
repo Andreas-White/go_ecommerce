@@ -51,10 +51,14 @@ func TestCreateProduct_Success(t *testing.T) {
 
 	require.Equal(t, http.StatusCreated, createRR.Code, "Failed to create product. Body: "+createRR.Body.String())
 
-	var resp map[string]string
-	err = json.Unmarshal(createRR.Body.Bytes(), &resp)
-	require.NoError(t, err)
-	assert.Equal(t, "Product created successfully", resp["message"])
+	var createdProduct models.Product
+	err = json.Unmarshal(createRR.Body.Bytes(), &createdProduct)
+	require.NoError(t, err, "Failed to unmarshal product response")
+	assert.Equal(t, productPayload.Name, createdProduct.Name)
+	assert.Equal(t, productPayload.Description, createdProduct.Description)
+	assert.Equal(t, productPayload.Price, createdProduct.Price)
+	assert.Equal(t, productPayload.Stock, createdProduct.Stock)
+	assert.NotEmpty(t, createdProduct.ID)
 }
 
 func TestGetProduct_ByID_And_All(t *testing.T) {
@@ -216,7 +220,6 @@ func TestUpdateProduct_Success(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, updateRR.Code, "Failed to update product. Body: "+updateRR.Body.String())
 
-	// The handler appears to return the updated product object, not a simple message.
 	// We will unmarshal into the Product model and verify its contents.
 	var returnedProduct models.Product
 	err = json.Unmarshal(updateRR.Body.Bytes(), &returnedProduct)
