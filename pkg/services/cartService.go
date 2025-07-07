@@ -15,7 +15,7 @@ type ICartService interface {
 	AddProductsToCart(ctx context.Context, userID *uuid.UUID, sessionID *string, cartItems []models.CartItemDTO) (*models.Cart, error)
 	RemoveProductsFromCart(ctx context.Context, cartItem []models.CartItemDTO) error
 	ClearCart(ctx context.Context, cartId *uuid.UUID) error
-	GetAllCartItemsByCartID(ctx context.Context, cartID uuid.UUID) ([]models.CartItem, error)
+	GetAllCartItemsByCartID(ctx context.Context, cartID uuid.UUID) ([]models.CartItemProductDetails, error)
 }
 
 type CartService struct {
@@ -63,6 +63,6 @@ func (s *CartService) ClearCart(ctx context.Context, cartId *uuid.UUID) error {
 	return s.cartRepo.ClearCart(ctx, cartId)
 }
 
-func (s *CartService) GetAllCartItemsByCartID(ctx context.Context, cartID uuid.UUID) ([]models.CartItem, error) {
+func (s *CartService) GetAllCartItemsByCartID(ctx context.Context, cartID uuid.UUID) ([]models.CartItemProductDetails, error) {
 	return s.cartRepo.GetAllCartItemsByCartID(ctx, cartID)
 }

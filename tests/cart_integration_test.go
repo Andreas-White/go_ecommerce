@@ -66,8 +66,8 @@ func TestCartFlow_RegisteredUser(t *testing.T) {
 
 	// 3. User adds both products to the cart
 	cartItemsToAdd := []models.CartItemDTO{
-		{ProductID: product1.ID, Quantity: 2},
-		{ProductID: product2.ID, Quantity: 5},
+		{ProductID: product1.ID, Quantity: 2, Price: product1.Price},
+		{ProductID: product2.ID, Quantity: 5, Price: product2.Price},
 	}
 	addBody, _ := json.Marshal(cartItemsToAdd)
 	addReq, _ := http.NewRequest("POST", "/cart/add", bytes.NewBuffer(addBody))
@@ -94,7 +94,7 @@ func TestCartFlow_RegisteredUser(t *testing.T) {
 	testRouter.ServeHTTP(getRR, getReq)
 	require.Equal(t, http.StatusOK, getRR.Code, "Failed to get cart items")
 
-	var addedItems []models.CartItem
+	var addedItems []models.CartItemProductDetails
 	err = json.Unmarshal(getRR.Body.Bytes(), &addedItems)
 	require.NoError(t, err)
 	require.Len(t, addedItems, 2, "Cart should have 2 items after adding")
@@ -122,7 +122,7 @@ func TestCartFlow_RegisteredUser(t *testing.T) {
 	testRouter.ServeHTTP(getRRAfterRemove, getReqAfterRemove)
 	require.Equal(t, http.StatusOK, getRRAfterRemove.Code, "Failed to get cart items")
 
-	var remainingItems []models.CartItem
+	var remainingItems []models.CartItemProductDetails
 	err = json.Unmarshal(getRRAfterRemove.Body.Bytes(), &remainingItems)
 	require.NoError(t, err)
 	require.Len(t, remainingItems, 1, "Cart should have 1 item left")
@@ -147,7 +147,7 @@ func TestCartFlow_RegisteredUser(t *testing.T) {
 	getRRAfterClear := httptest.NewRecorder()
 	testRouter.ServeHTTP(getRRAfterClear, getReqAfterClear)
 	require.Equal(t, http.StatusOK, getRRAfterClear.Code)
-	var finalItems []models.CartItem
+	var finalItems []models.CartItemProductDetails
 	json.Unmarshal(getRRAfterClear.Body.Bytes(), &finalItems)
 	assert.Len(t, finalItems, 0, "Cart should be empty after clearing")
 }
@@ -166,20 +166,26 @@ func TestCartFlow_GuestUser(t *testing.T) {
 
 	// 2. Producer creates two products
 	product1 := createTestProduct(t, producerToken, models.Product{
-		Name:  "Guest Book",
-		Price: 35.00,
-		Stock: 5,
+		Name:        "Guest Book",
+		Price:       35.00,
+		Stock:       5,
+		Category:    "Books",
+		ImageUrl:    "https://example.com/guest-book.jpg",
+		Description: "A guest book for visitors to sign.",
 	})
 	product2 := createTestProduct(t, producerToken, models.Product{
-		Name:  "Guest Marker",
-		Price: 2.50,
-		Stock: 50,
+		Name:        "Guest Marker",
+		Price:       2.50,
+		Stock:       50,
+		Category:    "Stationery",
+		ImageUrl:    "https://example.com/guest-marker.jpg",
+		Description: "A guest marker for visitors to sign.",
 	})
 
 	// 3. Guest adds both products to the cart
 	cartItemsToAdd := []models.CartItemDTO{
-		{ProductID: product1.ID, Quantity: 1},
-		{ProductID: product2.ID, Quantity: 10},
+		{ProductID: product1.ID, Quantity: 1, Price: product1.Price},
+		{ProductID: product2.ID, Quantity: 10, Price: product2.Price},
 	}
 	addBody, _ := json.Marshal(cartItemsToAdd)
 	addReq, _ := http.NewRequest("POST", "/cart/add", bytes.NewBuffer(addBody))
@@ -209,7 +215,7 @@ func TestCartFlow_GuestUser(t *testing.T) {
 	testRouter.ServeHTTP(getRR, getReq)
 	require.Equal(t, http.StatusOK, getRR.Code, "Failed to get guest cart items")
 
-	var addedItems []models.CartItem
+	var addedItems []models.CartItemProductDetails
 	err = json.Unmarshal(getRR.Body.Bytes(), &addedItems)
 	require.NoError(t, err)
 	require.Len(t, addedItems, 2, "Guest cart should have 2 items after adding")
@@ -237,7 +243,7 @@ func TestCartFlow_GuestUser(t *testing.T) {
 	testRouter.ServeHTTP(getRRAfterRemove, getReqAfterRemove)
 	require.Equal(t, http.StatusOK, getRRAfterRemove.Code, "Failed to get guest cart items")
 
-	var remainingItems []models.CartItem
+	var remainingItems []models.CartItemProductDetails
 	err = json.Unmarshal(getRRAfterRemove.Body.Bytes(), &remainingItems)
 	require.NoError(t, err)
 	require.Len(t, remainingItems, 1, "Guest cart should have 1 item left")
@@ -261,7 +267,7 @@ func TestCartFlow_GuestUser(t *testing.T) {
 	getRRAfterClear := httptest.NewRecorder()
 	testRouter.ServeHTTP(getRRAfterClear, getReqAfterClear)
 	require.Equal(t, http.StatusOK, getRRAfterClear.Code)
-	var finalItems []models.CartItem
+	var finalItems []models.CartItemProductDetails
 	json.Unmarshal(getRRAfterClear.Body.Bytes(), &finalItems)
 	assert.Len(t, finalItems, 0, "Guest cart should be empty after clearing")
 }

@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/utils"
 	"time"
@@ -17,7 +18,7 @@ type ICartRepository interface {
 	ClearCart(ctx context.Context, cartId *uuid.UUID) error
 	AddProductsToCart(ctx context.Context, cartItems []models.CartItemDTO, cart *models.Cart) (*models.Cart, error)
 	RemoveProductsFromCart(ctx context.Context, cartItems []models.CartItemDTO) error
-	GetAllCartItemsByCartID(ctx context.Context, cartID uuid.UUID) ([]models.CartItem, error)
+	GetAllCartItemsByCartID(ctx context.Context, cartID uuid.UUID) ([]models.CartItemProductDetails, error)
 }
 
 type CartRepository struct {
@@ -108,22 +109,34 @@ func (r *CartRepository) RemoveProductsFromCart(ctx context.Context, cartItems [
 	return nil
 }
 
-func (r *CartRepository) GetAllCartItemsByCartID(ctx context.Context, cartID uuid.UUID) ([]models.CartItem, error) {
-	query := "SELECT id, cart_id, product_id, quantity, price, created_at FROM cart_items WHERE cart_id = $1"
+func (r *CartRepository) GetAllCartItemsByCartID(ctx context.Context, cartID uuid.UUID) ([]models.CartItemProductDetails, error) {
+	query := `SELECT 
+        ci.id, ci.cart_id, ci.product_id, ci.quantity, ci.price,
+        p.name as product_name, p.description as product_description, p.stock as product_stock,
+        p.category as product_category, p.image_url as product_image_url
+        FROM cart_items ci
+        JOIN products p ON ci.product_id = p.id
+        WHERE ci.cart_id = $1`
+
 	rows, err := r.DB.QueryContext(ctx, query, cartID)
 	if err != nil {
 		return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetAllCartItemsByCartID", cartID.String())
 	}
 	defer rows.Close()
 
-	cartItems := []models.CartItem{}
+	cartItems := []models.CartItemProductDetails{}
 	for rows.Next() {
-		var cartItem models.CartItem
-		err := rows.Scan(&cartItem.ID, &cartItem.CartID, &cartItem.ProductID, &cartItem.Quantity, &cartItem.Price, &cartItem.CreatedAt)
+		var item models.CartItemProductDetails
+		err := rows.Scan(
+			&item.ID, &item.CartID, &item.ProductID, &item.Quantity, &item.Price,
+			&item.ProductName, &item.ProductDescription, &item.ProductStock,
+			&item.ProductCategory, &item.ProductImageUrl,
+		)
 		if err != nil {
 			return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetAllCartItemsByCartID", cartID.String())
 		}
-		cartItems = append(cartItems, cartItem)
+		cartItems = append(cartItems, item)
+		fmt.Println(item)
 	}
 	return cartItems, nil
 }
