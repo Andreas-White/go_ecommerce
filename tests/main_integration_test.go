@@ -85,6 +85,11 @@ func TestMain(m *testing.M) {
 	cartService := services.NewCartService(cartRepo, productRepo)
 	testCartHandler = handlers.NewCartHandler(cartService)
 
+	// Initialize Order components
+	orderRepo := repositories.NewOrderRepository(testDB)
+	orderService := services.NewOrderService(orderRepo, cartRepo, productRepo)
+	testOrderHandler := handlers.NewOrderHandler(orderService)
+
 	// Initialize Router
 	testRouter = http.NewServeMux()
 
@@ -118,6 +123,13 @@ func TestMain(m *testing.M) {
 	testRouter.Handle("/cart/clear", testAuthenticator.OptionalAuthenticateJWT(http.HandlerFunc(testCartHandler.ClearCart)))
 	testRouter.Handle("/cart/get", testAuthenticator.OptionalAuthenticateJWT(http.HandlerFunc(testCartHandler.GetCartItems)))
 	testRouter.Handle("/cart/update", testAuthenticator.OptionalAuthenticateJWT(http.HandlerFunc(testCartHandler.UpdateCartItems)))
+
+	// Order routes
+	testRouter.Handle("/orders/checkout", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.ProcessCheckout)))
+	testRouter.Handle("/orders/confirm", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.ConfirmOrder)))
+	testRouter.Handle("/orders/summary", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetOrderSummary)))
+	testRouter.Handle("/orders/details", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetOrderDetails)))
+	testRouter.Handle("/orders/user", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetUserOrders)))
 
 	code := m.Run()
 	os.Exit(code)

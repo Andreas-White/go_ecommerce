@@ -3,7 +3,6 @@ package repositories
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/utils"
 	"time"
@@ -154,7 +153,7 @@ func (r *CartRepository) UpdateCartItems(ctx context.Context, cartItems []models
 			return utils.HandleRepositoryErrors(ctx, err, "repository/UpdateCartItems", item.ProductID.String())
 		}
 		if affectedRows == 0 {
-			return utils.HandleRepositoryErrors(ctx, fmt.Errorf("no rows affected"), "repository/UpdateCartItems", item.ProductID.String())
+			return utils.HandleRepositoryErrors(ctx, sql.ErrNoRows, "repository/UpdateCartItems", item.ProductID.String())
 		}
 	}
 	return nil

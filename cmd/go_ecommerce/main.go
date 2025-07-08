@@ -52,6 +52,11 @@ func main() {
 	cartService := services.NewCartService(cartRepo, productRepo)
 	cartHandler := handlers.NewCartHandler(cartService)
 
+	// order
+	orderRepo := repositories.NewOrderRepository(DB)
+	orderService := services.NewOrderService(orderRepo, cartRepo, productRepo)
+	orderHandler := handlers.NewOrderHandler(orderService)
+
 	// Define routes
 	//user basic routes
 	http.HandleFunc("/users/register", userHandler.Register)
@@ -81,6 +86,13 @@ func main() {
 	http.Handle("/cart/clear", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.ClearCart)))
 	http.Handle("/cart/get", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.GetCartItems)))
 	http.Handle("/cart/update", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.UpdateCartItems)))
+
+	// order routes
+	http.Handle("/orders/checkout", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.ProcessCheckout)))
+	http.Handle("/orders/confirm", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.ConfirmOrder)))
+	http.Handle("/orders/summary", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetOrderSummary)))
+	http.Handle("/orders/details", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetOrderDetails)))
+	http.Handle("/orders/user", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetUserOrders)))
 
 	// server
 	log.Printf("Server is listening on port %v", cfg.AppPort)

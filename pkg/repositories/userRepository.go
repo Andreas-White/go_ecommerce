@@ -3,7 +3,6 @@ package repositories
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/utils"
 	"time"
@@ -212,7 +211,7 @@ func (r *UserRepository) DeleteUser(ctx context.Context, id string) error {
 		return utils.HandleRepositoryErrors(ctx, err, "repository/DeleteUser", id)
 	}
 	if rowsAffected == 0 {
-		return utils.HandleRepositoryErrors(ctx, fmt.Errorf("repository/DeleteUser - no rows affected"),
+		return utils.HandleRepositoryErrors(ctx, sql.ErrNoRows,
 			"repository/DeleteUser", id)
 	}
 
