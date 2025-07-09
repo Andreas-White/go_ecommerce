@@ -18,7 +18,7 @@ type IOrderRepository interface {
 	GetOrderByID(ctx context.Context, orderID uuid.UUID) (*models.Order, error)
 	GetOrderWithDetails(ctx context.Context, orderID uuid.UUID) (*models.OrderWithDetails, error)
 	GetOrdersByUserID(ctx context.Context, userID uuid.UUID) ([]models.Order, error)
-	UpdateOrderStatus(ctx context.Context, orderID uuid.UUID, status, paymentStatus string) error
+	UpdateOrderStatus(ctx context.Context, orderID uuid.UUID, status string, paymentStatus string) error
 	UpdatePaymentStatus(ctx context.Context, paymentID uuid.UUID, status string, transactionID *string) error
 	UpdateProductStock(ctx context.Context, productID uuid.UUID, quantity int) error
 }
@@ -226,7 +226,7 @@ func (r *OrderRepository) GetOrdersByUserID(ctx context.Context, userID uuid.UUI
 	return orders, nil
 }
 
-func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID uuid.UUID, status, paymentStatus string) error {
+func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID uuid.UUID, status string, paymentStatus string) error {
 	query := `
 		UPDATE orders SET status = $2, payment_status = $3, updated_at = $4
 		WHERE id = $1

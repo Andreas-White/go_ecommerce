@@ -7,6 +7,8 @@ import (
 	"go_ecommerce/pkg/services"
 	"go_ecommerce/pkg/utils"
 	"net/http"
+
+	"github.com/google/uuid"
 )
 
 type ProductHandler struct {
@@ -69,13 +71,13 @@ func (h *ProductHandler) GetProductsByCategory(w http.ResponseWriter, r *http.Re
 }
 
 func (h *ProductHandler) GetProductsByUserID(w http.ResponseWriter, r *http.Request) {
-	userID := r.URL.Query().Get("user_id")
-	if userID == "" {
+	authUser := middleware.GetUserFromContext(r, w)
+	if authUser == nil || authUser.ID == uuid.Nil {
 		utils.HandleAPIErrors(nil, w, "handler/GetProductsByUserID", http.StatusBadRequest, "User ID is required")
 		return
 	}
 
-	products, err := h.Service.GetProductsByUserID(r.Context(), userID)
+	products, err := h.Service.GetProductsByUserID(r.Context(), authUser.ID.String())
 	if err != nil {
 		utils.HandleAPIErrors(err, w, "handler/GetProductsByUserID", http.StatusNotFound, "Products not found")
 		return
@@ -100,15 +102,28 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authUser := middleware.GetUserFromContext(r, w)
+	if authUser == nil {
+		utils.HandleAPIErrors(nil, w, "handler/UpdateProduct", http.StatusUnauthorized, "User must be authenticated")
+		return
+	}
+
 	id := r.URL.Query().Get("id")
 	if id == "" {
 		utils.HandleAPIErrors(nil, w, "handler/UpdateProduct", http.StatusBadRequest, "Product ID is required")
 		return
 	}
 
-	product, err := h.Service.GetProductByID(r.Context(), id)
+	product, err := h.Service.GetProductByID(ctx, id)
 	if err != nil {
 		utils.HandleAPIErrors(err, w, "handler/UpdateProduct", http.StatusNotFound, "Product not found")
+		return
+	}
+
+	// Check ownership
+	if product.UserID != authUser.ID {
+		utils.HandleAPIErrors(nil, w, "handler/UpdateProduct", http.StatusForbidden, "You can only update your own products")
 		return
 	}
 
@@ -117,7 +132,7 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.Service.UpdateProduct(r.Context(), product)
+	err = h.Service.UpdateProduct(ctx, product)
 	if err != nil {
 		utils.HandleAPIErrors(err, w, "handler/UpdateProduct", http.StatusInternalServerError, "Failed to update product")
 		return
@@ -127,13 +142,33 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	authUser := middleware.GetUserFromContext(r, w)
+	if authUser == nil {
+		utils.HandleAPIErrors(nil, w, "handler/DeleteProduct", http.StatusUnauthorized, "User must be authenticated")
+		return
+	}
+
 	id := r.URL.Query().Get("id")
 	if id == "" {
 		utils.HandleAPIErrors(nil, w, "handler/DeleteProduct", http.StatusBadRequest, "Product ID is required")
 		return
 	}
 
-	err := h.Service.DeleteProduct(r.Context(), id)
+	// Check ownership by getting the product first
+	product, err := h.Service.GetProductByID(ctx, id)
+	if err != nil {
+		utils.HandleAPIErrors(err, w, "handler/DeleteProduct", http.StatusNotFound, "Product not found")
+		return
+	}
+
+	// Check ownership
+	if product.UserID != authUser.ID {
+		utils.HandleAPIErrors(nil, w, "handler/DeleteProduct", http.StatusForbidden, "You can only delete your own products")
+		return
+	}
+
+	err = h.Service.DeleteProduct(ctx, id)
 	if err != nil {
 		utils.HandleAPIErrors(err, w, "handler/DeleteProduct", http.StatusInternalServerError, "Failed to delete product")
 		return

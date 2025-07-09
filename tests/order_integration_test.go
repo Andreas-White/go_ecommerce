@@ -19,15 +19,14 @@ func TestCheckoutFlow_Complete(t *testing.T) {
 	// 1. Register a producer and a customer
 	producerEmail := "producer-checkout@example.com"
 	producerPassword := "password123"
-	producerPayload := createUserDTO(producerEmail, producerPassword)
-	producerPayload.IsProducer = true
+	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
 	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	customerEmail := "customer-checkout@example.com"
 	customerPassword := "password123"
-	customerPayload := createUserDTO(customerEmail, customerPassword)
+	customerPayload := createUserDTO(customerEmail, customerPassword, false)
 	registerTestUserAuth(t, customerPayload)
 	_, customerToken, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
 	require.NoError(t, err)
@@ -157,7 +156,7 @@ func TestCheckoutFlow_EmptyCart(t *testing.T) {
 	// Register a customer
 	customerEmail := "customer-empty-cart@example.com"
 	customerPassword := "password123"
-	customerPayload := createUserDTO(customerEmail, customerPassword)
+	customerPayload := createUserDTO(customerEmail, customerPassword, false)
 	registerTestUserAuth(t, customerPayload)
 	_, customerToken, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
 	require.NoError(t, err)
@@ -214,4 +213,4 @@ func TestCheckoutFlow_Unauthenticated(t *testing.T) {
 	checkoutRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(checkoutRR, checkoutReq)
 	assert.Equal(t, http.StatusUnauthorized, checkoutRR.Code, "Should fail without authentication")
-} 
+}

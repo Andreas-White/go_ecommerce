@@ -19,18 +19,7 @@ func TestChangePassword_Success(t *testing.T) {
 	email := "change_pass_succ@example.com"
 	initialPassword := "OldSecurePassword123"
 	newPassword := "NewSecurePassword456"
-	userDTO := models.UserDTO{
-		FirstName:  "Pass",
-		LastName:   "Changer",
-		Email:      email,
-		Password:   initialPassword,
-		Phone:      int64(1234567890),
-		Address:    "123 Test St",
-		City:       "Testville",
-		Country:    "Testland",
-		ZipCode:    12345,
-		IsProducer: false,
-	}
+	userDTO := createUserDTO(email, initialPassword, false)
 	registerTestUserAuth(t, userDTO)
 
 	_, token, err := loginUserAndGetTokenAuth(t, email, initialPassword)
@@ -72,7 +61,7 @@ func TestChangePassword_IncorrectCurrentPassword(t *testing.T) {
 	wrongCurrentPassword := "WrongPassword123"
 	newPassword := "NewPasswordAttempt456"
 
-	userDTO := models.UserDTO{FirstName: "Fail", LastName: "User", Email: email, Password: correctPassword, Phone: int64(111222333), Address: "1 Fail St", City: "Failville", Country: "FailLand", ZipCode: 10001, IsProducer: false}
+	userDTO := createUserDTO(email, correctPassword, false)
 	registerTestUserAuth(t, userDTO)
 
 	_, token, err := loginUserAndGetTokenAuth(t, email, correctPassword)
@@ -104,7 +93,7 @@ func TestChangePassword_InvalidNewPassword_TooShort(t *testing.T) {
 	currentPassword := "ValidOldPassword123"
 	shortNewPassword := "short"
 
-	userDTO := models.UserDTO{FirstName: "Short", LastName: "Pass", Email: email, Password: currentPassword, Phone: int64(222333444), Address: "2 Short St", City: "Shortville", Country: "Shortland", ZipCode: 20002, IsProducer: false}
+	userDTO := createUserDTO(email, currentPassword, false)
 	registerTestUserAuth(t, userDTO)
 	_, token, err := loginUserAndGetTokenAuth(t, email, currentPassword)
 	require.NoError(t, err)
@@ -131,7 +120,7 @@ func TestChangePassword_NewPasswordSameAsOld(t *testing.T) {
 	email := "change_pass_same@example.com"
 	currentPassword := "SameOldPassword123"
 
-	userDTO := models.UserDTO{FirstName: "Same", LastName: "Pass", Email: email, Password: currentPassword, Phone: int64(333444555), Address: "3 Same St", City: "Sameville", Country: "Sameland", ZipCode: 30003, IsProducer: false}
+	userDTO := createUserDTO(email, currentPassword, false)
 	registerTestUserAuth(t, userDTO)
 	_, token, err := loginUserAndGetTokenAuth(t, email, currentPassword)
 	require.NoError(t, err)
@@ -158,7 +147,7 @@ func TestChangePassword_MissingFields(t *testing.T) {
 	email := "change_pass_missing@example.com"
 	currentPassword := "ValidPassword123"
 
-	userDTO := models.UserDTO{FirstName: "Missing", LastName: "Fields", Email: email, Password: currentPassword, Phone: int64(444555666), Address: "4 Missing St", City: "Missingville", Country: "Missingland", ZipCode: 40004, IsProducer: false}
+	userDTO := createUserDTO(email, currentPassword, false)
 	registerTestUserAuth(t, userDTO)
 	_, token, err := loginUserAndGetTokenAuth(t, email, currentPassword)
 	require.NoError(t, err)

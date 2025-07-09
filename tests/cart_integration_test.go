@@ -39,15 +39,14 @@ func TestCartFlow_RegisteredUser(t *testing.T) {
 	// 1. Register a producer and a regular user
 	producerEmail := "producer-cart@example.com"
 	producerPassword := "password123"
-	producerPayload := createUserDTO(producerEmail, producerPassword)
-	producerPayload.IsProducer = true
+	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
 	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	userEmail := "customer-cart@example.com"
 	userPassword := "password123"
-	userPayload := createUserDTO(userEmail, userPassword)
+	userPayload := createUserDTO(userEmail, userPassword, false)
 	registerTestUserAuth(t, userPayload)
 	_, userToken, err := loginUserAndGetTokenAuth(t, userEmail, userPassword)
 	require.NoError(t, err)
@@ -158,8 +157,7 @@ func TestCartFlow_GuestUser(t *testing.T) {
 	// 1. Register a producer to create products
 	producerEmail := "producer-guest-cart@example.com"
 	producerPassword := "password123"
-	producerPayload := createUserDTO(producerEmail, producerPassword)
-	producerPayload.IsProducer = true
+	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
 	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)

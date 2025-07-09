@@ -20,7 +20,7 @@ func clearTables(t *testing.T) {
 func TestUserRegistration_Success(t *testing.T) {
 	clearTables(t)
 
-	registrationPayload := createUserDTO("testuser@example.com", "password123")
+	registrationPayload := createUserDTO("testuser@example.com", "password123", false)
 
 	regRR := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "User registration failed")
@@ -44,7 +44,7 @@ func TestUserRegistration_Success(t *testing.T) {
 func TestUserLogin_Success(t *testing.T) {
 	clearTables(t)
 
-	registrationPayload := createUserDTO("loginuser@example.com", "securepassword123")
+	registrationPayload := createUserDTO("loginuser@example.com", "securepassword123", false)
 
 	regRR := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "User registration failed")
@@ -67,7 +67,7 @@ func TestUserLogin_Failure(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, http.StatusUnauthorized, rr.Code, "Expected 401 for non-existent user")
 
-	registrationPayload := createUserDTO("wrongpass@example.com", "correctpassword")
+	registrationPayload := createUserDTO("wrongpass@example.com", "correctpassword", false)
 	regRR := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "Registration for wrong password test failed")
 	rrWrong, _, err := loginUserAndGetTokenAuth(t, registrationPayload.Email, "incorrectpassword")
@@ -79,7 +79,7 @@ func TestGetUserByID_Success(t *testing.T) {
 	clearTables(t)
 	var registeredUser models.User
 
-	regPayload := createUserDTO("getuser@example.com", "password123")
+	regPayload := createUserDTO("getuser@example.com", "password123", false)
 	regRR := registerTestUserAuth(t, regPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "Registration failed")
 
@@ -113,7 +113,7 @@ func TestGetUserByID_Unauthorized(t *testing.T) {
 
 func TestUpdateUser_Success(t *testing.T) {
 	clearTables(t)
-	registrationPayload := createUserDTO("updateuser@example.com", "password123")
+	registrationPayload := createUserDTO("updateuser@example.com", "password123", false)
 	regRR := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "Registration failed")
 
@@ -154,7 +154,7 @@ func TestUpdateUser_Unauthorized(t *testing.T) {
 func TestDeleteUser_Success(t *testing.T) {
 	clearTables(t)
 	// Register a user for deletion test
-	registrationPayload := createUserDTO("deleteuser@example.com", "password123")
+	registrationPayload := createUserDTO("deleteuser@example.com", "password123", false)
 	regRR := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "Registration failed")
 
@@ -204,7 +204,7 @@ func TestDeleteUser_Unauthorized(t *testing.T) {
 
 func TestGetUserByName(t *testing.T) {
 	clearTables(t)
-	registrationPayload := createUserDTO("byname@example.com", "password123")
+	registrationPayload := createUserDTO("byname@example.com", "password123", false)
 
 	regRR := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "Registration failed")
@@ -226,7 +226,7 @@ func TestGetUserByName(t *testing.T) {
 
 func TestGetUserByEmail(t *testing.T) {
 	clearTables(t)
-	registrationPayload := createUserDTO("byemail@example.com", "password123")
+	registrationPayload := createUserDTO("byemail@example.com", "password123", false)
 
 	regRR := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "Registration failed")
@@ -248,7 +248,7 @@ func TestGetUserByEmail(t *testing.T) {
 
 func TestDuplicateRegistration(t *testing.T) {
 	clearTables(t)
-	regPayload := createUserDTO("duplicate@example.com", "password123")
+	regPayload := createUserDTO("duplicate@example.com", "password123", false)
 	regRR := registerTestUserAuth(t, regPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "First registration failed")
 
@@ -263,7 +263,7 @@ func TestDuplicateRegistration(t *testing.T) {
 
 func TestInvalidPasswordRegistration(t *testing.T) {
 	clearTables(t)
-	regPayload := createUserDTO("shortpass@example.com", "123")
+	regPayload := createUserDTO("shortpass@example.com", "123", false)
 	regRR := registerTestUserAuth(t, regPayload)
 	assert.Equal(t, http.StatusBadRequest, regRR.Code, "Expected 400 for invalid password")
 	var errorResp map[string]string
@@ -274,7 +274,7 @@ func TestInvalidPasswordRegistration(t *testing.T) {
 
 func TestInvalidEmailRegistration(t *testing.T) {
 	clearTables(t)
-	regPayload := createUserDTO("invalid-email-format", "password123")
+	regPayload := createUserDTO("invalid-email-format", "password123", false)
 	regRR := registerTestUserAuth(t, regPayload)
 	assert.Equal(t, http.StatusBadRequest, regRR.Code, "Expected 400 for invalid email format")
 	var errorResp map[string]string
@@ -287,7 +287,7 @@ func TestDeleteNonExistentUser_Returns404(t *testing.T) {
 	clearTables(t)
 
 	// 1. Register a user
-	regPayload := createUserDTO("deletecheck@example.com", "password123")
+	regPayload := createUserDTO("deletecheck@example.com", "password123", false)
 	regRR := registerTestUserAuth(t, regPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "User registration failed")
 
@@ -322,7 +322,7 @@ func TestUserUpdate_GeneratesNewTokenAndUpdatesDetails(t *testing.T) {
 	clearTables(t)
 
 	// 1. Register a user
-	regPayload := createUserDTO("updatejwt@example.com", "password123")
+	regPayload := createUserDTO("updatejwt@example.com", "password123", false)
 
 	regRR := registerTestUserAuth(t, regPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "User registration failed")

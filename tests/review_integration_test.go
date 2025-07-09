@@ -20,15 +20,14 @@ func TestReviewFlow_Integration(t *testing.T) {
 	// 1. Register producer and customer
 	producerEmail := "producer-review@example.com"
 	producerPassword := "password123"
-	producerPayload := createUserDTO(producerEmail, producerPassword)
-	producerPayload.IsProducer = true
+	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
 	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	customerEmail := "customer-review@example.com"
 	customerPassword := "password123"
-	customerPayload := createUserDTO(customerEmail, customerPassword)
+	customerPayload := createUserDTO(customerEmail, customerPassword, false)
 	registerTestUserAuth(t, customerPayload)
 	_, customerToken, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
 	require.NoError(t, err)
@@ -153,15 +152,14 @@ func TestReview_NotPurchased_CannotReview(t *testing.T) {
 	// Register producer and non-buyer
 	producerEmail := "producer-nobuy@example.com"
 	producerPassword := "password123"
-	producerPayload := createUserDTO(producerEmail, producerPassword)
-	producerPayload.IsProducer = true
+	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
 	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	nonBuyerEmail := "nonbuyer@example.com"
 	nonBuyerPassword := "password123"
-	nonBuyerPayload := createUserDTO(nonBuyerEmail, nonBuyerPassword)
+	nonBuyerPayload := createUserDTO(nonBuyerEmail, nonBuyerPassword, false)
 	registerTestUserAuth(t, nonBuyerPayload)
 	_, nonBuyerToken, err := loginUserAndGetTokenAuth(t, nonBuyerEmail, nonBuyerPassword)
 	require.NoError(t, err)

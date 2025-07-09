@@ -106,7 +106,7 @@ func deleteUser(token string) *httptest.ResponseRecorder {
 	return deleteRR
 }
 
-func createUserDTO(email string, password string) models.UserDTO {
+func createUserDTO(email string, password string, isProducer bool) models.UserDTO {
 	return models.UserDTO{
 		FirstName:  "Login",
 		LastName:   "User",
@@ -114,7 +114,7 @@ func createUserDTO(email string, password string) models.UserDTO {
 		Email:      email,
 		Phone:      9876543210,
 		Password:   password,
-		IsProducer: false,
+		IsProducer: isProducer,
 		Address:    "456 Login Ave",
 		City:       "Loginton",
 		Country:    "Testland",

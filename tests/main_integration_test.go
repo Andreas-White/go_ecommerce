@@ -117,7 +117,7 @@ func TestMain(m *testing.M) {
 	testRouter.HandleFunc("/products", testProductHandler.GetProducts)
 	testRouter.HandleFunc("/product", testProductHandler.GetProduct)
 	testRouter.HandleFunc("/products/category", testProductHandler.GetProductsByCategory)
-	testRouter.HandleFunc("/products/user-id", testProductHandler.GetProductsByUserID)
+	testRouter.Handle("/products/my-products", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testProductHandler.GetProductsByUserID)))
 	testRouter.Handle("/products/create", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testProductHandler.CreateProduct)))
 	testRouter.Handle("/products/update", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testProductHandler.UpdateProduct)))
 	testRouter.Handle("/products/delete", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testProductHandler.DeleteProduct)))
