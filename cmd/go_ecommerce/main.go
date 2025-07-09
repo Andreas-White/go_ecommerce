@@ -57,6 +57,11 @@ func main() {
 	orderService := services.NewOrderService(orderRepo, cartRepo, productRepo)
 	orderHandler := handlers.NewOrderHandler(orderService)
 
+	// review
+	reviewRepo := repositories.NewReviewRepository(DB)
+	reviewService := services.NewReviewService(reviewRepo, orderRepo)
+	reviewHandler := handlers.NewReviewHandler(reviewService)
+
 	// Define routes
 	//user basic routes
 	http.HandleFunc("/users/register", userHandler.Register)
@@ -93,6 +98,12 @@ func main() {
 	http.Handle("/orders/summary", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetOrderSummary)))
 	http.Handle("/orders/details", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetOrderDetails)))
 	http.Handle("/orders/user", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetUserOrders)))
+
+	// review routes
+	http.Handle("/reviews/add", authMiddleware.AuthenticateJWT(http.HandlerFunc(reviewHandler.AddReview)))
+	http.HandleFunc("/reviews/get", reviewHandler.GetReviewsByProductID)
+	http.Handle("/reviews/update", authMiddleware.AuthenticateJWT(http.HandlerFunc(reviewHandler.UpdateReview)))
+	http.Handle("/reviews/delete", authMiddleware.AuthenticateJWT(http.HandlerFunc(reviewHandler.DeleteReview)))
 
 	// server
 	log.Printf("Server is listening on port %v", cfg.AppPort)

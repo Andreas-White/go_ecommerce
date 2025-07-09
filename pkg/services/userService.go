@@ -2,7 +2,7 @@ package services
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"go_ecommerce/pkg/middleware"
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/repositories"
@@ -39,15 +39,15 @@ func NewUserService(userRepo repositories.IUserRepository, tokenGenerator middle
 // CreateUser calls the repository to insert a new user into the database
 func (s *UserService) CreateUser(ctx context.Context, user *models.UserDTO) error {
 	if user.FirstName == "" || user.LastName == "" || user.Email == "" {
-		return utils.HandleServiceErrors(ctx, fmt.Errorf("full name and email are required"), "service/CreateUser")
+		return utils.HandleServiceErrors(ctx, errors.New("full name and email are required"), "service/CreateUser")
 	}
 
 	if len(user.Password) < 8 {
-		return utils.HandleServiceErrors(ctx, fmt.Errorf("password must be at least 8 characters long"), "service/CreateUser")
+		return utils.HandleServiceErrors(ctx, errors.New("password must be at least 8 characters long"), "service/CreateUser")
 	}
 
 	if !utils.IsValidEmail(user.Email) {
-		return utils.HandleServiceErrors(ctx, fmt.Errorf("invalid email format"), "service/CreateUser")
+		return utils.HandleServiceErrors(ctx, errors.New("invalid email format"), "service/CreateUser")
 	}
 
 	err := s.UserRepo.CreateUser(ctx, user)
@@ -88,11 +88,11 @@ func (s *UserService) GetUserByEmail(ctx context.Context, email string) (*models
 // UpdateUser updates a user’s information in the database
 func (s *UserService) UpdateUser(ctx context.Context, authUser *models.User, userPayload *models.UserDTO) (*models.User, string, error) {
 	if authUser.ID == uuid.Nil {
-		return nil, "", utils.HandleServiceErrors(ctx, fmt.Errorf("user ID is required"), "service/UpdateUser")
+		return nil, "", utils.HandleServiceErrors(ctx, errors.New("user ID is required"), "service/UpdateUser")
 	}
 
 	if !utils.IsValidEmail(authUser.Email) {
-		return nil, "", utils.HandleServiceErrors(ctx, fmt.Errorf("invalid email format"), "service/UpdateUser")
+		return nil, "", utils.HandleServiceErrors(ctx, errors.New("invalid email format"), "service/UpdateUser")
 	}
 
 	updatedUser := &models.User{
@@ -125,7 +125,7 @@ func (s *UserService) UpdateUser(ctx context.Context, authUser *models.User, use
 // DeleteUser deletes a user by ID
 func (s *UserService) DeleteUser(ctx context.Context, id string) error {
 	if id == "" {
-		return utils.HandleServiceErrors(ctx, fmt.Errorf("user ID is required"), "service/DeleteUser")
+		return utils.HandleServiceErrors(ctx, errors.New("user ID is required"), "service/DeleteUser")
 	}
 
 	err := s.UserRepo.DeleteUser(ctx, id)
@@ -142,7 +142,7 @@ func (s *UserService) AuthenticateUser(ctx context.Context, email, password stri
 	}
 
 	if !utils.CheckPasswordHash(password, authedUser.Auth.Password) {
-		return "", utils.HandleServiceErrors(ctx, fmt.Errorf("incorrect password"), "service/AuthenticateUser")
+		return "", utils.HandleServiceErrors(ctx, errors.New("incorrect password"), "service/AuthenticateUser")
 	}
 
 	user := &models.User{

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/repositories"
+	"go_ecommerce/pkg/utils"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,29 +39,29 @@ func (s *OrderService) ProcessCheckout(ctx context.Context, userID uuid.UUID, ch
 	// 1. Get cart items
 	cartItems, err := s.cartRepo.GetAllCartItemsByCartID(ctx, checkoutRequest.CartID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get cart items: %w", err)
+		return nil, utils.HandleServiceErrors(ctx, err, "service/ProcessCheckout")
 	}
 
 	if len(cartItems) == 0 {
-		return nil, errors.New("cart is empty")
+		return nil, utils.HandleServiceErrors(ctx, errors.New("cart is empty"), "service/ProcessCheckout")
 	}
 
 	// 2. Validate stock availability
 	for _, item := range cartItems {
 		if item.Quantity > int(item.ProductStock) {
-			return nil, fmt.Errorf("insufficient stock for product %s: requested %d, available %d", 
-				item.ProductName, item.Quantity, item.ProductStock)
+			return nil, utils.HandleServiceErrors(ctx, fmt.Errorf("insufficient stock for product %s: requested %d, available %d",
+				item.ProductName, item.Quantity, item.ProductStock), "service/ProcessCheckout")
 		}
 	}
 
 	// 3. Calculate totals
 	var subtotal float64
 	var orderItems []models.OrderItemSummary
-	
+
 	for _, item := range cartItems {
 		itemSubtotal := float64(item.Quantity) * item.Price
 		subtotal += itemSubtotal
-		
+
 		orderItems = append(orderItems, models.OrderItemSummary{
 			ProductID:   item.ProductID,
 			ProductName: item.ProductName,
@@ -84,7 +85,7 @@ func (s *OrderService) ProcessCheckout(ctx context.Context, userID uuid.UUID, ch
 
 	err = s.orderRepo.CreateOrder(ctx, order)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create order: %w", err)
+		return nil, utils.HandleServiceErrors(ctx, err, "service/ProcessCheckout")
 	}
 
 	// 5. Create order items
@@ -102,7 +103,7 @@ func (s *OrderService) ProcessCheckout(ctx context.Context, userID uuid.UUID, ch
 
 	err = s.orderRepo.CreateOrderItems(ctx, dbOrderItems)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create order items: %w", err)
+		return nil, utils.HandleServiceErrors(ctx, err, "service/ProcessCheckout")
 	}
 
 	// 6. Create payment record with pending status
@@ -117,7 +118,7 @@ func (s *OrderService) ProcessCheckout(ctx context.Context, userID uuid.UUID, ch
 
 	err = s.orderRepo.CreatePayment(ctx, payment)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create payment: %w", err)
+		return nil, utils.HandleServiceErrors(ctx, err, "service/ProcessCheckout")
 	}
 
 	// 7. Create shipping record
@@ -135,7 +136,7 @@ func (s *OrderService) ProcessCheckout(ctx context.Context, userID uuid.UUID, ch
 
 	err = s.orderRepo.CreateShipping(ctx, shipping)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create shipping: %w", err)
+		return nil, utils.HandleServiceErrors(ctx, err, "service/ProcessCheckout")
 	}
 
 	// 8. Create order summary for review
@@ -154,7 +155,7 @@ func (s *OrderService) ProcessCheckout(ctx context.Context, userID uuid.UUID, ch
 func (s *OrderService) GetOrderSummary(ctx context.Context, orderID uuid.UUID) (*models.OrderSummary, error) {
 	orderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, orderID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get order details: %w", err)
+		return nil, utils.HandleServiceErrors(ctx, err, "service/GetOrderSummary")
 	}
 
 	// Convert to order summary
@@ -206,31 +207,31 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, orderID uuid.UUID, user
 	// 1. Get the existing order with details
 	orderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, orderID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get order details: %w", err)
+		return nil, utils.HandleServiceErrors(ctx, err, "service/ConfirmOrder")
 	}
 
 	// 2. Verify the order belongs to the user
 	if orderWithDetails.Order.UserID != userID {
-		return nil, errors.New("order does not belong to user")
+		return nil, utils.HandleServiceErrors(ctx, errors.New("order does not belong to user"), "service/ConfirmOrder")
 	}
 
 	// 3. Verify the order is still pending
 	if orderWithDetails.Order.Status != "pending" {
-		return nil, fmt.Errorf("order is not in pending status: %s", orderWithDetails.Order.Status)
+		return nil, utils.HandleServiceErrors(ctx, fmt.Errorf("order is not in pending status: %s", orderWithDetails.Order.Status), "service/ConfirmOrder")
 	}
 
 	// 4. Update product stock
 	for _, item := range orderWithDetails.Items {
 		err = s.orderRepo.UpdateProductStock(ctx, item.ProductID, item.Quantity)
 		if err != nil {
-			return nil, fmt.Errorf("failed to update product stock: %w", err)
+			return nil, utils.HandleServiceErrors(ctx, err, "service/ConfirmOrder")
 		}
 	}
 
 	// 5. Process payment
 	err = s.ProcessPayment(ctx, orderID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to process payment: %w", err)
+		return nil, utils.HandleServiceErrors(ctx, err, "service/ConfirmOrder")
 	}
 
 	// 6. Clear the cart after successful order confirmation
@@ -242,7 +243,7 @@ func (s *OrderService) ConfirmOrder(ctx context.Context, orderID uuid.UUID, user
 	// 7. Get the updated order details
 	updatedOrderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, orderID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get updated order details: %w", err)
+		return nil, utils.HandleServiceErrors(ctx, err, "service/ConfirmOrder")
 	}
 
 	return updatedOrderWithDetails, nil
@@ -256,7 +257,7 @@ func (s *OrderService) ProcessPayment(ctx context.Context, orderID uuid.UUID) er
 	// Get the payment record for this order
 	orderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, orderID)
 	if err != nil {
-		return err
+		return utils.HandleServiceErrors(ctx, err, "service/ProcessPayment")
 	}
 	paymentID := orderWithDetails.Payment.ID
 
@@ -266,14 +267,14 @@ func (s *OrderService) ProcessPayment(ctx context.Context, orderID uuid.UUID) er
 	// Update payment status using payment ID
 	err = s.orderRepo.UpdatePaymentStatus(ctx, paymentID, "paid", &transactionID)
 	if err != nil {
-		return fmt.Errorf("failed to update payment status: %w", err)
+		return utils.HandleServiceErrors(ctx, err, "service/ProcessPayment")
 	}
 
 	// Update order status
 	err = s.orderRepo.UpdateOrderStatus(ctx, orderID, "processing", "paid")
 	if err != nil {
-		return fmt.Errorf("failed to update order status: %w", err)
+		return utils.HandleServiceErrors(ctx, err, "service/ProcessPayment")
 	}
 
 	return nil
-} 
+}

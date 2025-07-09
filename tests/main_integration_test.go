@@ -90,6 +90,11 @@ func TestMain(m *testing.M) {
 	orderService := services.NewOrderService(orderRepo, cartRepo, productRepo)
 	testOrderHandler := handlers.NewOrderHandler(orderService)
 
+	// Initialize Review components
+	reviewRepo := repositories.NewReviewRepository(testDB)
+	reviewService := services.NewReviewService(reviewRepo, orderRepo)
+	testReviewHandler := handlers.NewReviewHandler(reviewService)
+
 	// Initialize Router
 	testRouter = http.NewServeMux()
 
@@ -130,6 +135,12 @@ func TestMain(m *testing.M) {
 	testRouter.Handle("/orders/summary", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetOrderSummary)))
 	testRouter.Handle("/orders/details", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetOrderDetails)))
 	testRouter.Handle("/orders/user", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetUserOrders)))
+
+	// Review routes
+	testRouter.Handle("/reviews/add", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testReviewHandler.AddReview)))
+	testRouter.HandleFunc("/reviews/get", testReviewHandler.GetReviewsByProductID)
+	testRouter.Handle("/reviews/update", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testReviewHandler.UpdateReview)))
+	testRouter.Handle("/reviews/delete", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testReviewHandler.DeleteReview)))
 
 	code := m.Run()
 	os.Exit(code)

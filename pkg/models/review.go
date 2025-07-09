@@ -14,3 +14,9 @@ type Review struct {
 	Comment   *string   `json:"comment,omitempty" db:"comment"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
 }
+
+type ReviewDTO struct {
+	ProductID uuid.UUID `json:"product_id"`
+	Rating    int       `json:"rating"`
+	Comment   *string   `json:"comment,omitempty"`
+}

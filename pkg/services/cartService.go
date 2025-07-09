@@ -9,6 +9,7 @@ import (
 
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/repositories"
+	"go_ecommerce/pkg/utils"
 )
 
 type ICartService interface {
@@ -36,7 +37,7 @@ func (s *CartService) AddProductsToCart(ctx context.Context, userID *uuid.UUID, 
 	if userID != nil {
 		cart, err = s.cartRepo.GetCartByUserID(ctx, *userID)
 		if err != nil {
-			return nil, err
+			return nil, utils.HandleServiceErrors(ctx, err, "service/AddProductsToCart")
 		}
 	} else if sessionID != nil {
 		cart, err = s.cartRepo.GetCartBySessionID(ctx, *sessionID)
@@ -44,14 +45,14 @@ func (s *CartService) AddProductsToCart(ctx context.Context, userID *uuid.UUID, 
 			if errors.Is(err, sql.ErrNoRows) {
 				cart, err = s.cartRepo.CreateGuestCart(ctx, *sessionID)
 				if err != nil {
-					return nil, err
+					return nil, utils.HandleServiceErrors(ctx, err, "service/AddProductsToCart")
 				}
 			} else {
-				return nil, err
+				return nil, utils.HandleServiceErrors(ctx, err, "service/AddProductsToCart")
 			}
 		}
 	} else {
-		return nil, errors.New("cart cannot be created without a user or session")
+		return nil, utils.HandleServiceErrors(ctx, errors.New("cart cannot be created without a user or session"), "service/AddProductsToCart")
 	}
 
 	return s.cartRepo.AddProductsToCart(ctx, cartItems, cart)

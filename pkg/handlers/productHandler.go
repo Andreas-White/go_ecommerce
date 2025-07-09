@@ -23,7 +23,7 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 
 	var product models.ProductDTO
 	if err := json.NewDecoder(r.Body).Decode(&product); err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		utils.HandleAPIErrors(err, w, "handler/CreateProduct", http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
@@ -39,13 +39,13 @@ func (h *ProductHandler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
-		utils.RespondWithError(w, http.StatusBadRequest, "Product ID is required")
+		utils.HandleAPIErrors(nil, w, "handler/GetProduct", http.StatusBadRequest, "Product ID is required")
 		return
 	}
 
 	product, err := h.Service.GetProductByID(r.Context(), id)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		utils.HandleAPIErrors(err, w, "handler/GetProduct", http.StatusNotFound, "Product not found")
 		return
 	}
 
@@ -55,13 +55,13 @@ func (h *ProductHandler) GetProduct(w http.ResponseWriter, r *http.Request) {
 func (h *ProductHandler) GetProductsByCategory(w http.ResponseWriter, r *http.Request) {
 	category := r.URL.Query().Get("category")
 	if category == "" {
-		utils.RespondWithError(w, http.StatusBadRequest, "Category is required")
+		utils.HandleAPIErrors(nil, w, "handler/GetProductsByCategory", http.StatusBadRequest, "Category is required")
 		return
 	}
 
 	products, err := h.Service.GetProductsByCategory(r.Context(), category)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		utils.HandleAPIErrors(err, w, "handler/GetProductsByCategory", http.StatusNotFound, "Products not found")
 		return
 	}
 
@@ -71,13 +71,13 @@ func (h *ProductHandler) GetProductsByCategory(w http.ResponseWriter, r *http.Re
 func (h *ProductHandler) GetProductsByUserID(w http.ResponseWriter, r *http.Request) {
 	userID := r.URL.Query().Get("user_id")
 	if userID == "" {
-		utils.RespondWithError(w, http.StatusBadRequest, "User ID is required")
+		utils.HandleAPIErrors(nil, w, "handler/GetProductsByUserID", http.StatusBadRequest, "User ID is required")
 		return
 	}
 
 	products, err := h.Service.GetProductsByUserID(r.Context(), userID)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		utils.HandleAPIErrors(err, w, "handler/GetProductsByUserID", http.StatusNotFound, "Products not found")
 		return
 	}
 
@@ -92,7 +92,7 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 
 	products, err := h.Service.GetProducts(r.Context(), sortBy, sortOrder, searchTerm)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		utils.HandleAPIErrors(err, w, "handler/GetProducts", http.StatusInternalServerError, "Failed to get products")
 		return
 	}
 
@@ -102,24 +102,24 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
-		utils.RespondWithError(w, http.StatusBadRequest, "Product ID is required")
+		utils.HandleAPIErrors(nil, w, "handler/UpdateProduct", http.StatusBadRequest, "Product ID is required")
 		return
 	}
 
 	product, err := h.Service.GetProductByID(r.Context(), id)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusNotFound, err.Error())
+		utils.HandleAPIErrors(err, w, "handler/UpdateProduct", http.StatusNotFound, "Product not found")
 		return
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&product); err != nil {
-		utils.RespondWithError(w, http.StatusBadRequest, "Invalid request payload")
+		utils.HandleAPIErrors(err, w, "handler/UpdateProduct", http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
 	err = h.Service.UpdateProduct(r.Context(), product)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		utils.HandleAPIErrors(err, w, "handler/UpdateProduct", http.StatusInternalServerError, "Failed to update product")
 		return
 	}
 
@@ -129,13 +129,13 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("id")
 	if id == "" {
-		utils.RespondWithError(w, http.StatusBadRequest, "Product ID is required")
+		utils.HandleAPIErrors(nil, w, "handler/DeleteProduct", http.StatusBadRequest, "Product ID is required")
 		return
 	}
 
 	err := h.Service.DeleteProduct(r.Context(), id)
 	if err != nil {
-		utils.RespondWithError(w, http.StatusInternalServerError, err.Error())
+		utils.HandleAPIErrors(err, w, "handler/DeleteProduct", http.StatusInternalServerError, "Failed to delete product")
 		return
 	}
 
