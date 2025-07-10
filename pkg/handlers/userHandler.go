@@ -10,6 +10,16 @@ import (
 	"strings"
 )
 
+// IUserHandler interface
+type IUserHandler interface {
+	Register(w http.ResponseWriter, r *http.Request)
+	GetUserByID(w http.ResponseWriter, r *http.Request)
+	GetUserByName(w http.ResponseWriter, r *http.Request)
+	GetUserByEmail(w http.ResponseWriter, r *http.Request)
+	UpdateUser(w http.ResponseWriter, r *http.Request)
+	DeleteUser(w http.ResponseWriter, r *http.Request)
+}
+
 // UserHandler struct
 type UserHandler struct {
 	UserService services.IUserService

@@ -3,6 +3,7 @@ package repositories
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/utils"
 	"time"
@@ -18,9 +19,12 @@ type IOrderRepository interface {
 	GetOrderByID(ctx context.Context, orderID uuid.UUID) (*models.Order, error)
 	GetOrderWithDetails(ctx context.Context, orderID uuid.UUID) (*models.OrderWithDetails, error)
 	GetOrdersByUserID(ctx context.Context, userID uuid.UUID) ([]models.Order, error)
+	GetOrdersByProducerID(ctx context.Context, producerID uuid.UUID) ([]models.OrderWithDetails, error)
 	UpdateOrderStatus(ctx context.Context, orderID uuid.UUID, status string, paymentStatus string) error
 	UpdatePaymentStatus(ctx context.Context, paymentID uuid.UUID, status string, transactionID *string) error
 	UpdateProductStock(ctx context.Context, productID uuid.UUID, quantity int) error
+	UpdateShippingTracking(ctx context.Context, orderID uuid.UUID, trackingCode string, shippedAt *time.Time) error
+	GetSalesReport(ctx context.Context, producerID uuid.UUID, startDate, endDate *time.Time, category *string) (*models.SalesReportResponse, error)
 }
 
 type OrderRepository struct {
@@ -288,4 +292,259 @@ func (r *OrderRepository) UpdateProductStock(ctx context.Context, productID uuid
 	}
 
 	return nil
+}
+
+func (r *OrderRepository) GetOrdersByProducerID(ctx context.Context, producerID uuid.UUID) ([]models.OrderWithDetails, error) {
+	query := `
+		SELECT DISTINCT o.id, o.user_id, o.total_amount, o.status, o.payment_status, o.created_at, o.updated_at
+		FROM orders o
+		JOIN order_items oi ON o.id = oi.order_id
+		JOIN products p ON oi.product_id = p.id
+		WHERE p.user_id = $1 AND o.payment_status = 'paid'
+		ORDER BY o.created_at DESC
+	`
+
+	rows, err := r.DB.QueryContext(ctx, query, producerID)
+	if err != nil {
+		return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetOrdersByProducerID", producerID.String())
+	}
+	defer rows.Close()
+
+	var orders []models.OrderWithDetails
+	for rows.Next() {
+		var order models.Order
+		err := rows.Scan(
+			&order.ID, &order.UserID, &order.TotalAmount, &order.Status, &order.PaymentStatus,
+			&order.CreatedAt, &order.UpdatedAt)
+		if err != nil {
+			return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetOrdersByProducerID", producerID.String())
+		}
+
+		// Get full order details for each order
+		orderWithDetails, err := r.GetOrderWithDetails(ctx, order.ID)
+		if err != nil {
+			return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetOrdersByProducerID", producerID.String())
+		}
+
+		orders = append(orders, *orderWithDetails)
+	}
+
+	return orders, nil
+}
+
+func (r *OrderRepository) UpdateShippingTracking(ctx context.Context, orderID uuid.UUID, trackingCode string, shippedAt *time.Time) error {
+	query := `
+		UPDATE shippings SET tracking_code = $2, shipped_at = $3, updated_at = $4
+		WHERE order_id = $1
+	`
+
+	now := time.Now()
+	_, err := r.DB.ExecContext(ctx, query, orderID, trackingCode, shippedAt, now)
+
+	if err != nil {
+		return utils.HandleRepositoryErrors(ctx, err, "repository/UpdateShippingTracking", orderID.String())
+	}
+
+	return nil
+}
+
+func (r *OrderRepository) GetSalesReport(ctx context.Context, producerID uuid.UUID, startDate, endDate *time.Time, category *string) (*models.SalesReportResponse, error) {
+	// Build the base query for orders with producer's products
+	baseQuery := `
+		SELECT DISTINCT o.id, o.user_id, o.total_amount, o.status, o.payment_status, o.created_at, o.updated_at
+		FROM orders o
+		JOIN order_items oi ON o.id = oi.order_id
+		JOIN products p ON oi.product_id = p.id
+		WHERE p.user_id = $1 AND o.payment_status = 'paid'
+	`
+
+	args := []interface{}{producerID}
+	argIndex := 2
+
+	// Add date filters if provided
+	if startDate != nil {
+		baseQuery += fmt.Sprintf(" AND o.created_at >= $%d", argIndex)
+		args = append(args, *startDate)
+		argIndex++
+	}
+
+	if endDate != nil {
+		baseQuery += fmt.Sprintf(" AND o.created_at <= $%d", argIndex)
+		args = append(args, *endDate)
+		argIndex++
+	}
+
+	// Add category filter if provided
+	if category != nil {
+		baseQuery += fmt.Sprintf(" AND p.category = $%d", argIndex)
+		args = append(args, *category)
+		argIndex++
+	}
+
+	baseQuery += " ORDER BY o.created_at DESC"
+
+	// Get orders
+	rows, err := r.DB.QueryContext(ctx, baseQuery, args...)
+	if err != nil {
+		return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetSalesReport", producerID.String())
+	}
+	defer rows.Close()
+
+	var orders []models.Order
+	var totalRevenue float64
+	var totalOrders int
+
+	for rows.Next() {
+		var order models.Order
+		err := rows.Scan(
+			&order.ID, &order.UserID, &order.TotalAmount, &order.Status, &order.PaymentStatus,
+			&order.CreatedAt, &order.UpdatedAt)
+		if err != nil {
+			return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetSalesReport", producerID.String())
+		}
+		orders = append(orders, order)
+		totalRevenue += order.TotalAmount
+		totalOrders++
+	}
+
+	// Get detailed sales data for products
+	productSalesQuery := `
+		SELECT 
+			p.id, p.name, p.category, p.price,
+			SUM(oi.quantity) as units_sold,
+			SUM(oi.quantity * oi.price) as revenue
+		FROM order_items oi
+		JOIN products p ON oi.product_id = p.id
+		JOIN orders o ON oi.order_id = o.id
+		WHERE p.user_id = $1 AND o.payment_status = 'paid'
+	`
+
+	productArgs := []interface{}{producerID}
+	productArgIndex := 2
+
+	if startDate != nil {
+		productSalesQuery += fmt.Sprintf(" AND o.created_at >= $%d", productArgIndex)
+		productArgs = append(productArgs, *startDate)
+		productArgIndex++
+	}
+
+	if endDate != nil {
+		productSalesQuery += fmt.Sprintf(" AND o.created_at <= $%d", productArgIndex)
+		productArgs = append(productArgs, *endDate)
+		productArgIndex++
+	}
+
+	if category != nil {
+		productSalesQuery += fmt.Sprintf(" AND p.category = $%d", productArgIndex)
+		productArgs = append(productArgs, *category)
+		productArgIndex++
+	}
+
+	productSalesQuery += `
+		GROUP BY p.id, p.name, p.category, p.price
+		ORDER BY units_sold DESC
+		LIMIT 10
+	`
+
+	productRows, err := r.DB.QueryContext(ctx, productSalesQuery, productArgs...)
+	if err != nil {
+		return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetSalesReport", producerID.String())
+	}
+	defer productRows.Close()
+
+	var topSellingProducts []models.TopSellingProduct
+	var totalItemsSold int
+
+	for productRows.Next() {
+		var product models.TopSellingProduct
+		err := productRows.Scan(
+			&product.ProductID, &product.ProductName, &product.Category, &product.Price,
+			&product.UnitsSold, &product.Revenue)
+		if err != nil {
+			return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetSalesReport", producerID.String())
+		}
+		topSellingProducts = append(topSellingProducts, product)
+		totalItemsSold += product.UnitsSold
+	}
+
+	// Get category sales data
+	categorySalesQuery := `
+		SELECT 
+			p.category,
+			SUM(oi.quantity) as units_sold,
+			SUM(oi.quantity * oi.price) as revenue,
+			COUNT(DISTINCT o.id) as order_count
+		FROM order_items oi
+		JOIN products p ON oi.product_id = p.id
+		JOIN orders o ON oi.order_id = o.id
+		WHERE p.user_id = $1 AND o.payment_status = 'paid'
+	`
+
+	categoryArgs := []interface{}{producerID}
+	categoryArgIndex := 2
+
+	if startDate != nil {
+		categorySalesQuery += fmt.Sprintf(" AND o.created_at >= $%d", categoryArgIndex)
+		categoryArgs = append(categoryArgs, *startDate)
+		categoryArgIndex++
+	}
+
+	if endDate != nil {
+		categorySalesQuery += fmt.Sprintf(" AND o.created_at <= $%d", categoryArgIndex)
+		categoryArgs = append(categoryArgs, *endDate)
+		categoryArgIndex++
+	}
+
+	if category != nil {
+		categorySalesQuery += fmt.Sprintf(" AND p.category = $%d", categoryArgIndex)
+		categoryArgs = append(categoryArgs, *category)
+		categoryArgIndex++
+	}
+
+	categorySalesQuery += `
+		GROUP BY p.category
+		ORDER BY revenue DESC
+	`
+
+	categoryRows, err := r.DB.QueryContext(ctx, categorySalesQuery, categoryArgs...)
+	if err != nil {
+		return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetSalesReport", producerID.String())
+	}
+	defer categoryRows.Close()
+
+	var salesByCategory []models.CategorySales
+
+	for categoryRows.Next() {
+		var categorySales models.CategorySales
+		err := categoryRows.Scan(
+			&categorySales.Category, &categorySales.UnitsSold,
+			&categorySales.Revenue, &categorySales.OrderCount)
+		if err != nil {
+			return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetSalesReport", producerID.String())
+		}
+		salesByCategory = append(salesByCategory, categorySales)
+	}
+
+	// Calculate average order value
+	var averageOrderValue float64
+	if totalOrders > 0 {
+		averageOrderValue = totalRevenue / float64(totalOrders)
+	}
+
+	// Create the sales report response
+	report := &models.SalesReportResponse{
+		ProducerID:         producerID,
+		TotalRevenue:       totalRevenue,
+		TotalOrders:        totalOrders,
+		TotalItemsSold:     totalItemsSold,
+		AverageOrderValue:  averageOrderValue,
+		TopSellingProducts: topSellingProducts,
+		SalesByCategory:    salesByCategory,
+		Period: models.SalesPeriod{
+			StartDate: startDate,
+			EndDate:   endDate,
+		},
+	}
+
+	return report, nil
 }

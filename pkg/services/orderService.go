@@ -17,8 +17,11 @@ type IOrderService interface {
 	GetOrderSummary(ctx context.Context, orderID uuid.UUID) (*models.OrderSummary, error)
 	GetOrderWithDetails(ctx context.Context, orderID uuid.UUID) (*models.OrderWithDetails, error)
 	GetUserOrders(ctx context.Context, userID uuid.UUID) ([]models.Order, error)
+	GetProducerOrders(ctx context.Context, producerID uuid.UUID) ([]models.OrderWithDetails, error)
 	ConfirmOrder(ctx context.Context, orderID uuid.UUID, userID uuid.UUID) (*models.OrderWithDetails, error)
 	ProcessPayment(ctx context.Context, orderID uuid.UUID) error
+	FulfillOrder(ctx context.Context, producerID uuid.UUID, fulfillmentRequest models.OrderFulfillmentRequest) (*models.OrderFulfillmentResponse, error)
+	GetSalesReport(ctx context.Context, producerID uuid.UUID, request models.SalesReportRequest) (*models.SalesReportResponse, error)
 }
 
 type OrderService struct {
@@ -201,6 +204,10 @@ func (s *OrderService) GetUserOrders(ctx context.Context, userID uuid.UUID) ([]m
 	return s.orderRepo.GetOrdersByUserID(ctx, userID)
 }
 
+func (s *OrderService) GetProducerOrders(ctx context.Context, producerID uuid.UUID) ([]models.OrderWithDetails, error) {
+	return s.orderRepo.GetOrdersByProducerID(ctx, producerID)
+}
+
 // ConfirmOrder updates the order status and processes payment
 // This is called after the user confirms the order summary
 func (s *OrderService) ConfirmOrder(ctx context.Context, orderID uuid.UUID, userID uuid.UUID) (*models.OrderWithDetails, error) {
@@ -277,4 +284,96 @@ func (s *OrderService) ProcessPayment(ctx context.Context, orderID uuid.UUID) er
 	}
 
 	return nil
+}
+
+// FulfillOrder handles order fulfillment by producers
+func (s *OrderService) FulfillOrder(ctx context.Context, producerID uuid.UUID, fulfillmentRequest models.OrderFulfillmentRequest) (*models.OrderFulfillmentResponse, error) {
+	// 1. Get the order with details
+	orderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, fulfillmentRequest.OrderID)
+	if err != nil {
+		return nil, utils.HandleServiceErrors(ctx, err, "service/FulfillOrder")
+	}
+
+	// 2. Verify the order contains products from this producer
+	producerOwnsOrder := false
+	for _, item := range orderWithDetails.Items {
+		product, err := s.productRepo.GetProductByID(ctx, item.ProductID.String())
+		if err != nil {
+			return nil, utils.HandleServiceErrors(ctx, err, "service/FulfillOrder")
+		}
+		if product.UserID == producerID {
+			producerOwnsOrder = true
+			break
+		}
+	}
+
+	if !producerOwnsOrder {
+		return nil, utils.HandleServiceErrors(ctx, errors.New("order does not contain products from this producer"), "service/FulfillOrder")
+	}
+
+	// 3. Verify the order is in a valid state for fulfillment
+	if orderWithDetails.Order.PaymentStatus != "paid" {
+		return nil, utils.HandleServiceErrors(ctx, errors.New("order payment is not completed"), "service/FulfillOrder")
+	}
+
+	// 4. Validate the new status
+	validStatuses := map[string]bool{
+		"accepted":  true,
+		"preparing": true,
+		"shipped":   true,
+	}
+	if !validStatuses[fulfillmentRequest.NewStatus] {
+		return nil, utils.HandleServiceErrors(ctx, fmt.Errorf("invalid status: %s", fulfillmentRequest.NewStatus), "service/FulfillOrder")
+	}
+
+	// 5. Update order status
+	err = s.orderRepo.UpdateOrderStatus(ctx, fulfillmentRequest.OrderID, fulfillmentRequest.NewStatus, orderWithDetails.Order.PaymentStatus)
+	if err != nil {
+		return nil, utils.HandleServiceErrors(ctx, err, "service/FulfillOrder")
+	}
+
+	// 6. If status is "shipped", update shipping tracking
+	var shippedAt *time.Time
+	if fulfillmentRequest.NewStatus == "shipped" {
+		if fulfillmentRequest.TrackingCode == nil || *fulfillmentRequest.TrackingCode == "" {
+			return nil, utils.HandleServiceErrors(ctx, errors.New("tracking code is required when marking order as shipped"), "service/FulfillOrder")
+		}
+
+		now := time.Now()
+		shippedAt = &now
+
+		err = s.orderRepo.UpdateShippingTracking(ctx, fulfillmentRequest.OrderID, *fulfillmentRequest.TrackingCode, shippedAt)
+		if err != nil {
+			return nil, utils.HandleServiceErrors(ctx, err, "service/FulfillOrder")
+		}
+	}
+
+	// 7. Create response
+	response := &models.OrderFulfillmentResponse{
+		OrderID:      fulfillmentRequest.OrderID,
+		Status:       fulfillmentRequest.NewStatus,
+		TrackingCode: fulfillmentRequest.TrackingCode,
+		ShippedAt:    shippedAt,
+		Message:      fmt.Sprintf("Order %s successfully updated to %s", fulfillmentRequest.OrderID.String()[:8], fulfillmentRequest.NewStatus),
+	}
+
+	return response, nil
+}
+
+// GetSalesReport retrieves sales analytics for a producer
+func (s *OrderService) GetSalesReport(ctx context.Context, producerID uuid.UUID, request models.SalesReportRequest) (*models.SalesReportResponse, error) {
+	// Validate date range if both dates are provided
+	if request.StartDate != nil && request.EndDate != nil {
+		if request.StartDate.After(*request.EndDate) {
+			return nil, utils.HandleServiceErrors(ctx, errors.New("start date cannot be after end date"), "service/GetSalesReport")
+		}
+	}
+
+	// Get sales report from repository
+	report, err := s.orderRepo.GetSalesReport(ctx, producerID, request.StartDate, request.EndDate, request.Category)
+	if err != nil {
+		return nil, utils.HandleServiceErrors(ctx, err, "service/GetSalesReport")
+	}
+
+	return report, nil
 }

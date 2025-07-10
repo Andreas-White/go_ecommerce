@@ -43,8 +43,8 @@ func (h *OrderHandler) ProcessCheckout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if checkoutRequest.ShippingInfo.Address == "" || checkoutRequest.ShippingInfo.City == "" || 
-	   checkoutRequest.ShippingInfo.Country == "" || checkoutRequest.ShippingInfo.ZipCode == "" {
+	if checkoutRequest.ShippingInfo.Address == "" || checkoutRequest.ShippingInfo.City == "" ||
+		checkoutRequest.ShippingInfo.Country == "" || checkoutRequest.ShippingInfo.ZipCode == "" {
 		utils.HandleAPIErrors(nil, w, "handler/ProcessCheckout", http.StatusBadRequest, "Complete shipping information is required")
 		return
 	}
@@ -190,4 +190,107 @@ func (h *OrderHandler) GetUserOrders(w http.ResponseWriter, r *http.Request) {
 	}
 
 	utils.RespondWithJSON(w, http.StatusOK, orders)
-} 
+}
+
+// GetProducerOrders retrieves all orders for products owned by the authenticated producer
+func (h *OrderHandler) GetProducerOrders(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get user from context (must be authenticated)
+	user := middleware.GetUserFromContext(r, w)
+	if user == nil {
+		utils.HandleAPIErrors(nil, w, "handler/GetProducerOrders", http.StatusUnauthorized, "User must be authenticated")
+		return
+	}
+
+	// Verify user is a producer
+	if !user.IsProducer {
+		utils.HandleAPIErrors(nil, w, "handler/GetProducerOrders", http.StatusForbidden, "Only producers can access this endpoint")
+		return
+	}
+
+	orders, err := h.orderService.GetProducerOrders(ctx, user.ID)
+	if err != nil {
+		utils.HandleAPIErrors(err, w, "handler/GetProducerOrders", http.StatusInternalServerError, "Failed to get producer orders")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, orders)
+}
+
+// FulfillOrder handles order fulfillment by producers
+func (h *OrderHandler) FulfillOrder(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get user from context (must be authenticated)
+	user := middleware.GetUserFromContext(r, w)
+	if user == nil {
+		utils.HandleAPIErrors(nil, w, "handler/FulfillOrder", http.StatusUnauthorized, "User must be authenticated")
+		return
+	}
+
+	// Verify user is a producer
+	if !user.IsProducer {
+		utils.HandleAPIErrors(nil, w, "handler/FulfillOrder", http.StatusForbidden, "Only producers can fulfill orders")
+		return
+	}
+
+	var fulfillmentRequest models.OrderFulfillmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&fulfillmentRequest); err != nil {
+		utils.HandleAPIErrors(err, w, "handler/FulfillOrder", http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Validate required fields
+	if fulfillmentRequest.OrderID == uuid.Nil {
+		utils.HandleAPIErrors(nil, w, "handler/FulfillOrder", http.StatusBadRequest, "Order ID is required")
+		return
+	}
+
+	if fulfillmentRequest.NewStatus == "" {
+		utils.HandleAPIErrors(nil, w, "handler/FulfillOrder", http.StatusBadRequest, "New status is required")
+		return
+	}
+
+	// Process order fulfillment
+	response, err := h.orderService.FulfillOrder(ctx, user.ID, fulfillmentRequest)
+	if err != nil {
+		utils.HandleAPIErrors(err, w, "handler/FulfillOrder", http.StatusInternalServerError, "Failed to fulfill order")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, response)
+}
+
+// GetSalesReport handles sales report requests for producers
+func (h *OrderHandler) GetSalesReport(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get user from context (must be authenticated)
+	user := middleware.GetUserFromContext(r, w)
+	if user == nil {
+		utils.HandleAPIErrors(nil, w, "handler/GetSalesReport", http.StatusUnauthorized, "User must be authenticated")
+		return
+	}
+
+	// Verify user is a producer
+	if !user.IsProducer {
+		utils.HandleAPIErrors(nil, w, "handler/GetSalesReport", http.StatusForbidden, "Only producers can access sales reports")
+		return
+	}
+
+	var request models.SalesReportRequest
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		utils.HandleAPIErrors(err, w, "handler/GetSalesReport", http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	// Get sales report
+	report, err := h.orderService.GetSalesReport(ctx, user.ID, request)
+	if err != nil {
+		utils.HandleAPIErrors(err, w, "handler/GetSalesReport", http.StatusInternalServerError, "Failed to generate sales report")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, report)
+}

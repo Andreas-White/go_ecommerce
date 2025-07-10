@@ -183,3 +183,291 @@ func TestReview_NotPurchased_CannotReview(t *testing.T) {
 	assert.NotEqual(t, http.StatusCreated, reviewRR.Code)
 	assert.Contains(t, reviewRR.Body.String(), "Failed to add review")
 }
+
+func TestReviewCreation_UpdatesCompanyStats(t *testing.T) {
+	clearTables(t)
+
+	// 1. Register a producer with a company
+	producerEmail := "producer-company@example.com"
+	producerPassword := "password123"
+	producerPayload := createUserDTO(producerEmail, producerPassword, true)
+	registerTestUserAuth(t, producerPayload)
+	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	require.NoError(t, err)
+
+	// Create a company for the producer
+	address := "123 Business St"
+	city := "Business City"
+	country := "Business Country"
+	zipCode := "12345"
+	companyPayload := models.CompanyDTO{
+		Name:          "Test Company",
+		Address:       &address,
+		City:          &city,
+		Country:       &country,
+		ZipCode:       &zipCode,
+		ReviewAverage: 0.0,
+		ReviewCount:   0,
+	}
+
+	companyBody, _ := json.Marshal(companyPayload)
+	companyReq, _ := http.NewRequest("POST", "/companies/create", bytes.NewBuffer(companyBody))
+	companyReq.Header.Set("Content-Type", "application/json")
+	companyReq.Header.Set("Authorization", "Bearer "+producerToken)
+
+	companyRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(companyRR, companyReq)
+	require.Equal(t, http.StatusCreated, companyRR.Code, "Failed to create company")
+
+	// 2. Producer creates a product
+	product := createTestProduct(t, producerToken, models.Product{
+		Name:  "Test Product for Company Stats",
+		Price: 29.99,
+		Stock: 10,
+	})
+
+	// 3. Register a customer and make a purchase
+	customerEmail := "customer-company@example.com"
+	customerPassword := "password123"
+	customerPayload := createUserDTO(customerEmail, customerPassword, false)
+	registerTestUserAuth(t, customerPayload)
+	_, customerToken, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
+	require.NoError(t, err)
+
+	// Complete a purchase
+	completeTestPurchase(t, customerToken, product, 1)
+
+	// 4. Customer adds a review
+	comment1 := "Great product!"
+	reviewPayload := models.ReviewDTO{
+		ProductID: product.ID,
+		Rating:    5,
+		Comment:   &comment1,
+	}
+
+	reviewBody, _ := json.Marshal(reviewPayload)
+	reviewReq, _ := http.NewRequest("POST", "/reviews/add", bytes.NewBuffer(reviewBody))
+	reviewReq.Header.Set("Content-Type", "application/json")
+	reviewReq.Header.Set("Authorization", "Bearer "+customerToken)
+
+	reviewRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(reviewRR, reviewReq)
+	require.Equal(t, http.StatusCreated, reviewRR.Code, "Failed to add review")
+
+	// 5. Verify that the company's review statistics were updated
+	// Get the company details to check the updated stats
+	getCompanyReq, _ := http.NewRequest("GET", "/companies/get-by-user", nil)
+	getCompanyReq.Header.Set("Content-Type", "application/json")
+	getCompanyReq.Header.Set("Authorization", "Bearer "+producerToken)
+
+	getCompanyRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(getCompanyRR, getCompanyReq)
+	require.Equal(t, http.StatusOK, getCompanyRR.Code, "Failed to get company details")
+
+	var company models.CompanyDTO
+	err = json.Unmarshal(getCompanyRR.Body.Bytes(), &company)
+	require.NoError(t, err)
+
+	// Verify the company stats were updated
+	assert.Equal(t, 5.0, company.ReviewAverage, "Company review average should be updated to 5.0")
+	assert.Equal(t, 1, company.ReviewCount, "Company review count should be updated to 1")
+
+	// 6. Add another review and verify stats are recalculated
+	comment2 := "Good product!"
+	reviewPayload2 := models.ReviewDTO{
+		ProductID: product.ID,
+		Rating:    4,
+		Comment:   &comment2,
+	}
+
+	// Register another customer and make a purchase
+	customer2Email := "customer2-company@example.com"
+	customer2Password := "password123"
+	customer2Payload := createUserDTO(customer2Email, customer2Password, false)
+	registerTestUserAuth(t, customer2Payload)
+	_, customer2Token, err := loginUserAndGetTokenAuth(t, customer2Email, customer2Password)
+	require.NoError(t, err)
+
+	// Complete another purchase
+	completeTestPurchase(t, customer2Token, product, 1)
+
+	// Add second review
+	reviewBody2, _ := json.Marshal(reviewPayload2)
+	reviewReq2, _ := http.NewRequest("POST", "/reviews/add", bytes.NewBuffer(reviewBody2))
+	reviewReq2.Header.Set("Content-Type", "application/json")
+	reviewReq2.Header.Set("Authorization", "Bearer "+customer2Token)
+
+	reviewRR2 := httptest.NewRecorder()
+	testRouter.ServeHTTP(reviewRR2, reviewReq2)
+	require.Equal(t, http.StatusCreated, reviewRR2.Code, "Failed to add second review")
+
+	// Get updated company details
+	getCompanyReq2, _ := http.NewRequest("GET", "/companies/get-by-user", nil)
+	getCompanyReq2.Header.Set("Content-Type", "application/json")
+	getCompanyReq2.Header.Set("Authorization", "Bearer "+producerToken)
+
+	getCompanyRR2 := httptest.NewRecorder()
+	testRouter.ServeHTTP(getCompanyRR2, getCompanyReq2)
+	require.Equal(t, http.StatusOK, getCompanyRR2.Code, "Failed to get updated company details")
+
+	var updatedCompany models.CompanyDTO
+	err = json.Unmarshal(getCompanyRR2.Body.Bytes(), &updatedCompany)
+	require.NoError(t, err)
+
+	// Verify the company stats were recalculated correctly
+	expectedAverage := (5.0 + 4.0) / 2.0 // Average of 5 and 4
+	assert.Equal(t, expectedAverage, updatedCompany.ReviewAverage, "Company review average should be recalculated")
+	assert.Equal(t, 2, updatedCompany.ReviewCount, "Company review count should be updated to 2")
+}
+
+func TestReviewOperations_AllUpdateCompanyStats(t *testing.T) {
+	clearTables(t)
+
+	// 1. Register a producer with a company
+	producerEmail := "producer-all-ops@example.com"
+	producerPassword := "password123"
+	producerPayload := createUserDTO(producerEmail, producerPassword, true)
+	registerTestUserAuth(t, producerPayload)
+	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	require.NoError(t, err)
+
+	// Create a company for the producer
+	address := "123 Business St"
+	city := "Business City"
+	country := "Business Country"
+	zipCode := "12345"
+	companyPayload := models.CompanyDTO{
+		Name:          "Test Company All Ops",
+		Address:       &address,
+		City:          &city,
+		Country:       &country,
+		ZipCode:       &zipCode,
+		ReviewAverage: 0.0,
+		ReviewCount:   0,
+	}
+
+	companyBody, _ := json.Marshal(companyPayload)
+	companyReq, _ := http.NewRequest("POST", "/companies/create", bytes.NewBuffer(companyBody))
+	companyReq.Header.Set("Content-Type", "application/json")
+	companyReq.Header.Set("Authorization", "Bearer "+producerToken)
+
+	companyRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(companyRR, companyReq)
+	require.Equal(t, http.StatusCreated, companyRR.Code, "Failed to create company")
+
+	// 2. Producer creates a product
+	product := createTestProduct(t, producerToken, models.Product{
+		Name:  "Test Product All Ops",
+		Price: 39.99,
+		Stock: 10,
+	})
+
+	// 3. Register a customer and make a purchase
+	customerEmail := "customer-all-ops@example.com"
+	customerPassword := "password123"
+	customerPayload := createUserDTO(customerEmail, customerPassword, false)
+	registerTestUserAuth(t, customerPayload)
+	_, customerToken, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
+	require.NoError(t, err)
+
+	// Complete a purchase
+	completeTestPurchase(t, customerToken, product, 1)
+
+	// 4. Customer adds a review (CREATE)
+	comment1 := "Great product!"
+	reviewPayload := models.ReviewDTO{
+		ProductID: product.ID,
+		Rating:    5,
+		Comment:   &comment1,
+	}
+
+	reviewBody, _ := json.Marshal(reviewPayload)
+	reviewReq, _ := http.NewRequest("POST", "/reviews/add", bytes.NewBuffer(reviewBody))
+	reviewReq.Header.Set("Content-Type", "application/json")
+	reviewReq.Header.Set("Authorization", "Bearer "+customerToken)
+
+	reviewRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(reviewRR, reviewReq)
+	require.Equal(t, http.StatusCreated, reviewRR.Code, "Failed to add review")
+
+	// Get the review ID for update/delete operations
+	var reviews []models.Review
+	getReviewsReq, _ := http.NewRequest("GET", fmt.Sprintf("/reviews/get?product_id=%s", product.ID), nil)
+	getReviewsRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(getReviewsRR, getReviewsReq)
+	require.Equal(t, http.StatusOK, getReviewsRR.Code)
+	require.NoError(t, json.Unmarshal(getReviewsRR.Body.Bytes(), &reviews))
+	require.Len(t, reviews, 1)
+	reviewID := reviews[0].ID
+
+	// 5. Verify company stats after CREATE
+	getCompanyReq, _ := http.NewRequest("GET", "/companies/get-by-user", nil)
+	getCompanyReq.Header.Set("Content-Type", "application/json")
+	getCompanyReq.Header.Set("Authorization", "Bearer "+producerToken)
+
+	getCompanyRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(getCompanyRR, getCompanyReq)
+	require.Equal(t, http.StatusOK, getCompanyRR.Code, "Failed to get company details")
+
+	var company models.CompanyDTO
+	err = json.Unmarshal(getCompanyRR.Body.Bytes(), &company)
+	require.NoError(t, err)
+
+	assert.Equal(t, 5.0, company.ReviewAverage, "Company review average should be 5.0 after create")
+	assert.Equal(t, 1, company.ReviewCount, "Company review count should be 1 after create")
+
+	// 6. Customer updates the review (UPDATE)
+	updatedComment := "Updated: Great product!"
+	updatePayload := map[string]interface{}{
+		"rating":  4,
+		"comment": updatedComment,
+	}
+
+	updateBody, _ := json.Marshal(updatePayload)
+	updateReq, _ := http.NewRequest("PUT", fmt.Sprintf("/reviews/update?id=%s", reviewID), bytes.NewBuffer(updateBody))
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateReq.Header.Set("Authorization", "Bearer "+customerToken)
+
+	updateRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(updateRR, updateReq)
+	require.Equal(t, http.StatusOK, updateRR.Code, "Failed to update review")
+
+	// 7. Verify company stats after UPDATE
+	getCompanyReq2, _ := http.NewRequest("GET", "/companies/get-by-user", nil)
+	getCompanyReq2.Header.Set("Content-Type", "application/json")
+	getCompanyReq2.Header.Set("Authorization", "Bearer "+producerToken)
+
+	getCompanyRR2 := httptest.NewRecorder()
+	testRouter.ServeHTTP(getCompanyRR2, getCompanyReq2)
+	require.Equal(t, http.StatusOK, getCompanyRR2.Code, "Failed to get updated company details")
+
+	var updatedCompany models.CompanyDTO
+	err = json.Unmarshal(getCompanyRR2.Body.Bytes(), &updatedCompany)
+	require.NoError(t, err)
+
+	assert.Equal(t, 4.0, updatedCompany.ReviewAverage, "Company review average should be 4.0 after update")
+	assert.Equal(t, 1, updatedCompany.ReviewCount, "Company review count should still be 1 after update")
+
+	// 8. Customer deletes the review (DELETE)
+	deleteReq, _ := http.NewRequest("DELETE", fmt.Sprintf("/reviews/delete?id=%s", reviewID), nil)
+	deleteReq.Header.Set("Authorization", "Bearer "+customerToken)
+	deleteRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(deleteRR, deleteReq)
+	require.Equal(t, http.StatusOK, deleteRR.Code, "Failed to delete review")
+
+	// 9. Verify company stats after DELETE
+	getCompanyReq3, _ := http.NewRequest("GET", "/companies/get-by-user", nil)
+	getCompanyReq3.Header.Set("Content-Type", "application/json")
+	getCompanyReq3.Header.Set("Authorization", "Bearer "+producerToken)
+
+	getCompanyRR3 := httptest.NewRecorder()
+	testRouter.ServeHTTP(getCompanyRR3, getCompanyReq3)
+	require.Equal(t, http.StatusOK, getCompanyRR3.Code, "Failed to get company details after delete")
+
+	var deletedCompany models.CompanyDTO
+	err = json.Unmarshal(getCompanyRR3.Body.Bytes(), &deletedCompany)
+	require.NoError(t, err)
+
+	assert.Equal(t, 0.0, deletedCompany.ReviewAverage, "Company review average should be 0.0 after delete")
+	assert.Equal(t, 0, deletedCompany.ReviewCount, "Company review count should be 0 after delete")
+}

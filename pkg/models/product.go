@@ -20,10 +20,12 @@ type Product struct {
 }
 
 type ProductDTO struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description,omitempty"`
-	Price       float64 `json:"price"`
-	Stock       int32   `json:"stock"`
-	Category    string  `json:"category_id"`
-	ImageUrl    string  `json:"image_url,omitempty"`
+	ID          uuid.UUID  `json:"id"`
+	Name        string     `json:"name"`
+	Description string     `json:"description,omitempty"`
+	Price       float64    `json:"price"`
+	Stock       int32      `json:"stock"`
+	Category    string     `json:"category_id"`
+	ImageUrl    string     `json:"image_url,omitempty"`
+	Company     CompanyDTO `json:"company"`
 }

@@ -11,6 +11,13 @@ import (
 	"github.com/google/uuid"
 )
 
+type IReviewHandler interface {
+	AddReview(w http.ResponseWriter, r *http.Request)
+	GetReviewsByProductID(w http.ResponseWriter, r *http.Request)
+	UpdateReview(w http.ResponseWriter, r *http.Request)
+	DeleteReview(w http.ResponseWriter, r *http.Request)
+}
+
 type ReviewHandler struct {
 	Service services.IReviewService
 }

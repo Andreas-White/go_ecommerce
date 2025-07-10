@@ -75,9 +75,14 @@ func TestMain(m *testing.M) {
 	authService := services.NewAuthService(authRepo)
 	testAuthHandler = handlers.NewAuthHandler(authService) // Initialize package-level testAuthHandler
 
+	// Initialize Company components
+	testCompanyRepo := repositories.NewCompanyRepository(testDB)
+	testCompanyService := services.NewCompanyService(testCompanyRepo)
+	testCompanyHandler := handlers.NewCompanyHandler(testCompanyService)
+
 	// Initialize Product components
 	productRepo := repositories.NewProductRepository(testDB)
-	productService := services.NewProductService(productRepo)
+	productService := services.NewProductService(productRepo, testCompanyRepo)
 	testProductHandler = handlers.NewProductHandler(productService)
 
 	// Initialize Cart components
@@ -91,9 +96,10 @@ func TestMain(m *testing.M) {
 	testOrderHandler := handlers.NewOrderHandler(orderService)
 
 	// Initialize Review components
-	reviewRepo := repositories.NewReviewRepository(testDB)
-	reviewService := services.NewReviewService(reviewRepo, orderRepo)
-	testReviewHandler := handlers.NewReviewHandler(reviewService)
+	// Review service
+	testReviewRepo := repositories.NewReviewRepository(testDB)
+	testReviewService := services.NewReviewService(testReviewRepo, orderRepo, testCompanyRepo, productRepo)
+	testReviewHandler := handlers.NewReviewHandler(testReviewService)
 
 	// Initialize Router
 	testRouter = http.NewServeMux()
@@ -135,12 +141,22 @@ func TestMain(m *testing.M) {
 	testRouter.Handle("/orders/summary", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetOrderSummary)))
 	testRouter.Handle("/orders/details", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetOrderDetails)))
 	testRouter.Handle("/orders/user", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetUserOrders)))
+	testRouter.Handle("/orders/producer", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetProducerOrders)))
+	testRouter.Handle("/orders/fulfill", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.FulfillOrder)))
+	testRouter.Handle("/orders/sales-report", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetSalesReport)))
 
 	// Review routes
 	testRouter.Handle("/reviews/add", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testReviewHandler.AddReview)))
 	testRouter.HandleFunc("/reviews/get", testReviewHandler.GetReviewsByProductID)
 	testRouter.Handle("/reviews/update", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testReviewHandler.UpdateReview)))
 	testRouter.Handle("/reviews/delete", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testReviewHandler.DeleteReview)))
+
+	// Company routes
+	testRouter.Handle("/companies/create", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testCompanyHandler.CreateCompany)))
+	testRouter.Handle("/companies/get-by-user", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testCompanyHandler.GetCompanyByUserID)))
+	testRouter.HandleFunc("/companies/get-by-id", testCompanyHandler.GetCompanyByCompanyID)
+	testRouter.Handle("/companies/update", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testCompanyHandler.UpdateCompany)))
+	testRouter.Handle("/companies/delete", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testCompanyHandler.DeleteCompany)))
 
 	code := m.Run()
 	os.Exit(code)

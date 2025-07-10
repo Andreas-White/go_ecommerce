@@ -11,6 +11,16 @@ import (
 	"github.com/google/uuid"
 )
 
+type IProductHandler interface {
+	CreateProduct(w http.ResponseWriter, r *http.Request)
+	GetProduct(w http.ResponseWriter, r *http.Request)
+	GetProductsByCategory(w http.ResponseWriter, r *http.Request)
+	GetProductsByUserID(w http.ResponseWriter, r *http.Request)
+	GetProducts(w http.ResponseWriter, r *http.Request)
+	UpdateProduct(w http.ResponseWriter, r *http.Request)
+	DeleteProduct(w http.ResponseWriter, r *http.Request)
+}
+
 type ProductHandler struct {
 	Service services.IProductService
 }
@@ -115,7 +125,7 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	product, err := h.Service.GetProductByID(ctx, id)
+	product, err := h.Service.GetProductByIDForAuth(ctx, id)
 	if err != nil {
 		utils.HandleAPIErrors(err, w, "handler/UpdateProduct", http.StatusNotFound, "Product not found")
 		return
@@ -127,10 +137,20 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&product); err != nil {
+	// Parse the update payload
+	var updatePayload models.ProductDTO
+	if err := json.NewDecoder(r.Body).Decode(&updatePayload); err != nil {
 		utils.HandleAPIErrors(err, w, "handler/UpdateProduct", http.StatusBadRequest, "Invalid request payload")
 		return
 	}
+
+	// Update the product fields
+	product.Name = updatePayload.Name
+	product.Description = updatePayload.Description
+	product.Price = updatePayload.Price
+	product.Stock = updatePayload.Stock
+	product.Category = updatePayload.Category
+	product.ImageUrl = updatePayload.ImageUrl
 
 	err = h.Service.UpdateProduct(ctx, product)
 	if err != nil {
@@ -138,7 +158,14 @@ func (h *ProductHandler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.RespondWithJSON(w, http.StatusOK, product)
+	// Return the updated product as DTO
+	updatedProductDTO, err := h.Service.GetProductByID(ctx, id)
+	if err != nil {
+		utils.HandleAPIErrors(err, w, "handler/UpdateProduct", http.StatusInternalServerError, "Failed to get updated product")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, updatedProductDTO)
 }
 
 func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
@@ -156,7 +183,7 @@ func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check ownership by getting the product first
-	product, err := h.Service.GetProductByID(ctx, id)
+	product, err := h.Service.GetProductByIDForAuth(ctx, id)
 	if err != nil {
 		utils.HandleAPIErrors(err, w, "handler/DeleteProduct", http.StatusNotFound, "Product not found")
 		return

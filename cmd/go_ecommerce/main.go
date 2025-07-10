@@ -42,9 +42,14 @@ func main() {
 	userService := services.NewUserService(userRepo, authMiddleware)
 	userHandler := handlers.NewUserHandler(userService)
 
+	// company
+	companyRepo := repositories.NewCompanyRepository(DB)
+	companyService := services.NewCompanyService(companyRepo)
+	companyHandler := handlers.NewCompanyHandler(companyService)
+
 	// product
 	productRepo := repositories.NewProductRepository(DB)
-	productService := services.NewProductService(productRepo)
+	productService := services.NewProductService(productRepo, companyRepo)
 	productHandler := handlers.NewProductHandler(productService)
 
 	// cart
@@ -59,7 +64,7 @@ func main() {
 
 	// review
 	reviewRepo := repositories.NewReviewRepository(DB)
-	reviewService := services.NewReviewService(reviewRepo, orderRepo)
+	reviewService := services.NewReviewService(reviewRepo, orderRepo, companyRepo, productRepo)
 	reviewHandler := handlers.NewReviewHandler(reviewService)
 
 	// Define routes
@@ -79,9 +84,8 @@ func main() {
 	http.Handle("/products/create", authMiddleware.AuthenticateJWT(http.HandlerFunc(productHandler.CreateProduct)))
 	http.HandleFunc("/products", productHandler.GetProducts)
 	http.HandleFunc("/product", productHandler.GetProduct)
-	http.HandleFunc("/products/{id}", productHandler.GetProduct)
 	http.HandleFunc("/products/category", productHandler.GetProductsByCategory)
-	http.HandleFunc("/products/user-id", productHandler.GetProductsByUserID)
+	http.Handle("/products/my-products", authMiddleware.AuthenticateJWT(http.HandlerFunc(productHandler.GetProductsByUserID)))
 	http.Handle("/products/update", authMiddleware.AuthenticateJWT(http.HandlerFunc(productHandler.UpdateProduct)))
 	http.Handle("/products/delete", authMiddleware.AuthenticateJWT(http.HandlerFunc(productHandler.DeleteProduct)))
 
@@ -98,12 +102,22 @@ func main() {
 	http.Handle("/orders/summary", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetOrderSummary)))
 	http.Handle("/orders/details", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetOrderDetails)))
 	http.Handle("/orders/user", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetUserOrders)))
+	http.Handle("/orders/producer", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetProducerOrders)))
+	http.Handle("/orders/fulfill", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.FulfillOrder)))
+	http.Handle("/orders/sales-report", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetSalesReport)))
 
 	// review routes
 	http.Handle("/reviews/add", authMiddleware.AuthenticateJWT(http.HandlerFunc(reviewHandler.AddReview)))
 	http.HandleFunc("/reviews/get", reviewHandler.GetReviewsByProductID)
 	http.Handle("/reviews/update", authMiddleware.AuthenticateJWT(http.HandlerFunc(reviewHandler.UpdateReview)))
 	http.Handle("/reviews/delete", authMiddleware.AuthenticateJWT(http.HandlerFunc(reviewHandler.DeleteReview)))
+
+	// company routes
+	http.Handle("/companies/create", authMiddleware.AuthenticateJWT(http.HandlerFunc(companyHandler.CreateCompany)))
+	http.Handle("/companies/get-by-user", authMiddleware.AuthenticateJWT(http.HandlerFunc(companyHandler.GetCompanyByUserID)))
+	http.HandleFunc("/companies/get-by-id", companyHandler.GetCompanyByCompanyID)
+	http.Handle("/companies/update", authMiddleware.AuthenticateJWT(http.HandlerFunc(companyHandler.UpdateCompany)))
+	http.Handle("/companies/delete", authMiddleware.AuthenticateJWT(http.HandlerFunc(companyHandler.DeleteCompany)))
 
 	// server
 	log.Printf("Server is listening on port %v", cfg.AppPort)

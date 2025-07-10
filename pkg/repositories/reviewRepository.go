@@ -14,6 +14,7 @@ type IReviewRepository interface {
 	CreateReview(ctx context.Context, review *models.Review) error
 	GetReviewsByProductID(ctx context.Context, productID uuid.UUID) ([]models.Review, error)
 	GetReviewByUserAndProductID(ctx context.Context, userID, productID uuid.UUID) (*models.Review, error)
+	GetReviewByID(ctx context.Context, reviewID uuid.UUID) (*models.Review, error)
 	UpdateReview(ctx context.Context, reviewID, userID uuid.UUID, rating int, comment *string) error
 	DeleteReview(ctx context.Context, reviewID, userID uuid.UUID) error
 }
@@ -27,6 +28,7 @@ func NewReviewRepository(db *sql.DB) IReviewRepository {
 }
 
 func (r *ReviewRepository) CreateReview(ctx context.Context, review *models.Review) error {
+
 	now := time.Now()
 	review.ID = uuid.New()
 	review.CreatedAt = now
@@ -68,6 +70,20 @@ func (r *ReviewRepository) GetReviewByUserAndProductID(ctx context.Context, user
 	}
 	if err != nil {
 		return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetReviewByUserAndProductID", userID.String())
+	}
+	return &review, nil
+}
+
+func (r *ReviewRepository) GetReviewByID(ctx context.Context, reviewID uuid.UUID) (*models.Review, error) {
+	query := `SELECT id, product_id, user_id, rating, comment, created_at FROM reviews WHERE id = $1`
+	row := r.DB.QueryRowContext(ctx, query, reviewID)
+	var review models.Review
+	err := row.Scan(&review.ID, &review.ProductID, &review.UserID, &review.Rating, &review.Comment, &review.CreatedAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetReviewByID", reviewID.String())
 	}
 	return &review, nil
 }
