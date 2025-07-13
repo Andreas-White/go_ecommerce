@@ -21,18 +21,18 @@ func TestCheckoutFlow_Complete(t *testing.T) {
 	producerPassword := "password123"
 	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
-	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	_, producerAuthData, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	customerEmail := "customer-checkout@example.com"
 	customerPassword := "password123"
 	customerPayload := createUserDTO(customerEmail, customerPassword, false)
 	registerTestUserAuth(t, customerPayload)
-	_, customerToken, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
+	_, customerAuthData, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
 	require.NoError(t, err)
 
 	// 2. Producer creates a product
-	product := createTestProduct(t, producerToken, models.Product{
+	product := createTestProduct(t, producerAuthData, models.Product{
 		Name:  "Test Product for Checkout",
 		Price: 29.99,
 		Stock: 10,
@@ -45,7 +45,7 @@ func TestCheckoutFlow_Complete(t *testing.T) {
 	addBody, _ := json.Marshal(cartItemsToAdd)
 	addReq, _ := http.NewRequest("POST", "/cart/add", bytes.NewBuffer(addBody))
 	addReq.Header.Set("Content-Type", "application/json")
-	addReq.Header.Set("Authorization", "Bearer "+customerToken)
+	addAuthHeaders(addReq, customerAuthData)
 
 	addRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(addRR, addReq)
@@ -75,7 +75,7 @@ func TestCheckoutFlow_Complete(t *testing.T) {
 	checkoutBody, _ := json.Marshal(checkoutRequest)
 	checkoutReq, _ := http.NewRequest("POST", "/orders/checkout", bytes.NewBuffer(checkoutBody))
 	checkoutReq.Header.Set("Content-Type", "application/json")
-	checkoutReq.Header.Set("Authorization", "Bearer "+customerToken)
+	addAuthHeaders(checkoutReq, customerAuthData)
 
 	checkoutRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(checkoutRR, checkoutReq)
@@ -101,7 +101,7 @@ func TestCheckoutFlow_Complete(t *testing.T) {
 	confirmBody, _ := json.Marshal(confirmRequest)
 	confirmReq, _ := http.NewRequest("POST", "/orders/confirm", bytes.NewBuffer(confirmBody))
 	confirmReq.Header.Set("Content-Type", "application/json")
-	confirmReq.Header.Set("Authorization", "Bearer "+customerToken)
+	addAuthHeaders(confirmReq, customerAuthData)
 
 	confirmRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(confirmRR, confirmReq)
@@ -128,7 +128,7 @@ func TestCheckoutFlow_Complete(t *testing.T) {
 	detailsBody, _ := json.Marshal(detailsRequest)
 	detailsReq, _ := http.NewRequest("POST", "/orders/details", bytes.NewBuffer(detailsBody))
 	detailsReq.Header.Set("Content-Type", "application/json")
-	detailsReq.Header.Set("Authorization", "Bearer "+customerToken)
+	addAuthHeaders(detailsReq, customerAuthData)
 
 	detailsRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(detailsRR, detailsReq)
@@ -137,7 +137,7 @@ func TestCheckoutFlow_Complete(t *testing.T) {
 	// 7. Verify user orders can be retrieved
 	userOrdersReq, _ := http.NewRequest("GET", "/orders/user", nil)
 	userOrdersReq.Header.Set("Content-Type", "application/json")
-	userOrdersReq.Header.Set("Authorization", "Bearer "+customerToken)
+	addAuthHeaders(userOrdersReq, customerAuthData)
 
 	userOrdersRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(userOrdersRR, userOrdersReq)
@@ -158,7 +158,7 @@ func TestCheckoutFlow_EmptyCart(t *testing.T) {
 	customerPassword := "password123"
 	customerPayload := createUserDTO(customerEmail, customerPassword, false)
 	registerTestUserAuth(t, customerPayload)
-	_, customerToken, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
+	_, customerAuthData, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
 	require.NoError(t, err)
 
 	// Try to checkout with empty cart
@@ -180,7 +180,7 @@ func TestCheckoutFlow_EmptyCart(t *testing.T) {
 	checkoutBody, _ := json.Marshal(checkoutRequest)
 	checkoutReq, _ := http.NewRequest("POST", "/orders/checkout", bytes.NewBuffer(checkoutBody))
 	checkoutReq.Header.Set("Content-Type", "application/json")
-	checkoutReq.Header.Set("Authorization", "Bearer "+customerToken)
+	addAuthHeaders(checkoutReq, customerAuthData)
 
 	checkoutRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(checkoutRR, checkoutReq)
@@ -223,30 +223,30 @@ func TestOrderFulfillmentFlow_Complete(t *testing.T) {
 	producerPassword := "password123"
 	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
-	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	_, producerAuthData, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	customerEmail := "customer-fulfillment@example.com"
 	customerPassword := "password123"
 	customerPayload := createUserDTO(customerEmail, customerPassword, false)
 	registerTestUserAuth(t, customerPayload)
-	_, customerToken, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
+	_, customerAuthData, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
 	require.NoError(t, err)
 
 	// 2. Producer creates a product
-	product := createTestProduct(t, producerToken, models.Product{
+	product := createTestProduct(t, producerAuthData, models.Product{
 		Name:  "Test Product for Fulfillment",
 		Price: 49.99,
 		Stock: 5,
 	})
 
 	// 3. Customer completes a purchase
-	orderWithDetails := completeTestPurchase(t, customerToken, product, 2)
+	orderWithDetails := completeTestPurchase(t, customerAuthData, product, 2)
 
 	// 4. Producer views their orders
 	producerOrdersReq, _ := http.NewRequest("GET", "/orders/producer", nil)
 	producerOrdersReq.Header.Set("Content-Type", "application/json")
-	producerOrdersReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(producerOrdersReq, producerAuthData)
 
 	producerOrdersRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(producerOrdersRR, producerOrdersReq)
@@ -269,7 +269,7 @@ func TestOrderFulfillmentFlow_Complete(t *testing.T) {
 	acceptBody, _ := json.Marshal(acceptRequest)
 	acceptReq, _ := http.NewRequest("POST", "/orders/fulfill", bytes.NewBuffer(acceptBody))
 	acceptReq.Header.Set("Content-Type", "application/json")
-	acceptReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(acceptReq, producerAuthData)
 
 	acceptRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(acceptRR, acceptReq)
@@ -292,7 +292,7 @@ func TestOrderFulfillmentFlow_Complete(t *testing.T) {
 	preparingBody, _ := json.Marshal(preparingRequest)
 	preparingReq, _ := http.NewRequest("POST", "/orders/fulfill", bytes.NewBuffer(preparingBody))
 	preparingReq.Header.Set("Content-Type", "application/json")
-	preparingReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(preparingReq, producerAuthData)
 
 	preparingRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(preparingRR, preparingReq)
@@ -315,7 +315,7 @@ func TestOrderFulfillmentFlow_Complete(t *testing.T) {
 	shipBody, _ := json.Marshal(shipRequest)
 	shipReq, _ := http.NewRequest("POST", "/orders/fulfill", bytes.NewBuffer(shipBody))
 	shipReq.Header.Set("Content-Type", "application/json")
-	shipReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(shipReq, producerAuthData)
 
 	shipRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(shipRR, shipReq)
@@ -339,7 +339,7 @@ func TestOrderFulfillmentFlow_Complete(t *testing.T) {
 	detailsBody, _ := json.Marshal(detailsRequest)
 	detailsReq, _ := http.NewRequest("POST", "/orders/details", bytes.NewBuffer(detailsBody))
 	detailsReq.Header.Set("Content-Type", "application/json")
-	detailsReq.Header.Set("Authorization", "Bearer "+customerToken)
+	addAuthHeaders(detailsReq, customerAuthData)
 
 	detailsRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(detailsRR, detailsReq)
@@ -361,13 +361,13 @@ func TestOrderFulfillmentFlow_NegativeTests(t *testing.T) {
 	customerPassword := "password123"
 	customerPayload := createUserDTO(customerEmail, customerPassword, false)
 	registerTestUserAuth(t, customerPayload)
-	_, customerToken, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
+	_, customerAuthData, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
 	require.NoError(t, err)
 
 	// 2. Try to access producer orders endpoint (should fail)
 	producerOrdersReq, _ := http.NewRequest("GET", "/orders/producer", nil)
 	producerOrdersReq.Header.Set("Content-Type", "application/json")
-	producerOrdersReq.Header.Set("Authorization", "Bearer "+customerToken)
+	addAuthHeaders(producerOrdersReq, customerAuthData)
 
 	producerOrdersRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(producerOrdersRR, producerOrdersReq)
@@ -382,7 +382,7 @@ func TestOrderFulfillmentFlow_NegativeTests(t *testing.T) {
 	fulfillBody, _ := json.Marshal(fulfillRequest)
 	fulfillReq, _ := http.NewRequest("POST", "/orders/fulfill", bytes.NewBuffer(fulfillBody))
 	fulfillReq.Header.Set("Content-Type", "application/json")
-	fulfillReq.Header.Set("Authorization", "Bearer "+customerToken)
+	addAuthHeaders(fulfillReq, customerAuthData)
 
 	fulfillRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(fulfillRR, fulfillReq)
@@ -393,10 +393,10 @@ func TestOrderFulfillmentFlow_NegativeTests(t *testing.T) {
 	producerPassword := "password123"
 	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
-	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	_, producerAuthData, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
-	product := createTestProduct(t, producerToken, models.Product{
+	product := createTestProduct(t, producerAuthData, models.Product{
 		Name:  "Test Product for Negative Tests",
 		Price: 29.99,
 		Stock: 3,
@@ -411,7 +411,7 @@ func TestOrderFulfillmentFlow_NegativeTests(t *testing.T) {
 	invalidFulfillBody, _ := json.Marshal(invalidFulfillRequest)
 	invalidFulfillReq, _ := http.NewRequest("POST", "/orders/fulfill", bytes.NewBuffer(invalidFulfillBody))
 	invalidFulfillReq.Header.Set("Content-Type", "application/json")
-	invalidFulfillReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(invalidFulfillReq, producerAuthData)
 
 	invalidFulfillRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(invalidFulfillRR, invalidFulfillReq)
@@ -422,10 +422,10 @@ func TestOrderFulfillmentFlow_NegativeTests(t *testing.T) {
 	customer2Password := "password123"
 	customer2Payload := createUserDTO(customer2Email, customer2Password, false)
 	registerTestUserAuth(t, customer2Payload)
-	_, customer2Token, err := loginUserAndGetTokenAuth(t, customer2Email, customer2Password)
+	_, customer2AuthData, err := loginUserAndGetTokenAuth(t, customer2Email, customer2Password)
 	require.NoError(t, err)
 
-	orderWithDetails := completeTestPurchase(t, customer2Token, product, 1)
+	orderWithDetails := completeTestPurchase(t, customer2AuthData, product, 1)
 
 	shipWithoutTrackingRequest := models.OrderFulfillmentRequest{
 		OrderID:   orderWithDetails.Order.ID,
@@ -436,7 +436,7 @@ func TestOrderFulfillmentFlow_NegativeTests(t *testing.T) {
 	shipWithoutTrackingBody, _ := json.Marshal(shipWithoutTrackingRequest)
 	shipWithoutTrackingReq, _ := http.NewRequest("POST", "/orders/fulfill", bytes.NewBuffer(shipWithoutTrackingBody))
 	shipWithoutTrackingReq.Header.Set("Content-Type", "application/json")
-	shipWithoutTrackingReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(shipWithoutTrackingReq, producerAuthData)
 
 	shipWithoutTrackingRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(shipWithoutTrackingRR, shipWithoutTrackingReq)
@@ -444,7 +444,7 @@ func TestOrderFulfillmentFlow_NegativeTests(t *testing.T) {
 }
 
 // Helper function to complete a test purchase
-func completeTestPurchase(t *testing.T, customerToken string, product models.Product, quantity int) models.OrderWithDetails {
+func completeTestPurchase(t *testing.T, customerAuthData *TestAuthData, product models.Product, quantity int) models.OrderWithDetails {
 	// Add product to cart
 	cartItemsToAdd := []models.CartItemDTO{
 		{ProductID: product.ID, Quantity: quantity, Price: product.Price},
@@ -452,7 +452,7 @@ func completeTestPurchase(t *testing.T, customerToken string, product models.Pro
 	addBody, _ := json.Marshal(cartItemsToAdd)
 	addReq, _ := http.NewRequest("POST", "/cart/add", bytes.NewBuffer(addBody))
 	addReq.Header.Set("Content-Type", "application/json")
-	addReq.Header.Set("Authorization", "Bearer "+customerToken)
+	addAuthHeaders(addReq, customerAuthData)
 
 	addRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(addRR, addReq)
@@ -481,7 +481,7 @@ func completeTestPurchase(t *testing.T, customerToken string, product models.Pro
 	checkoutBody, _ := json.Marshal(checkoutRequest)
 	checkoutReq, _ := http.NewRequest("POST", "/orders/checkout", bytes.NewBuffer(checkoutBody))
 	checkoutReq.Header.Set("Content-Type", "application/json")
-	checkoutReq.Header.Set("Authorization", "Bearer "+customerToken)
+	addAuthHeaders(checkoutReq, customerAuthData)
 
 	checkoutRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(checkoutRR, checkoutReq)
@@ -501,7 +501,7 @@ func completeTestPurchase(t *testing.T, customerToken string, product models.Pro
 	confirmBody, _ := json.Marshal(confirmRequest)
 	confirmReq, _ := http.NewRequest("POST", "/orders/confirm", bytes.NewBuffer(confirmBody))
 	confirmReq.Header.Set("Content-Type", "application/json")
-	confirmReq.Header.Set("Authorization", "Bearer "+customerToken)
+	addAuthHeaders(confirmReq, customerAuthData)
 
 	confirmRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(confirmRR, confirmReq)
@@ -522,25 +522,25 @@ func TestSalesReportFlow_Complete(t *testing.T) {
 	producerPassword := "password123"
 	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
-	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	_, producerAuthData, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	// 2. Producer creates multiple products in different categories
-	product1 := createTestProduct(t, producerToken, models.Product{
+	product1 := createTestProduct(t, producerAuthData, models.Product{
 		Name:     "Electronics Product",
 		Price:    99.99,
 		Stock:    10,
 		Category: "Electronics",
 	})
 
-	product2 := createTestProduct(t, producerToken, models.Product{
+	product2 := createTestProduct(t, producerAuthData, models.Product{
 		Name:     "Clothing Product",
 		Price:    49.99,
 		Stock:    20,
 		Category: "Clothing",
 	})
 
-	product3 := createTestProduct(t, producerToken, models.Product{
+	product3 := createTestProduct(t, producerAuthData, models.Product{
 		Name:     "Another Electronics Product",
 		Price:    199.99,
 		Stock:    5,
@@ -555,7 +555,7 @@ func TestSalesReportFlow_Complete(t *testing.T) {
 		customerPassword := "password123"
 		customerPayload := createUserDTO(customerEmail, customerPassword, false)
 		registerTestUserAuth(t, customerPayload)
-		_, customerToken, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
+		_, customerAuthData, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
 		require.NoError(t, err)
 
 		// Customer buys different combinations of products
@@ -575,7 +575,7 @@ func TestSalesReportFlow_Complete(t *testing.T) {
 		}
 
 		for j, product := range products {
-			order := completeTestPurchase(t, customerToken, product, quantities[j])
+			order := completeTestPurchase(t, customerAuthData, product, quantities[j])
 			allOrders = append(allOrders, order)
 		}
 	}
@@ -586,7 +586,7 @@ func TestSalesReportFlow_Complete(t *testing.T) {
 	salesReportBody, _ := json.Marshal(salesReportRequest)
 	salesReportReq, _ := http.NewRequest("POST", "/orders/sales-report", bytes.NewBuffer(salesReportBody))
 	salesReportReq.Header.Set("Content-Type", "application/json")
-	salesReportReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(salesReportReq, producerAuthData)
 
 	salesReportRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(salesReportRR, salesReportReq)
@@ -617,7 +617,7 @@ func TestSalesReportFlow_Complete(t *testing.T) {
 	categoryFilterBody, _ := json.Marshal(categoryFilterRequest)
 	categoryFilterReq, _ := http.NewRequest("POST", "/orders/sales-report", bytes.NewBuffer(categoryFilterBody))
 	categoryFilterReq.Header.Set("Content-Type", "application/json")
-	categoryFilterReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(categoryFilterReq, producerAuthData)
 
 	categoryFilterRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(categoryFilterRR, categoryFilterReq)
@@ -641,7 +641,7 @@ func TestSalesReportFlow_NegativeTests(t *testing.T) {
 	customerPassword := "password123"
 	customerPayload := createUserDTO(customerEmail, customerPassword, false)
 	registerTestUserAuth(t, customerPayload)
-	_, customerToken, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
+	_, customerAuthData, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
 	require.NoError(t, err)
 
 	// 2. Try to access sales report (should fail)
@@ -650,7 +650,7 @@ func TestSalesReportFlow_NegativeTests(t *testing.T) {
 	salesReportBody, _ := json.Marshal(salesReportRequest)
 	salesReportReq, _ := http.NewRequest("POST", "/orders/sales-report", bytes.NewBuffer(salesReportBody))
 	salesReportReq.Header.Set("Content-Type", "application/json")
-	salesReportReq.Header.Set("Authorization", "Bearer "+customerToken)
+	addAuthHeaders(salesReportReq, customerAuthData)
 
 	salesReportRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(salesReportRR, salesReportReq)
@@ -661,7 +661,7 @@ func TestSalesReportFlow_NegativeTests(t *testing.T) {
 	producerPassword := "password123"
 	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
-	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	_, producerAuthData, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	// 4. Get sales report for producer with no sales
@@ -670,7 +670,7 @@ func TestSalesReportFlow_NegativeTests(t *testing.T) {
 	noSalesBody, _ := json.Marshal(noSalesRequest)
 	noSalesReq, _ := http.NewRequest("POST", "/orders/sales-report", bytes.NewBuffer(noSalesBody))
 	noSalesReq.Header.Set("Content-Type", "application/json")
-	noSalesReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(noSalesReq, producerAuthData)
 
 	noSalesRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(noSalesRR, noSalesReq)

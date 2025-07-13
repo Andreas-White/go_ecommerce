@@ -1,0 +1,14 @@
+.product-filter-sort {
+  display: flex;
+  gap: 16px;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+}
+
+.product-filter-select {
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: var(--input-background);
+  color: var(--text-color);
+} 

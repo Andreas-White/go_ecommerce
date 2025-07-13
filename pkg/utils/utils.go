@@ -2,8 +2,10 @@ package utils
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"database/sql"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -113,6 +115,16 @@ func IsValidEmail(email string) bool {
 	}
 
 	return true
+}
+
+// GenerateCSRFToken generates a secure random string for CSRF protection
+func GenerateCSRFToken(length int) string {
+	b := make([]byte, length)
+	_, err := rand.Read(b)
+	if err != nil {
+		return ""
+	}
+	return base64.RawURLEncoding.EncodeToString(b)
 }
 
 func HandleAPIErrors(err error, w http.ResponseWriter, sourceFunc string, httpCode int, genericErrorMessage string) {

@@ -21,13 +21,12 @@ func TestCreateProduct_Success(t *testing.T) {
 	producerPassword := "password123"
 	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 
-	regRR := registerTestUserAuth(t, producerPayload)
-	require.Equal(t, http.StatusCreated, regRR.Code, "Producer registration failed")
+	registerTestUserAuth(t, producerPayload)
 
 	// 2. Login to get token
-	_, token, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	_, authData, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
-	require.NotEmpty(t, token)
+	require.NotEmpty(t, authData.JWTToken)
 
 	// 3. Create a product
 	productPayload := models.Product{
@@ -43,7 +42,7 @@ func TestCreateProduct_Success(t *testing.T) {
 
 	createReq, _ := http.NewRequest("POST", "/products/create", bytes.NewBuffer(productBytes))
 	createReq.Header.Set("Content-Type", "application/json")
-	createReq.Header.Set("Authorization", "Bearer "+token)
+	addAuthHeaders(createReq, authData)
 
 	createRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(createRR, createReq)
@@ -68,7 +67,7 @@ func TestGetProduct_ByID_And_All(t *testing.T) {
 	producerPassword := "password123"
 	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
-	_, token, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	_, authData, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	productPayload := models.Product{
@@ -82,7 +81,7 @@ func TestGetProduct_ByID_And_All(t *testing.T) {
 	productBytes, _ := json.Marshal(productPayload)
 	createReq, _ := http.NewRequest("POST", "/products/create", bytes.NewBuffer(productBytes))
 	createReq.Header.Set("Content-Type", "application/json")
-	createReq.Header.Set("Authorization", "Bearer "+token)
+	addAuthHeaders(createReq, authData)
 	createRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(createRR, createReq)
 	require.Equal(t, http.StatusCreated, createRR.Code)
@@ -122,7 +121,7 @@ func TestGetProducts_SearchAndSort(t *testing.T) {
 	// Setup: create a user and two products
 	regPayload := createUserDTO("producer3@example.com", "password123", true)
 	registerTestUserAuth(t, regPayload)
-	_, token, err := loginUserAndGetTokenAuth(t, "producer3@example.com", "password123")
+	_, authData, err := loginUserAndGetTokenAuth(t, "producer3@example.com", "password123")
 	require.NoError(t, err)
 
 	productsToCreate := []models.Product{
@@ -134,7 +133,7 @@ func TestGetProducts_SearchAndSort(t *testing.T) {
 		productBytes, _ := json.Marshal(p)
 		createReq, _ := http.NewRequest("POST", "/products/create", bytes.NewBuffer(productBytes))
 		createReq.Header.Set("Content-Type", "application/json")
-		createReq.Header.Set("Authorization", "Bearer "+token)
+		addAuthHeaders(createReq, authData)
 		createRR := httptest.NewRecorder()
 		testRouter.ServeHTTP(createRR, createReq)
 		require.Equal(t, http.StatusCreated, createRR.Code)
@@ -170,7 +169,7 @@ func TestUpdateProduct_Success(t *testing.T) {
 	producerPassword := "password123"
 	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
-	_, token, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	_, authData, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	initialProduct := models.Product{
@@ -184,7 +183,7 @@ func TestUpdateProduct_Success(t *testing.T) {
 	productBytes, _ := json.Marshal(initialProduct)
 	createReq, _ := http.NewRequest("POST", "/products/create", bytes.NewBuffer(productBytes))
 	createReq.Header.Set("Content-Type", "application/json")
-	createReq.Header.Set("Authorization", "Bearer "+token)
+	addAuthHeaders(createReq, authData)
 	createRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(createRR, createReq)
 	require.Equal(t, http.StatusCreated, createRR.Code)
@@ -209,7 +208,7 @@ func TestUpdateProduct_Success(t *testing.T) {
 
 	updateReq, _ := http.NewRequest("PUT", fmt.Sprintf("/products/update?id=%s", createdProduct.ID), bytes.NewBuffer(updateBytes))
 	updateReq.Header.Set("Content-Type", "application/json")
-	updateReq.Header.Set("Authorization", "Bearer "+token)
+	addAuthHeaders(updateReq, authData)
 
 	updateRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(updateRR, updateReq)
@@ -247,7 +246,7 @@ func TestDeleteProduct_Success(t *testing.T) {
 	producerPassword := "password123"
 	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
-	_, token, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	_, authData, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	productPayload := models.Product{
@@ -259,7 +258,7 @@ func TestDeleteProduct_Success(t *testing.T) {
 	productBytes, _ := json.Marshal(productPayload)
 	createReq, _ := http.NewRequest("POST", "/products/create", bytes.NewBuffer(productBytes))
 	createReq.Header.Set("Content-Type", "application/json")
-	createReq.Header.Set("Authorization", "Bearer "+token)
+	addAuthHeaders(createReq, authData)
 	createRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(createRR, createReq)
 	require.Equal(t, http.StatusCreated, createRR.Code)
@@ -271,7 +270,7 @@ func TestDeleteProduct_Success(t *testing.T) {
 
 	// 2. Delete the product
 	deleteReq, _ := http.NewRequest("DELETE", fmt.Sprintf("/products/delete?id=%s", createdProduct.ID), nil)
-	deleteReq.Header.Set("Authorization", "Bearer "+token) // Assuming deletes are protected
+	addAuthHeaders(deleteReq, authData) // Assuming deletes are protected
 
 	deleteRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(deleteRR, deleteReq)
@@ -295,16 +294,12 @@ func TestGetProductsByUserID_Ownership(t *testing.T) {
 	producer1Email := "producer1-ownership@example.com"
 	producer1Password := "password123"
 	producer1Payload := createUserDTO(producer1Email, producer1Password, true)
-	registerTestUserAuth(t, producer1Payload)
-	_, producer1Token, err := loginUserAndGetTokenAuth(t, producer1Email, producer1Password)
-	require.NoError(t, err)
+	_, producer1AuthData := registerTestUserAuth(t, producer1Payload)
 
 	producer2Email := "producer2-ownership@example.com"
 	producer2Password := "password123"
 	producer2Payload := createUserDTO(producer2Email, producer2Password, true)
-	registerTestUserAuth(t, producer2Payload)
-	_, producer2Token, err := loginUserAndGetTokenAuth(t, producer2Email, producer2Password)
-	require.NoError(t, err)
+	_, producer2AuthData := registerTestUserAuth(t, producer2Payload)
 
 	// 2. Producer1 creates a product
 	product1 := models.Product{
@@ -316,7 +311,7 @@ func TestGetProductsByUserID_Ownership(t *testing.T) {
 	product1Bytes, _ := json.Marshal(product1)
 	create1Req, _ := http.NewRequest("POST", "/products/create", bytes.NewBuffer(product1Bytes))
 	create1Req.Header.Set("Content-Type", "application/json")
-	create1Req.Header.Set("Authorization", "Bearer "+producer1Token)
+	addAuthHeaders(create1Req, producer1AuthData)
 	create1RR := httptest.NewRecorder()
 	testRouter.ServeHTTP(create1RR, create1Req)
 	require.Equal(t, http.StatusCreated, create1RR.Code)
@@ -331,27 +326,27 @@ func TestGetProductsByUserID_Ownership(t *testing.T) {
 	product2Bytes, _ := json.Marshal(product2)
 	create2Req, _ := http.NewRequest("POST", "/products/create", bytes.NewBuffer(product2Bytes))
 	create2Req.Header.Set("Content-Type", "application/json")
-	create2Req.Header.Set("Authorization", "Bearer "+producer2Token)
+	addAuthHeaders(create2Req, producer2AuthData)
 	create2RR := httptest.NewRecorder()
 	testRouter.ServeHTTP(create2RR, create2Req)
 	require.Equal(t, http.StatusCreated, create2RR.Code)
 
 	// 4. Producer1 gets their products (should only see their own)
 	getMyProductsReq, _ := http.NewRequest("GET", "/products/my-products", nil)
-	getMyProductsReq.Header.Set("Authorization", "Bearer "+producer1Token)
+	addAuthHeaders(getMyProductsReq, producer1AuthData)
 	getMyProductsRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(getMyProductsRR, getMyProductsReq)
 	require.Equal(t, http.StatusOK, getMyProductsRR.Code)
 
 	var producer1Products []models.Product
-	err = json.Unmarshal(getMyProductsRR.Body.Bytes(), &producer1Products)
+	err := json.Unmarshal(getMyProductsRR.Body.Bytes(), &producer1Products)
 	require.NoError(t, err)
 	assert.Len(t, producer1Products, 1, "Producer1 should only see their own product")
 	assert.Equal(t, "Producer1's Product", producer1Products[0].Name)
 
 	// 5. Producer2 gets their products (should only see their own)
 	getMyProducts2Req, _ := http.NewRequest("GET", "/products/my-products", nil)
-	getMyProducts2Req.Header.Set("Authorization", "Bearer "+producer2Token)
+	addAuthHeaders(getMyProducts2Req, producer2AuthData)
 	getMyProducts2RR := httptest.NewRecorder()
 	testRouter.ServeHTTP(getMyProducts2RR, getMyProducts2Req)
 	require.Equal(t, http.StatusOK, getMyProducts2RR.Code)
@@ -370,16 +365,12 @@ func TestUpdateDeleteProduct_OwnershipCheck(t *testing.T) {
 	producer1Email := "producer1-ownership-check@example.com"
 	producer1Password := "password123"
 	producer1Payload := createUserDTO(producer1Email, producer1Password, true)
-	registerTestUserAuth(t, producer1Payload)
-	_, producer1Token, err := loginUserAndGetTokenAuth(t, producer1Email, producer1Password)
-	require.NoError(t, err)
+	_, producer1AuthData := registerTestUserAuth(t, producer1Payload)
 
 	producer2Email := "producer2-ownership-check@example.com"
 	producer2Password := "password123"
 	producer2Payload := createUserDTO(producer2Email, producer2Password, true)
-	registerTestUserAuth(t, producer2Payload)
-	_, producer2Token, err := loginUserAndGetTokenAuth(t, producer2Email, producer2Password)
-	require.NoError(t, err)
+	_, producer2AuthData := registerTestUserAuth(t, producer2Payload)
 
 	// 2. Producer1 creates a product
 	product1 := models.Product{
@@ -391,13 +382,13 @@ func TestUpdateDeleteProduct_OwnershipCheck(t *testing.T) {
 	product1Bytes, _ := json.Marshal(product1)
 	create1Req, _ := http.NewRequest("POST", "/products/create", bytes.NewBuffer(product1Bytes))
 	create1Req.Header.Set("Content-Type", "application/json")
-	create1Req.Header.Set("Authorization", "Bearer "+producer1Token)
+	addAuthHeaders(create1Req, producer1AuthData)
 	create1RR := httptest.NewRecorder()
 	testRouter.ServeHTTP(create1RR, create1Req)
 	require.Equal(t, http.StatusCreated, create1RR.Code)
 
 	var createdProduct models.Product
-	err = json.Unmarshal(create1RR.Body.Bytes(), &createdProduct)
+	err := json.Unmarshal(create1RR.Body.Bytes(), &createdProduct)
 	require.NoError(t, err)
 
 	// 3. Producer2 tries to update Producer1's product (should fail)
@@ -411,20 +402,21 @@ func TestUpdateDeleteProduct_OwnershipCheck(t *testing.T) {
 	updateBytes, _ := json.Marshal(updatePayload)
 	updateReq, _ := http.NewRequest("PUT", fmt.Sprintf("/products/update?id=%s", createdProduct.ID), bytes.NewBuffer(updateBytes))
 	updateReq.Header.Set("Content-Type", "application/json")
-	updateReq.Header.Set("Authorization", "Bearer "+producer2Token)
+	addAuthHeaders(updateReq, producer2AuthData)
 	updateRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(updateRR, updateReq)
 	assert.Equal(t, http.StatusForbidden, updateRR.Code, "Producer2 should not be able to update Producer1's product")
 
 	// 4. Producer2 tries to delete Producer1's product (should fail)
 	deleteReq, _ := http.NewRequest("DELETE", fmt.Sprintf("/products/delete?id=%s", createdProduct.ID), nil)
-	deleteReq.Header.Set("Authorization", "Bearer "+producer2Token)
+	addAuthHeaders(deleteReq, producer2AuthData)
 	deleteRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(deleteRR, deleteReq)
 	assert.Equal(t, http.StatusForbidden, deleteRR.Code, "Producer2 should not be able to delete Producer1's product")
 
 	// 5. Verify the product still exists and is unchanged
 	getReq, _ := http.NewRequest("GET", fmt.Sprintf("/product?id=%s", createdProduct.ID), nil)
+	addAuthHeaders(getReq, producer1AuthData)
 	getRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(getRR, getReq)
 	require.Equal(t, http.StatusOK, getRR.Code)
@@ -446,7 +438,7 @@ func TestUpdateDeleteProduct_OwnershipCheck(t *testing.T) {
 	validUpdateBytes, _ := json.Marshal(validUpdatePayload)
 	validUpdateReq, _ := http.NewRequest("PUT", fmt.Sprintf("/products/update?id=%s", createdProduct.ID), bytes.NewBuffer(validUpdateBytes))
 	validUpdateReq.Header.Set("Content-Type", "application/json")
-	validUpdateReq.Header.Set("Authorization", "Bearer "+producer1Token)
+	addAuthHeaders(validUpdateReq, producer1AuthData)
 	validUpdateRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(validUpdateRR, validUpdateReq)
 	assert.Equal(t, http.StatusOK, validUpdateRR.Code, "Producer1 should be able to update their own product")

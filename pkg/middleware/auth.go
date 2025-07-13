@@ -55,20 +55,27 @@ func (a *Authenticator) GenerateJWT(user *models.User) (string, error) {
 	return token.SignedString(a.jwtSecret)
 }
 
-// AuthenticateJWT is a middleware function that checks for a valid JWT token in the request headers
+// AuthenticateJWT is a middleware function that checks for a valid JWT token in the request cookies (preferred) or headers (fallback)
 func (a *Authenticator) AuthenticateJWT(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
+		var tokenString string
 
-		if authHeader == "" {
-			utils.RespondWithError(w, http.StatusUnauthorized, "Authorization header required")
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			utils.RespondWithError(w, http.StatusUnauthorized, "Authorization header must start with 'Bearer '")
-			return
+		// Try to get JWT from cookie first
+		cookie, err := r.Cookie("jwt")
+		if err == nil {
+			tokenString = cookie.Value
+		} else {
+			// Fallback: Try Authorization header
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				utils.RespondWithError(w, http.StatusUnauthorized, "Authorization required (cookie or header)")
+				return
+			}
+			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+			if tokenString == authHeader {
+				utils.RespondWithError(w, http.StatusUnauthorized, "Authorization header must start with 'Bearer '")
+				return
+			}
 		}
 
 		claims := &Claims{}
@@ -103,16 +110,23 @@ func (a *Authenticator) AuthenticateJWT(next http.Handler) http.Handler {
 // OptionalAuthenticateJWT is a middleware function that checks for a valid JWT token, but does not fail if it is not present
 func (a *Authenticator) OptionalAuthenticateJWT(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authHeader := r.Header.Get("Authorization")
-		if authHeader == "" {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenString == authHeader {
-			next.ServeHTTP(w, r)
-			return
+		var tokenString string
+		// Try to get JWT from cookie first
+		cookie, err := r.Cookie("jwt")
+		if err == nil {
+			tokenString = cookie.Value
+		} else {
+			// Fallback: Try Authorization header
+			authHeader := r.Header.Get("Authorization")
+			if authHeader == "" {
+				next.ServeHTTP(w, r)
+				return
+			}
+			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+			if tokenString == authHeader {
+				next.ServeHTTP(w, r)
+				return
+			}
 		}
 
 		claims := &Claims{}

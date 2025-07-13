@@ -1,0 +1,102 @@
+.login-loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+}
+
+.login-container {
+  max-width: 400px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: var(--card-background);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+.login-title {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--text-color);
+}
+
+.login-message-success {
+  background: #efe;
+  color: #363;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.login-message-error {
+  background: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.login-form-group {
+  margin-bottom: 1rem;
+}
+
+.login-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+}
+
+.login-input {
+  width: 100%;
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background: var(--input-background);
+  color: var(--text-color);
+}
+
+.login-input-error {
+  border-color: #c33;
+}
+
+.login-error-text {
+  color: #c33;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.login-submit-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.2s;
+}
+.login-submit-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.login-link-register {
+  text-align: center;
+  margin-top: 1.5rem;
+  color: var(--text-color);
+}
+
+.login-link-primary {
+  color: var(--primary-color);
+}
+
+.login-link-forgot {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.login-link-small {
+  font-size: 14px;
+} 

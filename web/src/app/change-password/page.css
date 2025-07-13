@@ -1,0 +1,103 @@
+.change-password-loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+}
+
+.change-password-container {
+  max-width: 400px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: var(--card-background);
+  border-radius: 8px;
+  box-shadow: 0 4px 8px var(--shadow-color);
+}
+
+.change-password-title {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--text-color);
+}
+
+.change-password-message-success {
+  background: #efe;
+  color: #363;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.change-password-message-error {
+  background: #fee;
+  color: #c33;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.change-password-form-group {
+  margin-bottom: 1rem;
+}
+
+.change-password-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.change-password-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--input-background);
+  color: var(--text-color);
+  box-sizing: border-box;
+}
+
+.change-password-input-error {
+  border-color: #c33;
+}
+
+.change-password-error-text {
+  color: #c33;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+}
+
+.change-password-submit-btn {
+  width: 100%;
+  padding: 12px;
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: opacity 0.3s ease;
+}
+
+.change-password-submit-btn:hover {
+  opacity: 0.9;
+}
+
+.change-password-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.change-password-back-link {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.change-password-link {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.change-password-link:hover {
+  text-decoration: underline;
+} 

@@ -22,13 +22,13 @@ func TestCompanyFlow_Integration(t *testing.T) {
 	producerPassword := "password123"
 	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
-	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	_, producerAuthData, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	// 2. Verify no company exists initially
 	getCompanyReq, _ := http.NewRequest("GET", "/companies/get-by-user", nil)
 	getCompanyReq.Header.Set("Content-Type", "application/json")
-	getCompanyReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(getCompanyReq, producerAuthData)
 
 	getCompanyRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(getCompanyRR, getCompanyReq)
@@ -52,7 +52,7 @@ func TestCompanyFlow_Integration(t *testing.T) {
 	companyBody, _ := json.Marshal(companyPayload)
 	createCompanyReq, _ := http.NewRequest("POST", "/companies/create", bytes.NewBuffer(companyBody))
 	createCompanyReq.Header.Set("Content-Type", "application/json")
-	createCompanyReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(createCompanyReq, producerAuthData)
 
 	createCompanyRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(createCompanyRR, createCompanyReq)
@@ -61,7 +61,7 @@ func TestCompanyFlow_Integration(t *testing.T) {
 	// 4. Verify company was created by retrieving it by user ID
 	getCompanyReq2, _ := http.NewRequest("GET", "/companies/get-by-user", nil)
 	getCompanyReq2.Header.Set("Content-Type", "application/json")
-	getCompanyReq2.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(getCompanyReq2, producerAuthData)
 
 	getCompanyRR2 := httptest.NewRecorder()
 	testRouter.ServeHTTP(getCompanyRR2, getCompanyReq2)
@@ -99,7 +99,7 @@ func TestCompanyFlow_Integration(t *testing.T) {
 	updateCompanyBody, _ := json.Marshal(updateCompanyPayload)
 	updateCompanyReq, _ := http.NewRequest("PUT", "/companies/update", bytes.NewBuffer(updateCompanyBody))
 	updateCompanyReq.Header.Set("Content-Type", "application/json")
-	updateCompanyReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(updateCompanyReq, producerAuthData)
 
 	updateCompanyRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(updateCompanyRR, updateCompanyReq)
@@ -108,7 +108,7 @@ func TestCompanyFlow_Integration(t *testing.T) {
 	// 6. Verify company was updated by retrieving it by user ID
 	getCompanyReq3, _ := http.NewRequest("GET", "/companies/get-by-user", nil)
 	getCompanyReq3.Header.Set("Content-Type", "application/json")
-	getCompanyReq3.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(getCompanyReq3, producerAuthData)
 
 	getCompanyRR3 := httptest.NewRecorder()
 	testRouter.ServeHTTP(getCompanyRR3, getCompanyReq3)
@@ -130,7 +130,7 @@ func TestCompanyFlow_Integration(t *testing.T) {
 	// 7. Delete the company
 	deleteCompanyReq, _ := http.NewRequest("DELETE", fmt.Sprintf("/companies/delete?company_id=%s", updatedCompany.ID), nil)
 	deleteCompanyReq.Header.Set("Content-Type", "application/json")
-	deleteCompanyReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(deleteCompanyReq, producerAuthData)
 
 	deleteCompanyRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(deleteCompanyRR, deleteCompanyReq)
@@ -139,7 +139,7 @@ func TestCompanyFlow_Integration(t *testing.T) {
 	// 8. Verify company was deleted by trying to retrieve it by user ID
 	getCompanyReq4, _ := http.NewRequest("GET", "/companies/get-by-user", nil)
 	getCompanyReq4.Header.Set("Content-Type", "application/json")
-	getCompanyReq4.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(getCompanyReq4, producerAuthData)
 
 	getCompanyRR4 := httptest.NewRecorder()
 	testRouter.ServeHTTP(getCompanyRR4, getCompanyReq4)
@@ -162,7 +162,7 @@ func TestCompany_UnauthorizedAccess(t *testing.T) {
 	producerPassword := "password123"
 	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
-	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	_, producerAuthData, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	// 2. Register another user
@@ -170,7 +170,7 @@ func TestCompany_UnauthorizedAccess(t *testing.T) {
 	otherUserPassword := "password123"
 	otherUserPayload := createUserDTO(otherUserEmail, otherUserPassword, false)
 	registerTestUserAuth(t, otherUserPayload)
-	_, otherUserToken, err := loginUserAndGetTokenAuth(t, otherUserEmail, otherUserPassword)
+	_, otherUserAuthData, err := loginUserAndGetTokenAuth(t, otherUserEmail, otherUserPassword)
 	require.NoError(t, err)
 
 	// 3. Producer creates a company
@@ -191,7 +191,7 @@ func TestCompany_UnauthorizedAccess(t *testing.T) {
 	companyBody, _ := json.Marshal(companyPayload)
 	createCompanyReq, _ := http.NewRequest("POST", "/companies/create", bytes.NewBuffer(companyBody))
 	createCompanyReq.Header.Set("Content-Type", "application/json")
-	createCompanyReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(createCompanyReq, producerAuthData)
 
 	createCompanyRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(createCompanyRR, createCompanyReq)
@@ -200,7 +200,7 @@ func TestCompany_UnauthorizedAccess(t *testing.T) {
 	// Get the created company to extract its ID
 	getCompanyReq, _ := http.NewRequest("GET", "/companies/get-by-user", nil)
 	getCompanyReq.Header.Set("Content-Type", "application/json")
-	getCompanyReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(getCompanyReq, producerAuthData)
 
 	getCompanyRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(getCompanyRR, getCompanyReq)
@@ -213,7 +213,7 @@ func TestCompany_UnauthorizedAccess(t *testing.T) {
 	// 4. Other user tries to get the company by user ID (should fail)
 	getCompanyReq2, _ := http.NewRequest("GET", "/companies/get-by-user", nil)
 	getCompanyReq2.Header.Set("Content-Type", "application/json")
-	getCompanyReq2.Header.Set("Authorization", "Bearer "+otherUserToken)
+	addAuthHeaders(getCompanyReq2, otherUserAuthData)
 
 	getCompanyRR2 := httptest.NewRecorder()
 	testRouter.ServeHTTP(getCompanyRR2, getCompanyReq2)
@@ -238,7 +238,7 @@ func TestCompany_UnauthorizedAccess(t *testing.T) {
 	updateCompanyBody, _ := json.Marshal(updateCompanyPayload)
 	updateCompanyReq, _ := http.NewRequest("PUT", "/companies/update", bytes.NewBuffer(updateCompanyBody))
 	updateCompanyReq.Header.Set("Content-Type", "application/json")
-	updateCompanyReq.Header.Set("Authorization", "Bearer "+otherUserToken)
+	addAuthHeaders(updateCompanyReq, otherUserAuthData)
 
 	updateCompanyRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(updateCompanyRR, updateCompanyReq)
@@ -248,7 +248,7 @@ func TestCompany_UnauthorizedAccess(t *testing.T) {
 	// 6. Other user tries to delete the company (currently succeeds due to no ownership validation)
 	deleteCompanyReq, _ := http.NewRequest("DELETE", fmt.Sprintf("/companies/delete?company_id=%s", createdCompany.ID), nil)
 	deleteCompanyReq.Header.Set("Content-Type", "application/json")
-	deleteCompanyReq.Header.Set("Authorization", "Bearer "+otherUserToken)
+	addAuthHeaders(deleteCompanyReq, otherUserAuthData)
 
 	deleteCompanyRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(deleteCompanyRR, deleteCompanyReq)
@@ -258,7 +258,7 @@ func TestCompany_UnauthorizedAccess(t *testing.T) {
 	// 7. Verify the company was deleted (since the other user was able to delete it)
 	getCompanyReq3, _ := http.NewRequest("GET", "/companies/get-by-user", nil)
 	getCompanyReq3.Header.Set("Content-Type", "application/json")
-	getCompanyReq3.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(getCompanyReq3, producerAuthData)
 
 	getCompanyRR3 := httptest.NewRecorder()
 	testRouter.ServeHTTP(getCompanyRR3, getCompanyReq3)
@@ -273,7 +273,7 @@ func TestCompany_InvalidOperations(t *testing.T) {
 	producerPassword := "password123"
 	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
-	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	_, producerAuthData, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	// 2. Try to create company without authentication
@@ -304,7 +304,7 @@ func TestCompany_InvalidOperations(t *testing.T) {
 	invalidCompanyBody := []byte(`{"name": "", "invalid_field": "value"}`)
 	invalidCreateReq, _ := http.NewRequest("POST", "/companies/create", bytes.NewBuffer(invalidCompanyBody))
 	invalidCreateReq.Header.Set("Content-Type", "application/json")
-	invalidCreateReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(invalidCreateReq, producerAuthData)
 
 	invalidCreateRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(invalidCreateRR, invalidCreateReq)
@@ -322,7 +322,7 @@ func TestCompany_InvalidOperations(t *testing.T) {
 	// 5. Try to delete company without company_id parameter
 	deleteCompanyReq, _ := http.NewRequest("DELETE", "/companies/delete", nil)
 	deleteCompanyReq.Header.Set("Content-Type", "application/json")
-	deleteCompanyReq.Header.Set("Authorization", "Bearer "+producerToken)
+	addAuthHeaders(deleteCompanyReq, producerAuthData)
 
 	deleteCompanyRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(deleteCompanyRR, deleteCompanyReq)

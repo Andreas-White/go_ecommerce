@@ -1,0 +1,831 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Go E-commerce API",
+    "version": "1.0.0",
+    "description": "OpenAPI specification for the Go E-commerce backend with cookie-based authentication and CSRF protection."
+  },
+  "servers": [
+    { "url": "http://localhost:8080", "description": "Local server" }
+  ],
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "jwt"
+      },
+      "csrfToken": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-CSRF-Token"
+      }
+    },
+    "schemas": {
+      "UserDTO": {
+        "type": "object",
+        "properties": {
+          "first_name": { "type": "string" },
+          "last_name": { "type": "string" },
+          "middle_name": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "phone": { "type": "integer", "format": "int64" },
+          "password": { "type": "string", "format": "password" },
+          "is_producer": { "type": "boolean" },
+          "address": { "type": "string" },
+          "city": { "type": "string" },
+          "country": { "type": "string" },
+          "zip_code": { "type": "integer", "format": "int32" }
+        },
+        "required": ["first_name", "last_name", "email", "password", "is_producer"]
+      },
+      "ChangePasswordDTO": {
+        "type": "object",
+        "properties": {
+          "current_password": { "type": "string" },
+          "new_password": { "type": "string" }
+        },
+        "required": ["current_password", "new_password"]
+      },
+      "CompanyDTO": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "address": { "type": "string" },
+          "city": { "type": "string" },
+          "country": { "type": "string" },
+          "zip_code": { "type": "string" },
+          "review_average": { "type": "number", "format": "float" },
+          "review_count": { "type": "integer" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["name"]
+      },
+      "ProductDTO": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "price": { "type": "number", "format": "float" },
+          "stock": { "type": "integer" },
+          "category_id": { "type": "string" },
+          "image_url": { "type": "string" },
+          "company": { "$ref": "#/components/schemas/CompanyDTO" }
+        },
+        "required": ["name", "price", "stock", "category_id"]
+      },
+      "CartItemDTO": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "cart_id": { "type": "string", "format": "uuid" },
+          "product_id": { "type": "string", "format": "uuid" },
+          "quantity": { "type": "integer" },
+          "price": { "type": "number", "format": "float" }
+        },
+        "required": ["product_id", "quantity"]
+      },
+      "CheckoutRequest": {
+        "type": "object",
+        "properties": {
+          "cart_id": { "type": "string", "format": "uuid" },
+          "shipping_info": { "$ref": "#/components/schemas/ShippingInfo" },
+          "payment_info": { "$ref": "#/components/schemas/PaymentInfo" }
+        },
+        "required": ["cart_id", "shipping_info", "payment_info"]
+      },
+      "ShippingInfo": {
+        "type": "object",
+        "properties": {
+          "address": { "type": "string" },
+          "city": { "type": "string" },
+          "country": { "type": "string" },
+          "zip_code": { "type": "string" },
+          "method": { "type": "string" },
+          "cost": { "type": "number", "format": "float" }
+        },
+        "required": ["address", "city", "country", "zip_code"]
+      },
+      "PaymentInfo": {
+        "type": "object",
+        "properties": {
+          "payment_method": { "type": "string" }
+        },
+        "required": ["payment_method"]
+      },
+      "OrderSummary": {
+        "type": "object",
+        "properties": {
+          "order_id": { "type": "string", "format": "uuid" },
+          "total_amount": { "type": "number", "format": "float" },
+          "shipping_cost": { "type": "number", "format": "float" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/OrderItemSummary" }
+          },
+          "shipping_info": { "$ref": "#/components/schemas/ShippingInfo" },
+          "payment_info": { "$ref": "#/components/schemas/PaymentInfo" }
+        }
+      },
+      "OrderItemSummary": {
+        "type": "object",
+        "properties": {
+          "product_id": { "type": "string", "format": "uuid" },
+          "product_name": { "type": "string" },
+          "quantity": { "type": "integer" },
+          "price": { "type": "number", "format": "float" },
+          "subtotal": { "type": "number", "format": "float" }
+        }
+      },
+      "OrderWithDetails": {
+        "type": "object",
+        "properties": {
+          "order": { "$ref": "#/components/schemas/Order" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/OrderItem" }
+          },
+          "payment": { "$ref": "#/components/schemas/Payment" },
+          "shipping": { "$ref": "#/components/schemas/Shipping" }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "user_id": { "type": "string", "format": "uuid" },
+          "total_amount": { "type": "number", "format": "float" },
+          "status": { "type": "string" },
+          "payment_status": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "order_id": { "type": "string", "format": "uuid" },
+          "product_id": { "type": "string", "format": "uuid" },
+          "quantity": { "type": "integer" },
+          "price": { "type": "number", "format": "float" }
+        }
+      },
+      "Payment": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "order_id": { "type": "string", "format": "uuid" },
+          "status": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Shipping": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "order_id": { "type": "string", "format": "uuid" },
+          "address": { "type": "string" },
+          "city": { "type": "string" },
+          "country": { "type": "string" },
+          "zip_code": { "type": "string" },
+          "method": { "type": "string" },
+          "cost": { "type": "number", "format": "float" },
+          "status": { "type": "string" },
+          "tracking_code": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ReviewDTO": {
+        "type": "object",
+        "properties": {
+          "product_id": { "type": "string", "format": "uuid" },
+          "rating": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "comment": { "type": "string" }
+        },
+        "required": ["product_id", "rating"]
+      }
+    }
+  },
+  "paths": {
+    "/users/register": {
+      "get": {
+        "summary": "Get CSRF token for registration",
+        "responses": {
+          "204": { "description": "CSRF token set in cookie" }
+        }
+      },
+      "post": {
+        "summary": "Register a new user",
+        "security": [{ "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UserDTO" }
+            }
+          }
+        },
+        "responses": {
+          "201": { 
+            "description": "User created and logged in", 
+            "content": { 
+              "application/json": { 
+                "schema": { 
+                  "type": "object", 
+                  "properties": { 
+                    "message": { "type": "string" },
+                    "csrf_token": { "type": "string" }
+                  } 
+                } 
+              } 
+            },
+            "headers": {
+              "Set-Cookie": {
+                "description": "JWT and CSRF cookies",
+                "schema": { "type": "string" }
+              }
+            }
+          },
+          "400": { "description": "Invalid input" }
+        }
+      }
+    },
+    "/users/login": {
+      "get": {
+        "summary": "Get CSRF token for login",
+        "responses": {
+          "204": { "description": "CSRF token set in cookie" }
+        }
+      },
+      "post": {
+        "summary": "Login and get JWT",
+        "security": [{ "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UserDTO" }
+            }
+          }
+        },
+        "responses": {
+          "200": { 
+            "description": "Login successful", 
+            "content": { 
+              "application/json": { 
+                "schema": { 
+                  "type": "object", 
+                  "properties": { 
+                    "message": { "type": "string" },
+                    "csrf_token": { "type": "string" }
+                  } 
+                } 
+              } 
+            },
+            "headers": {
+              "Set-Cookie": {
+                "description": "JWT and CSRF cookies",
+                "schema": { "type": "string" }
+              }
+            }
+          },
+          "400": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/users/get-by-id": {
+      "get": {
+        "summary": "Get user by ID (from JWT)",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "User found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserDTO" } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/users/get-by-name": {
+      "get": {
+        "summary": "Get user by name (from JWT)",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "User found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserDTO" } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/users/get-by-email": {
+      "get": {
+        "summary": "Get user by email (from JWT)",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "User found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserDTO" } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/users/update": {
+      "put": {
+        "summary": "Update user details",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UserDTO" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "User updated", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" }, "user": { "$ref": "#/components/schemas/UserDTO" }, "token": { "type": "string" } } } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/users/delete": {
+      "delete": {
+        "summary": "Delete user",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "responses": {
+          "200": { "description": "User deleted", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/auth/change-password": {
+      "post": {
+        "summary": "Change user password",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ChangePasswordDTO" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Password changed", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "Logout user and clear cookies",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "responses": {
+          "200": { "description": "Logged out successfully", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/products/create": {
+      "post": {
+        "summary": "Create a new product",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProductDTO" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Product created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProductDTO" } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/products": {
+      "get": {
+        "summary": "List products",
+        "parameters": [
+          { "name": "sortBy", "in": "query", "schema": { "type": "string" } },
+          { "name": "sortOrder", "in": "query", "schema": { "type": "string" } },
+          { "name": "search", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "List of products", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ProductDTO" } } } } }
+        }
+      }
+    },
+    "/product": {
+      "get": {
+        "summary": "Get product by ID",
+        "parameters": [
+          { "name": "id", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Product found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProductDTO" } } } },
+          "404": { "description": "Product not found" }
+        }
+      }
+    },
+    "/products/category": {
+      "get": {
+        "summary": "Get products by category",
+        "parameters": [
+          { "name": "category", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "List of products", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ProductDTO" } } } } },
+          "404": { "description": "Products not found" }
+        }
+      }
+    },
+    "/products/my-products": {
+      "get": {
+        "summary": "Get products for current user",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "List of products", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ProductDTO" } } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/products/update": {
+      "put": {
+        "summary": "Update a product",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ProductDTO" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Product updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ProductDTO" } } } },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/products/delete": {
+      "delete": {
+        "summary": "Delete a product",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Product deleted", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/companies/create": {
+      "post": {
+        "summary": "Create a company profile",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CompanyDTO" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Company created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompanyDTO" } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/companies/get-by-user": {
+      "get": {
+        "summary": "Get company by current user",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "Company found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompanyDTO" } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/companies/get-by-id": {
+      "get": {
+        "summary": "Get company by company ID",
+        "parameters": [
+          { "name": "company_id", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Company found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompanyDTO" } } } },
+          "404": { "description": "Company not found" }
+        }
+      }
+    },
+    "/companies/update": {
+      "put": {
+        "summary": "Update company profile",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CompanyDTO" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Company updated", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompanyDTO" } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/companies/delete": {
+      "delete": {
+        "summary": "Delete company",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "parameters": [
+          { "name": "company_id", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Company deleted", "content": { "application/json": { "schema": { "type": "string" } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/cart/add": {
+      "post": {
+        "summary": "Add products to cart (supports both authenticated and guest users)",
+        "security": [{ "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "array", "items": { "$ref": "#/components/schemas/CartItemDTO" } }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Cart updated", "content": { "application/json": { "schema": { "type": "object" } } } }
+        }
+      }
+    },
+    "/cart/remove": {
+      "post": {
+        "summary": "Remove products from cart (supports both authenticated and guest users)",
+        "security": [{ "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "array", "items": { "$ref": "#/components/schemas/CartItemDTO" } }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Product removed from cart", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } }
+        }
+      }
+    },
+    "/cart/clear": {
+      "post": {
+        "summary": "Clear cart (supports both authenticated and guest users)",
+        "security": [{ "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "properties": { "cartId": { "type": "string", "format": "uuid" } } }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Cart cleared", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } }
+        }
+      }
+    },
+    "/cart/get": {
+      "post": {
+        "summary": "Get cart items (supports both authenticated and guest users)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "properties": { "cartId": { "type": "string", "format": "uuid" } } }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Cart items", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/CartItemDTO" } } } } }
+        }
+      }
+    },
+    "/cart/update": {
+      "post": {
+        "summary": "Update cart items (supports both authenticated and guest users)",
+        "security": [{ "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "array", "items": { "$ref": "#/components/schemas/CartItemDTO" } }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Cart items updated", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } }
+        }
+      }
+    },
+    "/orders/checkout": {
+      "post": {
+        "summary": "Start checkout, get order summary",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CheckoutRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Order summary", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderSummary" } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/orders/confirm": {
+      "post": {
+        "summary": "Confirm order, process payment",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "properties": { "order_id": { "type": "string", "format": "uuid" } } }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Order confirmed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderWithDetails" } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/orders/summary": {
+      "post": {
+        "summary": "Get order summary",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "properties": { "order_id": { "type": "string", "format": "uuid" } } }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Order summary", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderSummary" } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/orders/details": {
+      "post": {
+        "summary": "Get order details",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "properties": { "order_id": { "type": "string", "format": "uuid" } } }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Order details", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderWithDetails" } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/orders/user": {
+      "get": {
+        "summary": "Get all orders for current user",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "List of orders", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Order" } } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/orders/producer": {
+      "get": {
+        "summary": "Get all orders for products produced by current user",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "List of orders", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/Order" } } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/orders/fulfill": {
+      "post": {
+        "summary": "Fulfill an order (mark as shipped)",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "properties": { "order_id": { "type": "string", "format": "uuid" } } }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Order fulfilled", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/orders/sales-report": {
+      "get": {
+        "summary": "Get sales report for current user's products",
+        "security": [{ "cookieAuth": [] }],
+        "responses": {
+          "200": { "description": "Sales report", "content": { "application/json": { "schema": { "type": "object" } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/reviews/add": {
+      "post": {
+        "summary": "Add a review",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReviewDTO" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Review submitted", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/reviews/get": {
+      "get": {
+        "summary": "Get reviews for a product",
+        "parameters": [
+          { "name": "product_id", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "List of reviews", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/ReviewDTO" } } } } }
+        }
+      }
+    },
+    "/reviews/update": {
+      "put": {
+        "summary": "Update a review",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "type": "object", "properties": { "rating": { "type": "integer" }, "comment": { "type": "string" } } }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Review updated", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/reviews/delete": {
+      "delete": {
+        "summary": "Delete a review",
+        "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "query", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "Review deleted", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" } } } } } },
+          "401": { "description": "Unauthorized" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    }
+  }
+} 

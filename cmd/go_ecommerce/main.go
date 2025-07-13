@@ -67,61 +67,65 @@ func main() {
 	reviewService := services.NewReviewService(reviewRepo, orderRepo, companyRepo, productRepo)
 	reviewHandler := handlers.NewReviewHandler(reviewService)
 
+	// Create a new mux to apply CORS middleware
+	mux := http.NewServeMux()
+
 	// Define routes
 	//user basic routes
-	http.HandleFunc("/users/register", userHandler.Register)
-	http.HandleFunc("/users/login", userHandler.Login)
-	http.Handle("/users/get-by-id", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByID)))
-	http.Handle("/users/get-by-name", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByName)))
-	http.Handle("/users/get-by-email", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByEmail)))
-	http.Handle("/users/update", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.UpdateUser)))
-	http.Handle("/users/delete", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.DeleteUser)))
+	mux.Handle("/users/register", middleware.CSRFMiddleware(http.HandlerFunc(userHandler.Register)))
+	mux.Handle("/users/login", middleware.CSRFMiddleware(http.HandlerFunc(userHandler.Login)))
+	mux.Handle("/users/get-by-id", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByID)))
+	mux.Handle("/users/get-by-name", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByName)))
+	mux.Handle("/users/get-by-email", authMiddleware.AuthenticateJWT(http.HandlerFunc(userHandler.GetUserByEmail)))
+	mux.Handle("/users/update", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(userHandler.UpdateUser))))
+	mux.Handle("/users/delete", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(userHandler.DeleteUser))))
 
 	//auth routes
-	http.Handle("/auth/change-password", authMiddleware.AuthenticateJWT(http.HandlerFunc(authHandler.ChangePassword)))
+	mux.Handle("/auth/change-password", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(authHandler.ChangePassword))))
+	mux.Handle("/auth/logout", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(authHandler.Logout))))
 
 	//product routes
-	http.Handle("/products/create", authMiddleware.AuthenticateJWT(http.HandlerFunc(productHandler.CreateProduct)))
-	http.HandleFunc("/products", productHandler.GetProducts)
-	http.HandleFunc("/product", productHandler.GetProduct)
-	http.HandleFunc("/products/category", productHandler.GetProductsByCategory)
-	http.Handle("/products/my-products", authMiddleware.AuthenticateJWT(http.HandlerFunc(productHandler.GetProductsByUserID)))
-	http.Handle("/products/update", authMiddleware.AuthenticateJWT(http.HandlerFunc(productHandler.UpdateProduct)))
-	http.Handle("/products/delete", authMiddleware.AuthenticateJWT(http.HandlerFunc(productHandler.DeleteProduct)))
+	mux.Handle("/products/create", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(productHandler.CreateProduct))))
+	mux.HandleFunc("/products", productHandler.GetProducts)
+	mux.HandleFunc("/product", productHandler.GetProduct)
+	mux.HandleFunc("/products/category", productHandler.GetProductsByCategory)
+	mux.Handle("/products/my-products", authMiddleware.AuthenticateJWT(http.HandlerFunc(productHandler.GetProductsByUserID)))
+	mux.Handle("/products/update", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(productHandler.UpdateProduct))))
+	mux.Handle("/products/delete", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(productHandler.DeleteProduct))))
 
 	// cart routes
-	http.Handle("/cart/add", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.AddToCart)))
-	http.Handle("/cart/remove", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.RemoveFromCart)))
-	http.Handle("/cart/clear", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.ClearCart)))
-	http.Handle("/cart/get", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.GetCartItems)))
-	http.Handle("/cart/update", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.UpdateCartItems)))
+	mux.Handle("/cart/add", authMiddleware.OptionalAuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(cartHandler.AddToCart))))
+	mux.Handle("/cart/remove", authMiddleware.OptionalAuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(cartHandler.RemoveFromCart))))
+	mux.Handle("/cart/clear", authMiddleware.OptionalAuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(cartHandler.ClearCart))))
+	mux.Handle("/cart/get", authMiddleware.OptionalAuthenticateJWT(http.HandlerFunc(cartHandler.GetCartItems)))
+	mux.Handle("/cart/update", authMiddleware.OptionalAuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(cartHandler.UpdateCartItems))))
 
 	// order routes
-	http.Handle("/orders/checkout", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.ProcessCheckout)))
-	http.Handle("/orders/confirm", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.ConfirmOrder)))
-	http.Handle("/orders/summary", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetOrderSummary)))
-	http.Handle("/orders/details", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetOrderDetails)))
-	http.Handle("/orders/user", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetUserOrders)))
-	http.Handle("/orders/producer", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetProducerOrders)))
-	http.Handle("/orders/fulfill", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.FulfillOrder)))
-	http.Handle("/orders/sales-report", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetSalesReport)))
+	mux.Handle("/orders/checkout", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(orderHandler.ProcessCheckout))))
+	mux.Handle("/orders/confirm", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(orderHandler.ConfirmOrder))))
+	mux.Handle("/orders/summary", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetOrderSummary)))
+	mux.Handle("/orders/details", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetOrderDetails)))
+	mux.Handle("/orders/user", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetUserOrders)))
+	mux.Handle("/orders/producer", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetProducerOrders)))
+	mux.Handle("/orders/fulfill", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(orderHandler.FulfillOrder))))
+	mux.Handle("/orders/sales-report", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetSalesReport)))
 
 	// review routes
-	http.Handle("/reviews/add", authMiddleware.AuthenticateJWT(http.HandlerFunc(reviewHandler.AddReview)))
-	http.HandleFunc("/reviews/get", reviewHandler.GetReviewsByProductID)
-	http.Handle("/reviews/update", authMiddleware.AuthenticateJWT(http.HandlerFunc(reviewHandler.UpdateReview)))
-	http.Handle("/reviews/delete", authMiddleware.AuthenticateJWT(http.HandlerFunc(reviewHandler.DeleteReview)))
+	mux.Handle("/reviews/add", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(reviewHandler.AddReview))))
+	mux.HandleFunc("/reviews/get", reviewHandler.GetReviewsByProductID)
+	mux.Handle("/reviews/update", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(reviewHandler.UpdateReview))))
+	mux.Handle("/reviews/delete", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(reviewHandler.DeleteReview))))
 
 	// company routes
-	http.Handle("/companies/create", authMiddleware.AuthenticateJWT(http.HandlerFunc(companyHandler.CreateCompany)))
-	http.Handle("/companies/get-by-user", authMiddleware.AuthenticateJWT(http.HandlerFunc(companyHandler.GetCompanyByUserID)))
-	http.HandleFunc("/companies/get-by-id", companyHandler.GetCompanyByCompanyID)
-	http.Handle("/companies/update", authMiddleware.AuthenticateJWT(http.HandlerFunc(companyHandler.UpdateCompany)))
-	http.Handle("/companies/delete", authMiddleware.AuthenticateJWT(http.HandlerFunc(companyHandler.DeleteCompany)))
+	mux.Handle("/companies/create", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(companyHandler.CreateCompany))))
+	mux.Handle("/companies/get-by-user", authMiddleware.AuthenticateJWT(http.HandlerFunc(companyHandler.GetCompanyByUserID)))
+	mux.HandleFunc("/companies/get-by-id", companyHandler.GetCompanyByCompanyID)
+	mux.Handle("/companies/update", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(companyHandler.UpdateCompany))))
+	mux.Handle("/companies/delete", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(companyHandler.DeleteCompany))))
 
 	// server
 	log.Printf("Server is listening on port %v", cfg.AppPort)
-	err = http.ListenAndServe(cfg.AppPort, nil)
+	err = http.ListenAndServe(cfg.AppPort, middleware.CORS(mux))
 	if err != nil {
 		log.Fatal("Server failed: ", err)
 	}

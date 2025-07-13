@@ -22,13 +22,17 @@ func TestUserRegistration_Success(t *testing.T) {
 
 	registrationPayload := createUserDTO("testuser@example.com", "password123", false)
 
-	regRR := registerTestUserAuth(t, registrationPayload)
+	regRR, authData := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "User registration failed")
 
 	var responseBody map[string]string
 	err := json.Unmarshal(regRR.Body.Bytes(), &responseBody)
 	require.NoError(t, err)
 	assert.Equal(t, "User created successfully", responseBody["message"])
+
+	// Verify that JWT and CSRF tokens were set
+	assert.NotEmpty(t, authData.JWTToken, "JWT token should be set in cookie")
+	assert.NotEmpty(t, authData.CSRFToken, "CSRF token should be set in cookie")
 
 	var userID, email string
 	err = testDB.QueryRow("SELECT id, email FROM users WHERE email = $1", registrationPayload.Email).Scan(&userID, &email)
@@ -46,17 +50,18 @@ func TestUserLogin_Success(t *testing.T) {
 
 	registrationPayload := createUserDTO("loginuser@example.com", "securepassword123", false)
 
-	regRR := registerTestUserAuth(t, registrationPayload)
+	regRR, _ := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "User registration failed")
 
-	loginRR, _, err := loginUserAndGetTokenAuth(t, registrationPayload.Email, registrationPayload.Password)
+	loginRR, authData, err := loginUserAndGetTokenAuth(t, registrationPayload.Email, registrationPayload.Password)
 	require.NoError(t, err)
 
 	assert.Equal(t, http.StatusOK, loginRR.Code, "Expected status code 200 OK for login")
 	var loginResponseBody map[string]string
 	err = json.Unmarshal(loginRR.Body.Bytes(), &loginResponseBody)
 	require.NoError(t, err)
-	assert.NotEmpty(t, loginResponseBody["token"], "Token should not be empty on successful login")
+	assert.NotEmpty(t, authData.JWTToken, "JWT token should not be empty on successful login")
+	assert.NotEmpty(t, authData.CSRFToken, "CSRF token should not be empty on successful login")
 }
 
 func TestUserLogin_Failure(t *testing.T) {
@@ -68,7 +73,7 @@ func TestUserLogin_Failure(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, rr.Code, "Expected 401 for non-existent user")
 
 	registrationPayload := createUserDTO("wrongpass@example.com", "correctpassword", false)
-	regRR := registerTestUserAuth(t, registrationPayload)
+	regRR, _ := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "Registration for wrong password test failed")
 	rrWrong, _, err := loginUserAndGetTokenAuth(t, registrationPayload.Email, "incorrectpassword")
 	require.Error(t, err)
@@ -80,19 +85,19 @@ func TestGetUserByID_Success(t *testing.T) {
 	var registeredUser models.User
 
 	regPayload := createUserDTO("getuser@example.com", "password123", false)
-	regRR := registerTestUserAuth(t, regPayload)
+	regRR, _ := registerTestUserAuth(t, regPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "Registration failed")
 
 	err := testDB.QueryRowContext(context.Background(), "SELECT id, first_name, last_name, email, phone, is_producer, address, city, country, zip_code, created_at FROM users WHERE email = $1", "getuser@example.com").
 		Scan(&registeredUser.ID, &registeredUser.FirstName, &registeredUser.LastName, &registeredUser.Email, &registeredUser.Phone, &registeredUser.IsProducer, &registeredUser.Address, &registeredUser.City, &registeredUser.Country, &registeredUser.ZipCode, &registeredUser.CreatedAt)
 	require.NoError(t, err, "Failed to retrieve registered user from DB")
 
-	loginRR, token, err := loginUserAndGetTokenAuth(t, registeredUser.Email, "password123")
+	loginRR, authData, err := loginUserAndGetTokenAuth(t, registeredUser.Email, "password123")
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, loginRR.Code, "Login failed")
-	require.NotEmpty(t, token, "Token not found")
+	require.NotEmpty(t, authData.JWTToken, "JWT token not found")
 
-	getRR := getUserById(token)
+	getRR := getUserById(authData)
 
 	assert.Equal(t, http.StatusOK, getRR.Code, "Expected 200 OK for GetUserByID")
 	var fetchedUser models.UserDTO
@@ -104,29 +109,31 @@ func TestGetUserByID_Success(t *testing.T) {
 
 func TestGetUserByID_Unauthorized(t *testing.T) {
 	clearTables(t)
-	getRRUnauth := getUserById("")
+	getRRUnauth := getUserById(nil)
 	assert.Equal(t, http.StatusUnauthorized, getRRUnauth.Code, "Expected 401 Unauthorized without token")
 
-	getRRInvalidToken := getUserById("invalidtoken123")
+	// Test with invalid auth data
+	invalidAuthData := &TestAuthData{JWTToken: "invalidtoken123"}
+	getRRInvalidToken := getUserById(invalidAuthData)
 	assert.Equal(t, http.StatusUnauthorized, getRRInvalidToken.Code, "Expected 401 Unauthorized with invalid token")
 }
 
 func TestUpdateUser_Success(t *testing.T) {
 	clearTables(t)
 	registrationPayload := createUserDTO("updateuser@example.com", "password123", false)
-	regRR := registerTestUserAuth(t, registrationPayload)
+	regRR, _ := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "Registration failed")
 
-	loginRR, token, err := loginUserAndGetTokenAuth(t, registrationPayload.Email, registrationPayload.Password)
+	loginRR, authData, err := loginUserAndGetTokenAuth(t, registrationPayload.Email, registrationPayload.Password)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, loginRR.Code, "Login failed")
-	require.NotEmpty(t, token, "Token not found")
+	require.NotEmpty(t, authData.JWTToken, "JWT token not found")
 
 	updatePayload := models.UserDTO{
 		FirstName: "UpdatedFirst", City: "NewCity",
 	}
 
-	updateRR := updateUser(token, updatePayload)
+	updateRR := updateUser(authData, updatePayload)
 
 	assert.Equal(t, http.StatusOK, updateRR.Code, "Expected 200 OK for UpdateUser")
 	var updateRespBody map[string]string
@@ -144,10 +151,12 @@ func TestUpdateUser_Unauthorized(t *testing.T) {
 	clearTables(t)
 	updatePayload := models.UserDTO{FirstName: "AttemptUpdate"}
 
-	updateRRUnauth := updateUser("", updatePayload)
+	updateRRUnauth := updateUser(nil, updatePayload)
 	assert.Equal(t, http.StatusUnauthorized, updateRRUnauth.Code, "Expected 401 Unauthorized without token")
 
-	updateRRInvalidToken := updateUser("invalidtoken123", updatePayload)
+	// Test with invalid auth data
+	invalidAuthData := &TestAuthData{JWTToken: "invalidtoken123"}
+	updateRRInvalidToken := updateUser(invalidAuthData, updatePayload)
 	assert.Equal(t, http.StatusUnauthorized, updateRRInvalidToken.Code, "Expected 401 Unauthorized with invalid token")
 }
 
@@ -155,16 +164,14 @@ func TestDeleteUser_Success(t *testing.T) {
 	clearTables(t)
 	// Register a user for deletion test
 	registrationPayload := createUserDTO("deleteuser@example.com", "password123", false)
-	regRR := registerTestUserAuth(t, registrationPayload)
+	regRR, _ := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "Registration failed")
 
 	// Login to get a token
-	loginRR, token, err := loginUserAndGetTokenAuth(t, registrationPayload.Email, registrationPayload.Password)
+	loginRR, authData, err := loginUserAndGetTokenAuth(t, registrationPayload.Email, registrationPayload.Password)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, loginRR.Code, "Login failed")
-	require.NotEmpty(t, token, "Token not found")
-	var loginRespBody map[string]string
-	_ = json.Unmarshal(loginRR.Body.Bytes(), &loginRespBody)
+	require.NotEmpty(t, authData.JWTToken, "JWT token not found")
 
 	// Query user to get user Id
 	var userId string
@@ -172,7 +179,7 @@ func TestDeleteUser_Success(t *testing.T) {
 	require.NoError(t, err, "Failed to query user from DB after delete")
 
 	// Delete the user
-	deleteRR := deleteUser(token)
+	deleteRR := deleteUser(authData)
 
 	assert.Equal(t, http.StatusOK, deleteRR.Code, "Expected 200 OK for DeleteUser")
 	var deleteRespBody map[string]string
@@ -195,10 +202,12 @@ func TestDeleteUser_Success(t *testing.T) {
 
 func TestDeleteUser_Unauthorized(t *testing.T) {
 	clearTables(t)
-	deleteRRUnauth := deleteUser("")
+	deleteRRUnauth := deleteUser(nil)
 	assert.Equal(t, http.StatusUnauthorized, deleteRRUnauth.Code, "Expected 401 Unauthorized without token")
 
-	deleteRRInvalidToken := deleteUser("invalidtoken123")
+	// Test with invalid auth data
+	invalidAuthData := &TestAuthData{JWTToken: "invalidtoken123"}
+	deleteRRInvalidToken := deleteUser(invalidAuthData)
 	assert.Equal(t, http.StatusUnauthorized, deleteRRInvalidToken.Code, "Expected 401 Unauthorized with invalid token")
 }
 
@@ -206,15 +215,15 @@ func TestGetUserByName(t *testing.T) {
 	clearTables(t)
 	registrationPayload := createUserDTO("byname@example.com", "password123", false)
 
-	regRR := registerTestUserAuth(t, registrationPayload)
+	regRR, _ := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "Registration failed")
 
-	loginRR, token, err := loginUserAndGetTokenAuth(t, registrationPayload.Email, registrationPayload.Password)
+	loginRR, authData, err := loginUserAndGetTokenAuth(t, registrationPayload.Email, registrationPayload.Password)
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, loginRR.Code, "Login failed")
-	require.NotEmpty(t, token, "Token not found")
+	require.NotEmpty(t, authData.JWTToken, "JWT token not found")
 
-	getRR := getUserByName(token)
+	getRR := getUserByName(authData)
 
 	assert.Equal(t, http.StatusOK, getRR.Code, "Expected 200 OK for GetUserByName")
 	var user models.User
@@ -228,15 +237,15 @@ func TestGetUserByEmail(t *testing.T) {
 	clearTables(t)
 	registrationPayload := createUserDTO("byemail@example.com", "password123", false)
 
-	regRR := registerTestUserAuth(t, registrationPayload)
+	regRR, _ := registerTestUserAuth(t, registrationPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "Registration failed")
 
-	loginRR, token, err := loginUserAndGetTokenAuth(t, registrationPayload.Email, registrationPayload.Password)
+	loginRR, authData, err := loginUserAndGetTokenAuth(t, registrationPayload.Email, registrationPayload.Password)
 	require.Equal(t, http.StatusOK, loginRR.Code, "Login failed")
 	require.NoError(t, err)
-	require.NotEmpty(t, token, "Token not found")
+	require.NotEmpty(t, authData.JWTToken, "JWT token not found")
 
-	getRR := getUserByEmail(token)
+	getRR := getUserByEmail(authData)
 
 	assert.Equal(t, http.StatusOK, getRR.Code, "Expected 200 OK for GetUserByEmail")
 	var user models.User
@@ -249,11 +258,11 @@ func TestGetUserByEmail(t *testing.T) {
 func TestDuplicateRegistration(t *testing.T) {
 	clearTables(t)
 	regPayload := createUserDTO("duplicate@example.com", "password123", false)
-	regRR := registerTestUserAuth(t, regPayload)
+	regRR, _ := registerTestUserAuth(t, regPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "First registration failed")
 
 	// Attempt second registration with same email
-	secondRegRR := registerTestUserAuth(t, regPayload)
+	secondRegRR, _ := registerTestUserAuth(t, regPayload)
 	assert.Equal(t, http.StatusInternalServerError, secondRegRR.Code, "Expected 500 for duplicate registration")
 	var errorResp map[string]string
 	err := json.Unmarshal(secondRegRR.Body.Bytes(), &errorResp)
@@ -264,7 +273,7 @@ func TestDuplicateRegistration(t *testing.T) {
 func TestInvalidPasswordRegistration(t *testing.T) {
 	clearTables(t)
 	regPayload := createUserDTO("shortpass@example.com", "123", false)
-	regRR := registerTestUserAuth(t, regPayload)
+	regRR, _ := registerTestUserAuth(t, regPayload)
 	assert.Equal(t, http.StatusBadRequest, regRR.Code, "Expected 400 for invalid password")
 	var errorResp map[string]string
 	err := json.Unmarshal(regRR.Body.Bytes(), &errorResp)
@@ -275,7 +284,7 @@ func TestInvalidPasswordRegistration(t *testing.T) {
 func TestInvalidEmailRegistration(t *testing.T) {
 	clearTables(t)
 	regPayload := createUserDTO("invalid-email-format", "password123", false)
-	regRR := registerTestUserAuth(t, regPayload)
+	regRR, _ := registerTestUserAuth(t, regPayload)
 	assert.Equal(t, http.StatusBadRequest, regRR.Code, "Expected 400 for invalid email format")
 	var errorResp map[string]string
 	err := json.Unmarshal(regRR.Body.Bytes(), &errorResp)
@@ -288,7 +297,7 @@ func TestDeleteNonExistentUser_Returns404(t *testing.T) {
 
 	// 1. Register a user
 	regPayload := createUserDTO("deletecheck@example.com", "password123", false)
-	regRR := registerTestUserAuth(t, regPayload)
+	regRR, _ := registerTestUserAuth(t, regPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "User registration failed")
 
 	// Get user ID after registration (needed for direct deletion if not inferable from login)
@@ -298,17 +307,17 @@ func TestDeleteNonExistentUser_Returns404(t *testing.T) {
 	require.NotEmpty(t, registeredUser.ID, "Registered user ID is empty")
 
 	// 2. Log in to get a token
-	loginRR, token, err := loginUserAndGetTokenAuth(t, regPayload.Email, regPayload.Password)
+	loginRR, authData, err := loginUserAndGetTokenAuth(t, regPayload.Email, regPayload.Password)
 	require.Equal(t, http.StatusOK, loginRR.Code, "User login failed")
 	require.NoError(t, err)
-	require.NotEmpty(t, token, "Token not found in login response")
+	require.NotEmpty(t, authData.JWTToken, "JWT token not found in login response")
 
 	// 3. Delete the user (first time - should succeed)
-	deleteRR := deleteUser(token)
+	deleteRR := deleteUser(authData)
 	assert.Equal(t, http.StatusOK, deleteRR.Code, "Expected first delete to be successful")
 
 	// 4. Attempt to delete the same user again (should fail with 500)
-	secondDeleteRR := deleteUser(token)
+	secondDeleteRR := deleteUser(authData)
 
 	// Assert that the second delete attempt returns 500 Internal Server Error
 	assert.Equal(t, http.StatusInternalServerError, secondDeleteRR.Code, "Expected second delete attempt to return 500 Internal Server Error")
@@ -324,7 +333,7 @@ func TestUserUpdate_GeneratesNewTokenAndUpdatesDetails(t *testing.T) {
 	// 1. Register a user
 	regPayload := createUserDTO("updatejwt@example.com", "password123", false)
 
-	regRR := registerTestUserAuth(t, regPayload)
+	regRR, _ := registerTestUserAuth(t, regPayload)
 	require.Equal(t, http.StatusCreated, regRR.Code, "User registration failed")
 
 	// Get registered user's ID
@@ -333,10 +342,10 @@ func TestUserUpdate_GeneratesNewTokenAndUpdatesDetails(t *testing.T) {
 	require.NoError(t, err, "Failed to query registered user ID")
 
 	// 2. Log in to get an initial JWT
-	loginRR, token, err := loginUserAndGetTokenAuth(t, regPayload.Email, regPayload.Password)
+	loginRR, authData, err := loginUserAndGetTokenAuth(t, regPayload.Email, regPayload.Password)
 	require.Equal(t, http.StatusOK, loginRR.Code, "User login failed")
 	require.NoError(t, err)
-	require.NotEmpty(t, token, "Initial token not found")
+	require.NotEmpty(t, authData.JWTToken, "Initial JWT token not found")
 
 	// 3. Prepare an update request
 	updatedFirstName := "UpdatedName"
@@ -347,7 +356,7 @@ func TestUserUpdate_GeneratesNewTokenAndUpdatesDetails(t *testing.T) {
 	}
 
 	// 4. Call the update user endpoint
-	updateRR := updateUser(token, updatePayload)
+	updateRR := updateUser(authData, updatePayload)
 
 	// 5. Assert response from update
 	require.Equal(t, http.StatusOK, updateRR.Code, "User update failed. Body: "+updateRR.Body.String())
@@ -364,14 +373,19 @@ func TestUserUpdate_GeneratesNewTokenAndUpdatesDetails(t *testing.T) {
 	assert.Equal(t, updatedLastName, updateResp.User.LastName, "Last name not updated in response")
 	assert.Equal(t, regPayload.Email, updateResp.User.Email, "Email should not have changed if not in update payload")
 	assert.NotEmpty(t, updateResp.Token, "New token not found in update response")
-	assert.NotEqual(t, token, updateResp.Token, "New token should be different from the initial token")
-	newToken := updateResp.Token
+	assert.NotEqual(t, authData.JWTToken, updateResp.Token, "New token should be different from the initial token")
 
-	// 6. Use the new JWT to get user by ID (or by name)
-	// Using GetUserByID as it's simpler and directly uses the ID from the updated user object
-	getRR := getUserById(newToken)
+	// 6. Create new auth data with the updated token
+	newAuthData := &TestAuthData{
+		JWTToken:  updateResp.Token,
+		CSRFToken: authData.CSRFToken, // Keep the same CSRF token
+		Cookies:   authData.Cookies,   // Keep the same cookies structure
+	}
 
-	// 7. Assert that the subsequent request is successful and returns updated info
+	// 7. Use the new JWT to get user by ID
+	getRR := getUserById(newAuthData)
+
+	// 8. Assert that the subsequent request is successful and returns updated info
 	require.Equal(t, http.StatusOK, getRR.Code, "GetUserByID with new token failed. Body: "+getRR.Body.String())
 	var fetchedUser models.UserDTO
 	err = json.Unmarshal(getRR.Body.Bytes(), &fetchedUser)

@@ -47,6 +47,7 @@ func (h *CartHandler) AddToCart(w http.ResponseWriter, r *http.Request) {
 	if user != nil {
 		userID = &user.ID
 	} else {
+		// Guest user - use session-based cart
 		cookie, err := r.Cookie(cartSessionCookie)
 		if err != nil || cookie.Value == "" {
 			newSessionID := uuid.NewString()
@@ -82,6 +83,37 @@ func (h *CartHandler) RemoveFromCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get cart ID for the items
+	var cartID uuid.UUID
+	user := middleware.GetUserFromContext(r, w)
+	if user != nil {
+		// Authenticated user - get cart by user ID
+		cart, err := h.cartService.GetCartByUserID(ctx, user.ID)
+		if err != nil {
+			utils.HandleAPIErrors(err, w, "handler/RemoveFromCart", http.StatusInternalServerError, "Failed to get user cart")
+			return
+		}
+		cartID = cart.ID
+	} else {
+		// Guest user - get cart by session ID
+		cookie, err := r.Cookie(cartSessionCookie)
+		if err != nil || cookie.Value == "" {
+			utils.HandleAPIErrors(nil, w, "handler/RemoveFromCart", http.StatusBadRequest, "No cart session found")
+			return
+		}
+		cart, err := h.cartService.GetCartBySessionID(ctx, cookie.Value)
+		if err != nil {
+			utils.HandleAPIErrors(err, w, "handler/RemoveFromCart", http.StatusInternalServerError, "Failed to get guest cart")
+			return
+		}
+		cartID = cart.ID
+	}
+
+	// Set cart ID for all items
+	for i := range cartItemDTO {
+		cartItemDTO[i].CartID = cartID
+	}
+
 	err := h.cartService.RemoveProductsFromCart(ctx, cartItemDTO)
 	if err != nil {
 		utils.HandleAPIErrors(err, w, "handler/RemoveFromCart", http.StatusInternalServerError, "Failed to remove products from cart")
@@ -94,13 +126,32 @@ func (h *CartHandler) RemoveFromCart(w http.ResponseWriter, r *http.Request) {
 func (h *CartHandler) ClearCart(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var cartId uuid.UUID
-	if err := json.NewDecoder(r.Body).Decode(&cartId); err != nil {
-		utils.HandleAPIErrors(err, w, "handler/ClearCart", http.StatusBadRequest, "Invalid request payload")
-		return
+	var cartID *uuid.UUID
+	user := middleware.GetUserFromContext(r, w)
+	if user != nil {
+		// Authenticated user - get cart by user ID
+		cart, err := h.cartService.GetCartByUserID(ctx, user.ID)
+		if err != nil {
+			utils.HandleAPIErrors(err, w, "handler/ClearCart", http.StatusInternalServerError, "Failed to get user cart")
+			return
+		}
+		cartID = &cart.ID
+	} else {
+		// Guest user - get cart by session ID
+		cookie, err := r.Cookie(cartSessionCookie)
+		if err != nil || cookie.Value == "" {
+			utils.HandleAPIErrors(nil, w, "handler/ClearCart", http.StatusBadRequest, "No cart session found")
+			return
+		}
+		cart, err := h.cartService.GetCartBySessionID(ctx, cookie.Value)
+		if err != nil {
+			utils.HandleAPIErrors(err, w, "handler/ClearCart", http.StatusInternalServerError, "Failed to get guest cart")
+			return
+		}
+		cartID = &cart.ID
 	}
 
-	err := h.cartService.ClearCart(ctx, &cartId)
+	err := h.cartService.ClearCart(ctx, cartID)
 	if err != nil {
 		utils.HandleAPIErrors(err, w, "handler/ClearCart", http.StatusInternalServerError, "Failed to clear cart")
 		return
@@ -112,13 +163,34 @@ func (h *CartHandler) ClearCart(w http.ResponseWriter, r *http.Request) {
 func (h *CartHandler) GetCartItems(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var cartId uuid.UUID
-	if err := json.NewDecoder(r.Body).Decode(&cartId); err != nil {
-		utils.HandleAPIErrors(err, w, "handler/GetCartItems", http.StatusBadRequest, "Invalid request payload")
-		return
+	var cartID uuid.UUID
+	user := middleware.GetUserFromContext(r, w)
+	if user != nil {
+		// Authenticated user - get cart by user ID
+		cart, err := h.cartService.GetCartByUserID(ctx, user.ID)
+		if err != nil {
+			utils.HandleAPIErrors(err, w, "handler/GetCartItems", http.StatusInternalServerError, "Failed to get user cart")
+			return
+		}
+		cartID = cart.ID
+	} else {
+		// Guest user - get cart by session ID
+		cookie, err := r.Cookie(cartSessionCookie)
+		if err != nil || cookie.Value == "" {
+			// Return empty cart for guest users without session
+			utils.RespondWithJSON(w, http.StatusOK, []models.CartItemProductDetails{})
+			return
+		}
+		cart, err := h.cartService.GetCartBySessionID(ctx, cookie.Value)
+		if err != nil {
+			// Return empty cart if session cart doesn't exist
+			utils.RespondWithJSON(w, http.StatusOK, []models.CartItemProductDetails{})
+			return
+		}
+		cartID = cart.ID
 	}
 
-	cartItems, err := h.cartService.GetAllCartItemsByCartID(ctx, cartId)
+	cartItems, err := h.cartService.GetAllCartItemsByCartID(ctx, cartID)
 	if err != nil {
 		utils.HandleAPIErrors(err, w, "handler/GetCartItems", http.StatusInternalServerError, "Failed to get cart items")
 		return
@@ -134,6 +206,37 @@ func (h *CartHandler) UpdateCartItems(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&cartItemDTO); err != nil {
 		utils.HandleAPIErrors(err, w, "handler/UpdateCartItems", http.StatusBadRequest, "Invalid request payload")
 		return
+	}
+
+	// Get cart ID for the items
+	var cartID uuid.UUID
+	user := middleware.GetUserFromContext(r, w)
+	if user != nil {
+		// Authenticated user - get cart by user ID
+		cart, err := h.cartService.GetCartByUserID(ctx, user.ID)
+		if err != nil {
+			utils.HandleAPIErrors(err, w, "handler/UpdateCartItems", http.StatusInternalServerError, "Failed to get user cart")
+			return
+		}
+		cartID = cart.ID
+	} else {
+		// Guest user - get cart by session ID
+		cookie, err := r.Cookie(cartSessionCookie)
+		if err != nil || cookie.Value == "" {
+			utils.HandleAPIErrors(nil, w, "handler/UpdateCartItems", http.StatusBadRequest, "No cart session found")
+			return
+		}
+		cart, err := h.cartService.GetCartBySessionID(ctx, cookie.Value)
+		if err != nil {
+			utils.HandleAPIErrors(err, w, "handler/UpdateCartItems", http.StatusInternalServerError, "Failed to get guest cart")
+			return
+		}
+		cartID = cart.ID
+	}
+
+	// Set cart ID for all items
+	for i := range cartItemDTO {
+		cartItemDTO[i].CartID = cartID
 	}
 
 	err := h.cartService.UpdateCartItems(ctx, cartItemDTO)

@@ -1,0 +1,191 @@
+/*
+  1. Base styles for the light theme (default)
+  Define your primary, secondary, text, background colors using CSS variables.
+*/
+:root {
+  --background-color: #ffffff; /* White */
+  --text-color: #343434; /* Dark Grey */
+  --primary-color: #2a6fdf; /* Blue */
+  --secondary-color: #e2e8f0; /* Light Grey */
+  --border-color: #cbd5e0; /* Grey */
+  --card-background: #ffffff; /* White */
+  --input-background: #edf2f7; /* Light grey for inputs */
+  --link-color: #343434; /* Blue */
+  --shadow-color: rgba(0, 0, 0, 0.1); /* Subtle shadow for light mode */
+}
+
+/*
+  2. Dark theme styles
+  These styles apply when the 'dark' class is present on the body or html element.
+  Or, when the user's system prefers dark mode.
+*/
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background-color: #1a202c; /* Dark Grey */
+    --text-color: #e2e8f0; /* Light Grey */
+    --primary-color: #63b3ed; /* Lighter Blue */
+    --secondary-color: #4a5568; /* Medium Dark Grey */
+    --border-color: #2d3748; /* Darker Grey */
+    --card-background: #2d3748; /* Darker Grey */
+    --input-background: #4a5568; /* Medium Dark Grey for inputs */
+    --link-color: #e2e8f0; /* Light Grey */
+    --shadow-color: rgba(0, 0, 0, 0.4); /* Stronger shadow for dark mode */
+  }
+}
+
+/* This allows a manual toggle to override system preference */
+html.dark {
+  --background-color: #1a202c;
+  --text-color: #e2e8f0;
+  --primary-color: #63b3ed;
+  --secondary-color: #4a5568;
+  --border-color: #2d3748;
+  --card-background: #2d3748;
+  --input-background: #4a5568;
+  --link-color: #e2e8f0;
+  --shadow-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Reset default browser styles and apply global theme variables */
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family:
+    -apple-system,
+    BlinkMacSystemFont,
+    Segoe UI,
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    Fira Sans,
+    Droid Sans,
+    Helvetica Neue,
+    sans-serif;
+  line-height: 1.6;
+  font-size: 18px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  background-color: var(--background-color);
+  color: var(--text-color);
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease; /* Smooth transition for theme change */
+}
+
+a {
+  color: var(--link-color);
+  text-decoration: none;
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+a:hover {
+  text-decoration: none;
+}
+
+/* Light theme link hover effects */
+a:hover {
+  color: #1a202c; /* Darker color for light theme */
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Dark theme link hover effects */
+@media (prefers-color-scheme: dark) {
+  a:hover {
+    color: #ffffff; /* Brighter color for dark theme */
+    text-shadow: 0 2px 4px rgba(255, 255, 255, 0.3);
+  }
+}
+
+/* Manual dark mode override for link hover */
+html.dark a:hover {
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(255, 255, 255, 0.3);
+}
+
+/* Example usage of variables in other components */
+.card {
+  background-color: var(--card-background);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 4px 8px var(--shadow-color);
+  border-radius: 8px;
+  padding: 20px;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+
+.button-primary {
+  background-color: var(--primary-color);
+  color: var(--background-color); /* Text color should contrast with primary */
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.button-primary:hover {
+  opacity: 0.9;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+textarea {
+  background-color: var(--input-background);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--primary-color);
+  border-top: 3px solid transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  100% { transform: rotate(360deg); }
+}
+
+/* Theme-aware logo styles */
+.logo-dark {
+  display: block;
+}
+
+.logo-light {
+  display: none;
+}
+
+@media (prefers-color-scheme: light) {
+  .logo-dark {
+    display: none;
+  }
+  
+  .logo-light {
+    display: block;
+  }
+}
+
+/* Manual dark mode override */
+html.dark .logo-dark {
+  display: block;
+}
+
+html.dark .logo-light {
+  display: none;
+}

@@ -1,0 +1,24 @@
+.alert {
+  border-radius: 6px;
+  padding: 10px 16px;
+  margin: 10px 0;
+  font-weight: 500;
+}
+
+.alert-success {
+  background: rgba(42, 111, 223, 0.1);
+  color: var(--primary-color);
+  border: 1px solid var(--primary-color);
+}
+
+.alert-error {
+  background: rgba(229, 62, 62, 0.1);
+  color: #e53e3e;
+  border: 1px solid #e53e3e;
+}
+
+.alert-info {
+  background: rgba(49, 130, 206, 0.1);
+  color: #3182ce;
+  border: 1px solid #3182ce;
+} 

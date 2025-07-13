@@ -15,13 +15,13 @@ import (
 )
 
 // Helper to create a product for cart tests
-func createTestProduct(t *testing.T, token string, product models.Product) models.Product {
+func createTestProduct(t *testing.T, authData *TestAuthData, product models.Product) models.Product {
 	productBytes, err := json.Marshal(product)
 	require.NoError(t, err)
 
 	req, _ := http.NewRequest("POST", "/products/create", bytes.NewBuffer(productBytes))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
+	addAuthHeaders(req, authData)
 
 	rr := httptest.NewRecorder()
 	testRouter.ServeHTTP(rr, req)
@@ -41,23 +41,23 @@ func TestCartFlow_RegisteredUser(t *testing.T) {
 	producerPassword := "password123"
 	producerPayload := createUserDTO(producerEmail, producerPassword, true)
 	registerTestUserAuth(t, producerPayload)
-	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	_, producerAuthData, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
 	require.NoError(t, err)
 
 	userEmail := "customer-cart@example.com"
 	userPassword := "password123"
 	userPayload := createUserDTO(userEmail, userPassword, false)
 	registerTestUserAuth(t, userPayload)
-	_, userToken, err := loginUserAndGetTokenAuth(t, userEmail, userPassword)
+	_, userAuthData, err := loginUserAndGetTokenAuth(t, userEmail, userPassword)
 	require.NoError(t, err)
 
 	// 2. Producer creates two products
-	product1 := createTestProduct(t, producerToken, models.Product{
+	product1 := createTestProduct(t, producerAuthData, models.Product{
 		Name:  "Test Book",
 		Price: 25.50,
 		Stock: 10,
 	})
-	product2 := createTestProduct(t, producerToken, models.Product{
+	product2 := createTestProduct(t, producerAuthData, models.Product{
 		Name:  "Test Pen",
 		Price: 1.50,
 		Stock: 100,
@@ -71,7 +71,7 @@ func TestCartFlow_RegisteredUser(t *testing.T) {
 	addBody, _ := json.Marshal(cartItemsToAdd)
 	addReq, _ := http.NewRequest("POST", "/cart/add", bytes.NewBuffer(addBody))
 	addReq.Header.Set("Content-Type", "application/json")
-	addReq.Header.Set("Authorization", "Bearer "+userToken)
+	addAuthHeaders(addReq, userAuthData)
 
 	addRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(addRR, addReq)
@@ -87,7 +87,7 @@ func TestCartFlow_RegisteredUser(t *testing.T) {
 	getBody, _ := json.Marshal(cartID)
 	getReq, _ := http.NewRequest("POST", "/cart/get", bytes.NewBuffer(getBody))
 	getReq.Header.Set("Content-Type", "application/json")
-	getReq.Header.Set("Authorization", "Bearer "+userToken)
+	addAuthHeaders(getReq, userAuthData)
 
 	getRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(getRR, getReq)
@@ -105,7 +105,7 @@ func TestCartFlow_RegisteredUser(t *testing.T) {
 	removeBody, _ := json.Marshal(itemToRemove)
 	removeReq, _ := http.NewRequest("POST", "/cart/remove", bytes.NewBuffer(removeBody))
 	removeReq.Header.Set("Content-Type", "application/json")
-	removeReq.Header.Set("Authorization", "Bearer "+userToken)
+	addAuthHeaders(removeReq, userAuthData)
 
 	removeRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(removeRR, removeReq)
@@ -115,7 +115,7 @@ func TestCartFlow_RegisteredUser(t *testing.T) {
 	getBodyAfterRemove, _ := json.Marshal(cartID)
 	getReqAfterRemove, _ := http.NewRequest("POST", "/cart/get", bytes.NewBuffer(getBodyAfterRemove))
 	getReqAfterRemove.Header.Set("Content-Type", "application/json")
-	getReqAfterRemove.Header.Set("Authorization", "Bearer "+userToken)
+	addAuthHeaders(getReqAfterRemove, userAuthData)
 
 	getRRAfterRemove := httptest.NewRecorder()
 	testRouter.ServeHTTP(getRRAfterRemove, getReqAfterRemove)
@@ -132,7 +132,7 @@ func TestCartFlow_RegisteredUser(t *testing.T) {
 	clearBody, _ := json.Marshal(cartID)
 	clearReq, _ := http.NewRequest("POST", "/cart/clear", bytes.NewBuffer(clearBody))
 	clearReq.Header.Set("Content-Type", "application/json")
-	clearReq.Header.Set("Authorization", "Bearer "+userToken)
+	addAuthHeaders(clearReq, userAuthData)
 
 	clearRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(clearRR, clearReq)
@@ -141,7 +141,7 @@ func TestCartFlow_RegisteredUser(t *testing.T) {
 	// 7. Verify cart is empty
 	getReqAfterClear, _ := http.NewRequest("POST", "/cart/get", bytes.NewBuffer(getBody))
 	getReqAfterClear.Header.Set("Content-Type", "application/json")
-	getReqAfterClear.Header.Set("Authorization", "Bearer "+userToken)
+	addAuthHeaders(getReqAfterClear, userAuthData)
 
 	getRRAfterClear := httptest.NewRecorder()
 	testRouter.ServeHTTP(getRRAfterClear, getReqAfterClear)
@@ -158,12 +158,10 @@ func TestCartFlow_GuestUser(t *testing.T) {
 	producerEmail := "producer-guest-cart@example.com"
 	producerPassword := "password123"
 	producerPayload := createUserDTO(producerEmail, producerPassword, true)
-	registerTestUserAuth(t, producerPayload)
-	_, producerToken, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
-	require.NoError(t, err)
+	_, producerAuthData := registerTestUserAuth(t, producerPayload)
 
 	// 2. Producer creates two products
-	product1 := createTestProduct(t, producerToken, models.Product{
+	product1 := createTestProduct(t, producerAuthData, models.Product{
 		Name:        "Guest Book",
 		Price:       35.00,
 		Stock:       5,
@@ -171,7 +169,7 @@ func TestCartFlow_GuestUser(t *testing.T) {
 		ImageUrl:    "https://example.com/guest-book.jpg",
 		Description: "A guest book for visitors to sign.",
 	})
-	product2 := createTestProduct(t, producerToken, models.Product{
+	product2 := createTestProduct(t, producerAuthData, models.Product{
 		Name:        "Guest Marker",
 		Price:       2.50,
 		Stock:       50,
@@ -180,7 +178,17 @@ func TestCartFlow_GuestUser(t *testing.T) {
 		Description: "A guest marker for visitors to sign.",
 	})
 
-	// 3. Guest adds both products to the cart
+	// 3. Guest adds both products to the cart (no authentication required)
+	// First, get CSRF token for guest user
+	csrfReq, _ := http.NewRequest("GET", "/csrf", nil)
+	csrfRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(csrfRR, csrfReq)
+	require.Equal(t, http.StatusNoContent, csrfRR.Code, "Failed to get CSRF token")
+
+	// Get CSRF cookie and token
+	csrfCookie := csrfRR.Result().Cookies()[0]
+	require.NotNil(t, csrfCookie, "CSRF cookie not set")
+
 	cartItemsToAdd := []models.CartItemDTO{
 		{ProductID: product1.ID, Quantity: 1, Price: product1.Price},
 		{ProductID: product2.ID, Quantity: 10, Price: product2.Price},
@@ -188,13 +196,15 @@ func TestCartFlow_GuestUser(t *testing.T) {
 	addBody, _ := json.Marshal(cartItemsToAdd)
 	addReq, _ := http.NewRequest("POST", "/cart/add", bytes.NewBuffer(addBody))
 	addReq.Header.Set("Content-Type", "application/json")
+	addReq.AddCookie(csrfCookie)
+	addReq.Header.Set("X-CSRF-Token", csrfCookie.Value)
 
 	addRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(addRR, addReq)
 	require.Equal(t, http.StatusOK, addRR.Code, "Failed to add items to guest cart")
 
 	var createdCart models.Cart
-	err = json.Unmarshal(addRR.Body.Bytes(), &createdCart)
+	err := json.Unmarshal(addRR.Body.Bytes(), &createdCart)
 	require.NoError(t, err)
 	assert.NotEqual(t, uuid.Nil, createdCart.ID)
 	cartID := createdCart.ID
@@ -203,10 +213,8 @@ func TestCartFlow_GuestUser(t *testing.T) {
 	sessionCookie := addRR.Result().Cookies()[0]
 	require.NotNil(t, sessionCookie, "Session cookie not set for guest user")
 
-	// 3a. Verify items were added by getting the cart
-	getBody, _ := json.Marshal(cartID)
-	getReq, _ := http.NewRequest("POST", "/cart/get", bytes.NewBuffer(getBody))
-	getReq.Header.Set("Content-Type", "application/json")
+	// 4. Verify items were added by getting the cart
+	getReq, _ := http.NewRequest("GET", "/cart/get", nil)
 	getReq.AddCookie(sessionCookie)
 
 	getRR := httptest.NewRecorder()
@@ -218,7 +226,7 @@ func TestCartFlow_GuestUser(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, addedItems, 2, "Guest cart should have 2 items after adding")
 
-	// 3b. Update cart items
+	// 5. Update cart items
 	cartItemsToUpdate := []models.CartItemDTO{
 		{CartID: cartID, ProductID: product1.ID, Quantity: 2, Price: product1.Price},
 		{CartID: cartID, ProductID: product2.ID, Quantity: 20, Price: product2.Price},
@@ -227,15 +235,15 @@ func TestCartFlow_GuestUser(t *testing.T) {
 	updateReq, _ := http.NewRequest("POST", "/cart/update", bytes.NewBuffer(updateBody))
 	updateReq.Header.Set("Content-Type", "application/json")
 	updateReq.AddCookie(sessionCookie)
+	updateReq.AddCookie(csrfCookie)
+	updateReq.Header.Set("X-CSRF-Token", csrfCookie.Value)
 
 	updateRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(updateRR, updateReq)
 	require.Equal(t, http.StatusOK, updateRR.Code, "Failed to update guest cart items")
 
-	// 3c. Verify items were updated by getting the cart
-	getBodyAfterUpdate, _ := json.Marshal(cartID)
-	getReqAfterUpdate, _ := http.NewRequest("POST", "/cart/get", bytes.NewBuffer(getBodyAfterUpdate))
-	getReqAfterUpdate.Header.Set("Content-Type", "application/json")
+	// 6. Verify items were updated by getting the cart
+	getReqAfterUpdate, _ := http.NewRequest("GET", "/cart/get", nil)
 	getReqAfterUpdate.AddCookie(sessionCookie)
 
 	getRRAfterUpdate := httptest.NewRecorder()
@@ -253,7 +261,7 @@ func TestCartFlow_GuestUser(t *testing.T) {
 	assert.Equal(t, cartID, updatedItems[1].CartID)
 	assert.Equal(t, 20, updatedItems[1].Quantity)
 
-	// 4. Guest removes one product from the cart
+	// 7. Guest removes one product from the cart
 	itemToRemove := []models.CartItemDTO{
 		{CartID: cartID, ProductID: product1.ID},
 	}
@@ -261,15 +269,15 @@ func TestCartFlow_GuestUser(t *testing.T) {
 	removeReq, _ := http.NewRequest("POST", "/cart/remove", bytes.NewBuffer(removeBody))
 	removeReq.Header.Set("Content-Type", "application/json")
 	removeReq.AddCookie(sessionCookie)
+	removeReq.AddCookie(csrfCookie)
+	removeReq.Header.Set("X-CSRF-Token", csrfCookie.Value)
 
 	removeRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(removeRR, removeReq)
 	require.Equal(t, http.StatusOK, removeRR.Code, "Failed to remove item from guest cart")
 
-	// 5. Retrieve cart items and verify
-	getBodyAfterRemove, _ := json.Marshal(cartID)
-	getReqAfterRemove, _ := http.NewRequest("POST", "/cart/get", bytes.NewBuffer(getBodyAfterRemove))
-	getReqAfterRemove.Header.Set("Content-Type", "application/json")
+	// 8. Retrieve cart items and verify
+	getReqAfterRemove, _ := http.NewRequest("GET", "/cart/get", nil)
 	getReqAfterRemove.AddCookie(sessionCookie)
 
 	getRRAfterRemove := httptest.NewRecorder()
@@ -282,19 +290,19 @@ func TestCartFlow_GuestUser(t *testing.T) {
 	require.Len(t, remainingItems, 1, "Guest cart should have 1 item left")
 	assert.Equal(t, product2.ID, remainingItems[0].ProductID)
 
-	// 6. Clear the cart
-	clearBody, _ := json.Marshal(cartID)
-	clearReq, _ := http.NewRequest("POST", "/cart/clear", bytes.NewBuffer(clearBody))
+	// 9. Clear the cart
+	clearReq, _ := http.NewRequest("POST", "/cart/clear", nil)
 	clearReq.Header.Set("Content-Type", "application/json")
 	clearReq.AddCookie(sessionCookie)
+	clearReq.AddCookie(csrfCookie)
+	clearReq.Header.Set("X-CSRF-Token", csrfCookie.Value)
 
 	clearRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(clearRR, clearReq)
 	require.Equal(t, http.StatusOK, clearRR.Code, "Failed to clear guest cart")
 
-	// 7. Verify cart is empty
-	getReqAfterClear, _ := http.NewRequest("POST", "/cart/get", bytes.NewBuffer(getBody))
-	getReqAfterClear.Header.Set("Content-Type", "application/json")
+	// 10. Verify cart is empty
+	getReqAfterClear, _ := http.NewRequest("GET", "/cart/get", nil)
 	getReqAfterClear.AddCookie(sessionCookie)
 
 	getRRAfterClear := httptest.NewRecorder()

@@ -33,6 +33,24 @@ func NewUserHandler(userService services.IUserService) *UserHandler {
 
 // CreateUser handles the creation of a new user
 func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
+	isDevelopment := r.Header.Get("X-Development-Mode") == "true" || strings.Contains(r.Host, "localhost")
+	if r.Method == http.MethodGet {
+		// Set CSRF cookie for preflight
+		csrfToken := utils.GenerateCSRFToken(32)
+		csrfCookie := &http.Cookie{
+			Name:     "csrf_token",
+			Value:    csrfToken,
+			Path:     "/",
+			HttpOnly: false,
+			Secure:   !isDevelopment, // For local dev; adjust as needed
+			SameSite: http.SameSiteStrictMode,
+			MaxAge:   60 * 60 * 24,
+		}
+		http.SetCookie(w, csrfCookie)
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	var user models.UserDTO
 	ctx := r.Context()
 
@@ -53,6 +71,36 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		utils.HandleAPIErrors(err, w, "handler/Register", http.StatusInternalServerError, "Failed to create user")
+		return
+	}
+
+	// Auto-login: generate JWT for the new user
+	token, err := h.UserService.AuthenticateUser(ctx, user.Email, user.Password)
+	if err == nil && token != "" {
+		cookie := &http.Cookie{
+			Name:     "jwt",
+			Value:    token,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   !isDevelopment, // Set to false for local dev
+			SameSite: http.SameSiteStrictMode,
+			MaxAge:   60 * 60 * 24, // 1 day
+		}
+		http.SetCookie(w, cookie)
+
+		csrfToken := utils.GenerateCSRFToken(32)
+		csrfCookie := &http.Cookie{
+			Name:     "csrf_token",
+			Value:    csrfToken,
+			Path:     "/",
+			HttpOnly: false,
+			Secure:   !isDevelopment, // Set to false for local dev
+			SameSite: http.SameSiteStrictMode,
+			MaxAge:   60 * 60 * 24,
+		}
+		http.SetCookie(w, csrfCookie)
+
+		utils.RespondWithJSON(w, http.StatusCreated, map[string]string{"message": "User created successfully", "csrf_token": csrfToken})
 		return
 	}
 
@@ -148,6 +196,24 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 // Login handles user login and generates a JWT token
 func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
+	isDevelopment := r.Header.Get("X-Development-Mode") == "true" || strings.Contains(r.Host, "localhost")
+	if r.Method == http.MethodGet {
+		// Set CSRF cookie for preflight
+		csrfToken := utils.GenerateCSRFToken(32)
+		csrfCookie := &http.Cookie{
+			Name:     "csrf_token",
+			Value:    csrfToken,
+			Path:     "/",
+			HttpOnly: false,
+			Secure:   !isDevelopment, // For local dev; adjust as needed
+			SameSite: http.SameSiteStrictMode,
+			MaxAge:   60 * 60 * 24,
+		}
+		http.SetCookie(w, csrfCookie)
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+
 	var loginRequest models.UserDTO
 
 	if err := json.NewDecoder(r.Body).Decode(&loginRequest); err != nil {
@@ -164,5 +230,31 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"token": token})
+	// Set JWT as httpOnly, Secure, SameSite cookie
+	cookie := &http.Cookie{
+		Name:     "jwt",
+		Value:    token,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   !isDevelopment, // Set to false for local dev
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   60 * 60 * 24, // 1 day
+	}
+	http.SetCookie(w, cookie)
+
+	// Generate CSRF token and set as non-httpOnly cookie
+	csrfToken := utils.GenerateCSRFToken(32)
+	csrfCookie := &http.Cookie{
+		Name:     "csrf_token",
+		Value:    csrfToken,
+		Path:     "/",
+		HttpOnly: false,
+		Secure:   !isDevelopment, // Set to false for local dev
+		SameSite: http.SameSiteStrictMode,
+		MaxAge:   60 * 60 * 24,
+	}
+	http.SetCookie(w, csrfCookie)
+
+	// Optionally, return the CSRF token in the response body for initial JS access
+	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "Login successful", "csrf_token": csrfToken})
 }

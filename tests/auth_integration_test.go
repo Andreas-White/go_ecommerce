@@ -22,9 +22,9 @@ func TestChangePassword_Success(t *testing.T) {
 	userDTO := createUserDTO(email, initialPassword, false)
 	registerTestUserAuth(t, userDTO)
 
-	_, token, err := loginUserAndGetTokenAuth(t, email, initialPassword)
+	_, authData, err := loginUserAndGetTokenAuth(t, email, initialPassword)
 	require.NoError(t, err, "Failed to login user for password change test")
-	require.NotEmpty(t, token, "Login token should not be empty")
+	require.NotEmpty(t, authData.JWTToken, "Login JWT token should not be empty")
 
 	changeDTO := models.ChangePasswordDTO{
 		CurrentPassword: initialPassword,
@@ -34,7 +34,7 @@ func TestChangePassword_Success(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "/auth/change-password", bytes.NewBuffer(payload))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
+	addAuthHeaders(req, authData)
 
 	rr := httptest.NewRecorder()
 	testRouter.ServeHTTP(rr, req)
@@ -45,9 +45,9 @@ func TestChangePassword_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Password changed successfully", successResp["message"])
 
-	_, newToken, err := loginUserAndGetTokenAuth(t, email, newPassword)
+	_, newAuthData, err := loginUserAndGetTokenAuth(t, email, newPassword)
 	assert.NoError(t, err, "Login with new password should succeed")
-	assert.NotEmpty(t, newToken, "Token from new password login should not be empty")
+	assert.NotEmpty(t, newAuthData.JWTToken, "JWT token from new password login should not be empty")
 
 	_, _, err = loginUserAndGetTokenAuth(t, email, initialPassword)
 	assert.Error(t, err, "Login with old password should fail")
@@ -64,7 +64,7 @@ func TestChangePassword_IncorrectCurrentPassword(t *testing.T) {
 	userDTO := createUserDTO(email, correctPassword, false)
 	registerTestUserAuth(t, userDTO)
 
-	_, token, err := loginUserAndGetTokenAuth(t, email, correctPassword)
+	_, authData, err := loginUserAndGetTokenAuth(t, email, correctPassword)
 	require.NoError(t, err)
 
 	changeDTO := models.ChangePasswordDTO{
@@ -75,7 +75,7 @@ func TestChangePassword_IncorrectCurrentPassword(t *testing.T) {
 
 	req, _ := http.NewRequest("POST", "/auth/change-password", bytes.NewBuffer(payload))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
+	addAuthHeaders(req, authData)
 
 	rr := httptest.NewRecorder()
 	testRouter.ServeHTTP(rr, req)
@@ -95,7 +95,7 @@ func TestChangePassword_InvalidNewPassword_TooShort(t *testing.T) {
 
 	userDTO := createUserDTO(email, currentPassword, false)
 	registerTestUserAuth(t, userDTO)
-	_, token, err := loginUserAndGetTokenAuth(t, email, currentPassword)
+	_, authData, err := loginUserAndGetTokenAuth(t, email, currentPassword)
 	require.NoError(t, err)
 
 	changeDTO := models.ChangePasswordDTO{
@@ -105,7 +105,7 @@ func TestChangePassword_InvalidNewPassword_TooShort(t *testing.T) {
 	payload, _ := json.Marshal(changeDTO)
 	req, _ := http.NewRequest("POST", "/auth/change-password", bytes.NewBuffer(payload))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
+	addAuthHeaders(req, authData)
 	rr := httptest.NewRecorder()
 	testRouter.ServeHTTP(rr, req)
 
@@ -122,7 +122,7 @@ func TestChangePassword_NewPasswordSameAsOld(t *testing.T) {
 
 	userDTO := createUserDTO(email, currentPassword, false)
 	registerTestUserAuth(t, userDTO)
-	_, token, err := loginUserAndGetTokenAuth(t, email, currentPassword)
+	_, authData, err := loginUserAndGetTokenAuth(t, email, currentPassword)
 	require.NoError(t, err)
 
 	changeDTO := models.ChangePasswordDTO{
@@ -132,7 +132,7 @@ func TestChangePassword_NewPasswordSameAsOld(t *testing.T) {
 	payload, _ := json.Marshal(changeDTO)
 	req, _ := http.NewRequest("POST", "/auth/change-password", bytes.NewBuffer(payload))
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+token)
+	addAuthHeaders(req, authData)
 	rr := httptest.NewRecorder()
 	testRouter.ServeHTTP(rr, req)
 
@@ -149,7 +149,7 @@ func TestChangePassword_MissingFields(t *testing.T) {
 
 	userDTO := createUserDTO(email, currentPassword, false)
 	registerTestUserAuth(t, userDTO)
-	_, token, err := loginUserAndGetTokenAuth(t, email, currentPassword)
+	_, authData, err := loginUserAndGetTokenAuth(t, email, currentPassword)
 	require.NoError(t, err)
 
 	testCases := []struct {
@@ -175,7 +175,7 @@ func TestChangePassword_MissingFields(t *testing.T) {
 			body, _ := json.Marshal(tc.payload)
 			req, _ := http.NewRequest("POST", "/auth/change-password", bytes.NewBuffer(body))
 			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Authorization", "Bearer "+token)
+			addAuthHeaders(req, authData)
 			rr := httptest.NewRecorder()
 			testRouter.ServeHTTP(rr, req)
 
@@ -206,7 +206,7 @@ func TestChangePassword_Unauthorized_NoToken(t *testing.T) {
 	var errResp map[string]string
 	err := json.Unmarshal(rr.Body.Bytes(), &errResp)
 	require.NoError(t, err)
-	assert.Contains(t, errResp["error"], "Authorization header required")
+	assert.Contains(t, errResp["error"], "Authorization required")
 }
 
 func TestChangePassword_Unauthorized_InvalidToken(t *testing.T) {
