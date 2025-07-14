@@ -59,6 +59,11 @@ export default function Header() {
           ) : user ? (
             <>
               <Link href="/profile">{user.first_name}</Link>
+              {user.is_producer && (
+                <Link href="/producer/dashboard" className="producer-link">
+                  Producer Dashboard
+                </Link>
+              )}
               <button 
                 className="button-primary header-logout-btn" 
                 onClick={handleLogout}

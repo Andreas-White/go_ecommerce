@@ -1,0 +1,246 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { api } from '@/lib/api';
+import CompanyProfile from '@/components/company/CompanyProfile';
+import CreateUpdateCompanyForm from '@/components/company/CreateUpdateCompanyForm';
+import ProducerProductList from '@/components/products/ProducerProductList';
+import CreateProductForm from '@/components/products/CreateProductForm';
+import DeleteCompanyButton from '@/components/company/DeleteCompanyButton';
+import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import Alert from '@/components/ui/Alert';
+import './page.css';
+
+interface Company {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  country: string;
+  zip_code: string;
+  review_average: number;
+  review_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  category_id: string;
+  image_url: string;
+  company: Company;
+}
+
+export default function ProducerDashboard() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
+  const [company, setCompany] = useState<Company | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [showCreateCompany, setShowCreateCompany] = useState(false);
+  const [showCreateProduct, setShowCreateProduct] = useState(false);
+  const [loadingData, setLoadingData] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        router.push('/login');
+        return;
+      }
+      
+      if (!user.is_producer) {
+        router.push('/');
+        return;
+      }
+
+      fetchProducerData();
+    }
+  }, [loading, user, router]);
+
+  const fetchProducerData = async () => {
+    try {
+      setLoadingData(true);
+      setError(null);
+
+      // Fetch company details
+      try {
+        const companyData = await api.get<Company>('/companies/get-by-user');
+        setCompany(companyData);
+      } catch (err) {
+        // Company not found is expected for new producers
+        setCompany(null);
+      }
+
+      // Fetch products
+      try {
+        const productsData = await api.get<Product[]>('/products/my-products');
+        setProducts(productsData || []);
+      } catch (err) {
+        // No products is expected for new producers
+        setProducts([]);
+      }
+    } catch (err) {
+      setError('Failed to load producer data');
+      console.error('Error fetching producer data:', err);
+      // Ensure products is always an array even on error
+      setProducts([]);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  const handleCompanyCreated = (newCompany: Company) => {
+    setCompany(newCompany);
+    setShowCreateCompany(false);
+  };
+
+  const handleCompanyUpdated = (updatedCompany: Company) => {
+    setCompany(updatedCompany);
+  };
+
+  const handleCompanyDeleted = () => {
+    setCompany(null);
+  };
+
+  const handleProductCreated = (newProduct: Product) => {
+    setProducts([...products, newProduct]);
+    setShowCreateProduct(false);
+  };
+
+  const handleProductUpdated = (updatedProduct: Product) => {
+    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+  };
+
+  const handleProductDeleted = (productId: string) => {
+    setProducts(products.filter(p => p.id !== productId));
+  };
+
+  if (loading || loadingData) {
+    return (
+      <div className="producer-dashboard">
+        <div className="loading-container">
+          <LoadingSpinner />
+          <p>Loading producer dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Will redirect to login
+  }
+
+  if (!user.is_producer) {
+    return null; // Will redirect to home
+  }
+
+  return (
+    <div className="producer-dashboard">
+      <div className="dashboard-header">
+        <h1>Producer Dashboard</h1>
+        <p>Manage your company profile and products</p>
+      </div>
+
+      {error && (
+        <Alert type="error">{error}</Alert>
+      )}
+
+      <div className="dashboard-content">
+        {/* Company Section */}
+        <section className="company-section">
+          <div className="section-header">
+            <h2>Company Profile</h2>
+            {!company && (
+              <button 
+                className="btn-primary"
+                onClick={() => setShowCreateCompany(true)}
+              >
+                Create Company
+              </button>
+            )}
+          </div>
+
+          {showCreateCompany ? (
+            <CreateUpdateCompanyForm
+              onCompanyCreated={handleCompanyCreated}
+              onCancel={() => setShowCreateCompany(false)}
+              onCompanyDeleted={handleCompanyDeleted}
+            />
+          ) : company ? (
+            <div className="company-content">
+              <CompanyProfile company={company} />
+              <div className="company-actions">
+                <CreateUpdateCompanyForm
+                  company={company}
+                  onCompanyUpdated={handleCompanyUpdated}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="no-company">
+              <p>You haven't created a company profile yet.</p>
+              <button 
+                className="btn-primary"
+                onClick={() => setShowCreateCompany(true)}
+              >
+                Create Your First Company
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* Products Section */}
+        <section className="products-section">
+          <div className="section-header">
+            <h2>Your Products</h2>
+            {company && (
+              <button 
+                className="btn-primary"
+                onClick={() => setShowCreateProduct(true)}
+              >
+                Add New Product
+              </button>
+            )}
+          </div>
+
+          {showCreateProduct ? (
+            <CreateProductForm
+              onProductCreated={handleProductCreated}
+              onCancel={() => setShowCreateProduct(false)}
+            />
+          ) : (
+            <ProducerProductList
+              products={products || []}
+              onProductUpdated={handleProductUpdated}
+              onProductDeleted={handleProductDeleted}
+            />
+          )}
+
+          {!company && (products || []).length === 0 && (
+            <div className="no-products">
+              <p>Create a company profile first to add products.</p>
+            </div>
+          )}
+
+          {company && (products || []).length === 0 && (
+            <div className="no-products">
+              <p>You haven't added any products yet.</p>
+              <button 
+                className="btn-primary"
+                onClick={() => setShowCreateProduct(true)}
+              >
+                Add Your First Product
+              </button>
+            </div>
+          )}
+        </section>
+      </div>
+    </div>
+  );
+} 

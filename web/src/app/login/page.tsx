@@ -1,11 +1,11 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import Link from 'next/link';
 import './page.css';
 
-export default function LoginPage() {
+function LoginForm() {
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -166,5 +166,13 @@ export default function LoginPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="login-loading-container"><div>Loading...</div></div>}>
+      <LoginForm />
+    </Suspense>
   );
 } 

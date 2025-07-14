@@ -3,16 +3,21 @@ import './ProductFilterSort.css';
 
 const categories = [
   { value: '', label: 'All Categories' },
-  { value: 'electronics', label: 'Electronics' },
-  { value: 'fashion', label: 'Fashion' },
-  { value: 'books', label: 'Books' },
-  // Add more categories as needed
+  { value: 'Electronics', label: 'Electronics' },
+  { value: 'Fashion', label: 'Fashion' },
+  { value: 'Books', label: 'Books' },
+  { value: 'Home & Garden', label: 'Home & Garden' },
+  { value: 'Sports', label: 'Sports' },
+  { value: 'Toys', label: 'Toys' },
+  { value: 'Health', label: 'Health & Beauty' },
+  { value: 'Automotive', label: 'Automotive' },
+  { value: 'Food', label: 'Food & Beverages' },
 ];
 
 const sortOptions = [
-  { value: '', label: 'Default' },
-  { value: 'price', label: 'Price' },
   { value: 'name', label: 'Name' },
+  { value: 'price', label: 'Price' },
+  { value: 'created_at', label: 'Date Added' },
 ];
 
 const orderOptions = [

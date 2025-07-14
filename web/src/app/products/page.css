@@ -16,29 +16,8 @@
   color: var(--text-color);
 }
 
-.products-controls {
-  display: flex;
-  gap: 1rem;
+.products-search-section {
   margin-bottom: 2rem;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.products-search-input {
-  padding: 8px 12px;
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-  background: var(--input-background);
-  color: var(--text-color);
-  min-width: 200px;
-}
-
-.products-select {
-  padding: 8px 12px;
-  border-radius: 4px;
-  border: 1px solid var(--border-color);
-  background: var(--input-background);
-  color: var(--text-color);
 }
 
 .products-error {

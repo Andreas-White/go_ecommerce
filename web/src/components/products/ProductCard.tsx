@@ -13,7 +13,7 @@ export type Product = {
 export default function ProductCard({ product }: { product: Product }) {
   return (
     <div className="product-card">
-      <Link href={`/products/${product.id}`} className="product-card-link">
+      <Link href={`/product/${product.id}`} className="product-card-link">
         <div className="product-card-image-container">
           {product.image_url ? (
             <img src={product.image_url} alt={product.name} className="product-card-image" />

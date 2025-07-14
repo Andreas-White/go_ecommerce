@@ -16,6 +16,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (data: Record<string, any>) => Promise<void>;
+  changePassword: (data: { current_password: string; new_password: string }) => Promise<void>;
   checkAuth: () => Promise<void>;
 }
 
@@ -102,8 +103,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const changePassword = async (data: { current_password: string; new_password: string }) => {
+    try {
+      // First get CSRF token
+      await api.getCSRFToken('/auth/change-password');
+      
+      // Then change password
+      await api.post<{ message: string }>(
+        '/auth/change-password',
+        data,
+        {},
+        true // require CSRF
+      );
+    } catch (error) {
+      throw error; // Re-throw to let the component handle it
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, register, checkAuth }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, register, changePassword, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );

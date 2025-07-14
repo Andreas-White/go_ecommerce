@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { useCart } from '../../context/CartContext';
 import { api } from '../../lib/api';
 import Link from 'next/link';
+import ProductFilterSort from '../../components/products/ProductFilterSort';
+import SearchBar from '../../components/common/SearchBar';
 import './page.css';
 
 interface Product {
@@ -23,24 +25,34 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [category, setCategory] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
   const { addToCart } = useCart();
 
   useEffect(() => {
     fetchProducts();
-  }, [searchTerm, sortBy, sortOrder]);
+  }, [searchTerm, category, sortBy, sortOrder]);
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (sortBy) params.append('sortBy', sortBy);
-      if (sortOrder) params.append('sortOrder', sortOrder);
+      let productsData: Product[] = [];
 
-      const productsData = await api.get<Product[]>(`/products?${params.toString()}`);
-      setProducts(productsData || []);
+      if (category) {
+        // Use category-specific endpoint
+        productsData = await api.get<Product[]>(`/products/category?category=${category}`) || [];
+      } else {
+        // Use general products endpoint with search and sort
+        const params = new URLSearchParams();
+        if (searchTerm) params.append('search', searchTerm);
+        if (sortBy) params.append('sortBy', sortBy);
+        if (sortOrder) params.append('sortOrder', sortOrder);
+
+        productsData = await api.get<Product[]>(`/products?${params.toString()}`) || [];
+      }
+
+      setProducts(productsData);
       setError(null);
     } catch (error) {
       console.error('Failed to fetch products:', error);
@@ -64,6 +76,11 @@ export default function ProductsPage() {
     }
   };
 
+  const handleSearchSubmit = () => {
+    // Trigger search - this will be handled by the useEffect
+    fetchProducts();
+  };
+
   if (loading) {
     return (
       <div className="products-loading-container">
@@ -76,35 +93,24 @@ export default function ProductsPage() {
     <div className="products-container">
       <h1 className="products-title">Products</h1>
 
-      {/* Search and Filter Controls */}
-      <div className="products-controls">
-        <input
-          type="text"
-          placeholder="Search products..."
+      {/* Search Bar */}
+      <div className="products-search-section">
+        <SearchBar
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="products-search-input"
+          onChange={setSearchTerm}
+          onSubmit={handleSearchSubmit}
         />
-        
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="products-select"
-        >
-          <option value="name">Name</option>
-          <option value="price">Price</option>
-          <option value="created_at">Date Added</option>
-        </select>
-        
-        <select
-          value={sortOrder}
-          onChange={(e) => setSortOrder(e.target.value)}
-          className="products-select"
-        >
-          <option value="asc">Ascending</option>
-          <option value="desc">Descending</option>
-        </select>
       </div>
+
+      {/* Filter and Sort Controls */}
+      <ProductFilterSort
+        category={category}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onCategoryChange={setCategory}
+        onSortByChange={setSortBy}
+        onSortOrderChange={setSortOrder}
+      />
 
       {error && (
         <div className="products-error">
@@ -117,7 +123,7 @@ export default function ProductsPage() {
           <div className="products-empty-icon">📦</div>
           <h2 className="products-empty-title">No products found</h2>
           <p className="products-empty-text">
-            {searchTerm ? 'Try adjusting your search terms.' : 'No products are available at the moment.'}
+            {searchTerm || category ? 'Try adjusting your search terms or category filter.' : 'No products are available at the moment.'}
           </p>
         </div>
       ) : (
