@@ -6,6 +6,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../lib/api';
 import Link from 'next/link';
 import './page.css';
+import AddReviewForm from '../../../components/products/AddReviewForm';
 
 interface Product {
   id: string;
@@ -255,6 +256,14 @@ export default function ProductDetailsPage() {
                 </div>
               ))}
             </div>
+          )}
+
+          {/* Add Review Form for authenticated users */}
+          {user && (
+            <AddReviewForm 
+              productId={product.id} 
+              onReviewSubmitted={fetchProductReviews}
+            />
           )}
         </div>
       </div>

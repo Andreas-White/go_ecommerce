@@ -1,10 +1,7 @@
 .confirmation-container {
-  min-height: 100%;
-  min-width: 100%;
+  min-height: 100vh;
   background-color: var(--background-color);
   padding: 2rem 0;
-  max-width: 5rem;
-  margin-top: 1rem;
 }
 
 .confirmation-content {

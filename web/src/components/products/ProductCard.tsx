@@ -10,6 +10,7 @@ export type Product = {
   description?: string;
 };
 
+// Not used 
 export default function ProductCard({ product }: { product: Product }) {
   return (
     <div className="product-card">
