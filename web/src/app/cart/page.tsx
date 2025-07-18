@@ -1,16 +1,52 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import Link from 'next/link';
 import './page.css';
+import { api } from '../../lib/api';
 
 export default function CartPage() {
   const { cartItems, loading, removeFromCart, updateCartItems, clearCart } = useCart();
   const { user } = useAuth();
   const [updating, setUpdating] = useState(false);
+  const [productMap, setProductMap] = useState<{ [productId: string]: any }>({});
 
-  const handleQuantityChange = async (productId: string, newQuantity: number) => {
+  // Memoize unique product IDs to avoid unnecessary re-computations
+  const uniqueProductIds = useMemo(() => {
+    return Array.from(new Set(cartItems.map(item => item.product_id)));
+  }, [cartItems]);
+
+  // Fetch products only when the set of unique product IDs changes
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (uniqueProductIds.length === 0) {
+        setProductMap({});
+        return;
+      }
+
+      const newMap: { [productId: string]: any } = {};
+      await Promise.all(uniqueProductIds.map(async (id) => {
+        // Only fetch if we don't already have this product
+        if (!productMap[id]) {
+          try {
+            const product = await api.get(`/product?id=${id}`);
+            newMap[id] = product;
+          } catch (e) {
+            // ignore error, leave undefined
+          }
+        } else {
+          // Keep existing product data
+          newMap[id] = productMap[id];
+        }
+      }));
+      setProductMap(newMap);
+    };
+    
+    fetchProducts();
+  }, [uniqueProductIds]); // Only depend on unique product IDs, not cartItems
+
+  const handleQuantityChange = useCallback(async (productId: string, newQuantity: number) => {
     if (newQuantity <= 0) {
       // Remove item if quantity is 0 or negative
       await handleRemoveItem(productId);
@@ -25,9 +61,9 @@ export default function CartPage() {
     } finally {
       setUpdating(false);
     }
-  };
+  }, [updateCartItems]);
 
-  const handleRemoveItem = async (productId: string) => {
+  const handleRemoveItem = useCallback(async (productId: string) => {
     setUpdating(true);
     try {
       await removeFromCart([{ product_id: productId, quantity: 1 }]);
@@ -36,9 +72,9 @@ export default function CartPage() {
     } finally {
       setUpdating(false);
     }
-  };
+  }, [removeFromCart]);
 
-  const handleClearCart = async () => {
+  const handleClearCart = useCallback(async () => {
     if (confirm('Are you sure you want to clear your cart?')) {
       setUpdating(true);
       try {
@@ -49,16 +85,76 @@ export default function CartPage() {
         setUpdating(false);
       }
     }
-  };
+  }, [clearCart]);
 
-  const calculateTotal = () => {
-    return cartItems.reduce((total, item) => total + (item.price || 0) * item.quantity, 0);
-  };
+  const calculateTotal = useCallback(() => {
+    return cartItems.reduce((total, item) => {
+      const product = productMap[item.product_id];
+      const price = product?.price || 0;
+      return total + price * item.quantity;
+    }, 0);
+  }, [cartItems, productMap]);
 
   if (loading) {
     return (
       <div className="cart-loading-container">
         <div>Loading cart...</div>
+      </div>
+    );
+  }
+
+  function CartItem({ item, product, updating, onQuantityChange, onRemove }: {
+    item: any;
+    product: any;
+    updating: boolean;
+    onQuantityChange: (productId: string, newQuantity: number) => void;
+    onRemove: (productId: string) => void;
+  }) {
+    const price = product?.price || 0;
+    return (
+      <div className={`cart-item`}>
+        <div className="cart-item-info">
+          {product?.image_url && (
+            <img src={product.image_url} alt={item.product_name || `Product ${item.product_id}`} className="cart-item-image" />
+          )}
+          <h3 className="cart-item-name">
+            {item.product_name || `Product ${item.product_id}`}
+          </h3>
+          <p className="cart-item-price">
+            ${price.toFixed(2)} each
+          </p>
+        </div>
+        <div className="cart-item-quantity">
+          <button
+            onClick={() => onQuantityChange(item.product_id, item.quantity - 1)}
+            disabled={updating}
+            className="cart-quantity-btn"
+          >
+            -
+          </button>
+          <span className="cart-quantity-display">
+            {item.quantity}
+          </span>
+          <button
+            onClick={() => onQuantityChange(item.product_id, item.quantity + 1)}
+            disabled={updating}
+            className="cart-quantity-btn"
+          >
+            +
+          </button>
+        </div>
+        <div className="cart-item-subtotal">
+          <p className="cart-item-total">
+            ${(price * item.quantity).toFixed(2)}
+          </p>
+        </div>
+        <button
+          onClick={() => onRemove(item.product_id)}
+          disabled={updating}
+          className="cart-remove-btn"
+        >
+          Remove
+        </button>
       </div>
     );
   }
@@ -84,52 +180,19 @@ export default function CartPage() {
             <div className="cart-items-card">
               <h2 className="cart-items-title">Cart Items</h2>
               
-              {cartItems.map((item, index) => (
-                <div key={index} className={`cart-item${index < cartItems.length - 1 ? ' cart-item-border' : ''}`}>
-                  <div className="cart-item-info">
-                    <h3 className="cart-item-name">
-                      {item.product_name || `Product ${item.product_id}`}
-                    </h3>
-                    <p className="cart-item-price">
-                      ${(item.price || 0).toFixed(2)} each
-                    </p>
-                  </div>
-                  
-                  <div className="cart-item-quantity">
-                    <button
-                      onClick={() => handleQuantityChange(item.product_id, item.quantity - 1)}
-                      disabled={updating}
-                      className="cart-quantity-btn"
-                    >
-                      -
-                    </button>
-                    <span className="cart-quantity-display">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => handleQuantityChange(item.product_id, item.quantity + 1)}
-                      disabled={updating}
-                      className="cart-quantity-btn"
-                    >
-                      +
-                    </button>
-                  </div>
-                  
-                  <div className="cart-item-subtotal">
-                    <p className="cart-item-total">
-                      ${((item.price || 0) * item.quantity).toFixed(2)}
-                    </p>
-                  </div>
-                  
-                  <button
-                    onClick={() => handleRemoveItem(item.product_id)}
-                    disabled={updating}
-                    className="cart-remove-btn"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
+              {cartItems.map((item, index) => {
+                const product = productMap[item.product_id];
+                return (
+                  <CartItem
+                    key={item.product_id}
+                    item={item}
+                    product={product}
+                    updating={updating}
+                    onQuantityChange={handleQuantityChange}
+                    onRemove={handleRemoveItem}
+                  />
+                );
+              })}
               
               <div className="cart-clear-section">
                 <button

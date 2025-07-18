@@ -40,10 +40,10 @@ export default function ProducerProductList({
   onProductUpdated, 
   onProductDeleted 
 }: ProducerProductListProps) {
-  const [editingProduct, setEditingProduct] = useState<string | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  const handleEditStart = (productId: string) => {
-    setEditingProduct(productId);
+  const handleEditStart = (product: Product) => {
+    setEditingProduct(product);
   };
 
   const handleEditComplete = (updatedProduct: Product) => {
@@ -65,67 +65,58 @@ export default function ProducerProductList({
 
   return (
     <div className="producer-product-list">
+      {editingProduct && (
+        <EditProductButton
+          product={editingProduct}
+          onProductUpdated={handleEditComplete}
+          onCancel={handleEditCancel}
+        />
+      )}
       <div className="products-grid">
         {products.map((product) => (
           <div key={product.id} className="product-card">
-            {editingProduct === product.id ? (
-              <EditProductButton
-                product={product}
-                onProductUpdated={handleEditComplete}
-                onCancel={handleEditCancel}
+            <div className="product-image">
+              {product.image_url ? (
+                <img src={product.image_url} alt={product.name} />
+              ) : (
+                <div className="no-image">No Image</div>
+              )}
+            </div>
+            <div className="product-info">
+              <h4>{product.name}</h4>
+              <p className="product-description">
+                {product.description || 'No description available'}
+              </p>
+              <div className="product-details">
+                <div className="detail-item">
+                  <span className="label">Price:</span>
+                  <span className="value">${product.price.toFixed(2)}</span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Stock:</span>
+                  <span className={`value ${product.stock === 0 ? 'out-of-stock' : ''}`}>
+                    {product.stock} units
+                  </span>
+                </div>
+                <div className="detail-item">
+                  <span className="label">Category:</span>
+                  <span className="value">{product.category_id}</span>
+                </div>
+              </div>
+            </div>
+            <div className="product-actions">
+              <button
+                className="btn-edit"
+                onClick={() => handleEditStart(product)}
+              >
+                Edit
+              </button>
+              <DeleteProductButton
+                productId={product.id}
+                productName={product.name}
+                onProductDeleted={onProductDeleted}
               />
-            ) : (
-              <>
-                <div className="product-image">
-                  {product.image_url ? (
-                    <img src={product.image_url} alt={product.name} />
-                  ) : (
-                    <div className="no-image">No Image</div>
-                  )}
-                </div>
-                
-                <div className="product-info">
-                  <h4>{product.name}</h4>
-                  <p className="product-description">
-                    {product.description || 'No description available'}
-                  </p>
-                  
-                  <div className="product-details">
-                    <div className="detail-item">
-                      <span className="label">Price:</span>
-                      <span className="value">${product.price.toFixed(2)}</span>
-                    </div>
-                    
-                    <div className="detail-item">
-                      <span className="label">Stock:</span>
-                      <span className={`value ${product.stock === 0 ? 'out-of-stock' : ''}`}>
-                        {product.stock} units
-                      </span>
-                    </div>
-                    
-                    <div className="detail-item">
-                      <span className="label">Category:</span>
-                      <span className="value">{product.category_id}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="product-actions">
-                  <button
-                    className="btn-edit"
-                    onClick={() => handleEditStart(product.id)}
-                  >
-                    Edit
-                  </button>
-                  
-                  <DeleteProductButton
-                    productId={product.id}
-                    productName={product.name}
-                    onProductDeleted={onProductDeleted}
-                  />
-                </div>
-              </>
-            )}
+            </div>
           </div>
         ))}
       </div>

@@ -130,9 +130,11 @@ export default function ProductsPage() {
         <div className="products-grid">
           {products.map((product) => (
             <div key={product.id} className="product-card">
-              {product.image_url && (
+              {product.image_url ? (
+                <img src={product.image_url} alt={product.name} className="product-card-image" />
+              ) : (
                 <div className="product-image-placeholder">
-                  <span className="product-image-text">Image</span>
+                  <span className="product-image-text">No Image</span>
                 </div>
               )}
               

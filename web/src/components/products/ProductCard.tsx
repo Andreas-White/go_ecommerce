@@ -28,7 +28,7 @@ export default function ProductCard({ product }: { product: Product }) {
           ${product.price.toFixed(2)}
         </div>
       </Link>
-      <Button className="product-card-button">Add to Cart</Button>
+      <Button className="product-card-button">Add to to Cart</Button>
     </div>
   );
 } 

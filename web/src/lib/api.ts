@@ -1,4 +1,6 @@
 // Centralized API client for Go backend with cookie-based authentication and CSRF protection
+// This file is not a React component and should not trigger Fast Refresh
+// @refresh reset
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080';
 
 // CSRF token management

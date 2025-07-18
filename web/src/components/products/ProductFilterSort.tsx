@@ -4,7 +4,7 @@ import './ProductFilterSort.css';
 const categories = [
   { value: '', label: 'All Categories' },
   { value: 'Electronics', label: 'Electronics' },
-  { value: 'Fashion', label: 'Fashion' },
+  { value: 'Clothing', label: 'Clothing' },
   { value: 'Books', label: 'Books' },
   { value: 'Home & Garden', label: 'Home & Garden' },
   { value: 'Sports', label: 'Sports' },
@@ -12,6 +12,8 @@ const categories = [
   { value: 'Health', label: 'Health & Beauty' },
   { value: 'Automotive', label: 'Automotive' },
   { value: 'Food', label: 'Food & Beverages' },
+  { value: 'Shoes', label: 'Shoes' },
+  { value: 'Other', label: 'Other' },
 ];
 
 const sortOptions = [

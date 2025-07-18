@@ -64,6 +64,8 @@ export default function ProductDetailsPage() {
     } catch (error) {
       console.error('Failed to fetch product:', error);
       setError('Failed to load product details.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -74,6 +76,8 @@ export default function ProductDetailsPage() {
     } catch (error) {
       console.error('Failed to fetch reviews:', error);
       // Don't set error for reviews as it's not critical
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -137,9 +141,7 @@ export default function ProductDetailsPage() {
         <div className="product-details-main">
           <div className="product-details-image-section">
             {product.image_url ? (
-              <div className="product-details-image-placeholder">
-                <span>Product Image</span>
-              </div>
+              <img src={product.image_url} alt={product.name} className="product-details-image" />
             ) : (
               <div className="product-details-image-placeholder">
                 <span>No Image Available</span>

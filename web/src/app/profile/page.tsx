@@ -83,7 +83,7 @@ export default function ProfilePage() {
           )}
 
           <Link 
-            href="/my-orders"
+            href="/orders"
             className="profile-btn profile-btn-secondary"
           >
             View My Orders

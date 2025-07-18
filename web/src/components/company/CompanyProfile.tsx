@@ -1,6 +1,9 @@
 'use client';
 
 import './CompanyProfile.css';
+import { useState } from 'react';
+import CreateUpdateCompanyForm from './CreateUpdateCompanyForm';
+import DeleteCompanyButton from './DeleteCompanyButton';
 
 interface Company {
   id: string;
@@ -17,9 +20,13 @@ interface Company {
 
 interface CompanyProfileProps {
   company: Company;
+  onCompanyUpdated?: (company: Company) => void;
+  onCompanyDeleted?: () => void;
 }
 
-export default function CompanyProfile({ company }: CompanyProfileProps) {
+export default function CompanyProfile({ company, onCompanyUpdated, onCompanyDeleted }: CompanyProfileProps) {
+  const [editing, setEditing] = useState(false);
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -27,6 +34,26 @@ export default function CompanyProfile({ company }: CompanyProfileProps) {
       day: 'numeric'
     });
   };
+
+  if (editing) {
+    return (
+      <div className="company-profile">
+        <CreateUpdateCompanyForm
+          company={company}
+          onCompanyUpdated={(updated) => {
+            setEditing(false);
+            onCompanyUpdated?.(updated);
+          }}
+          onCancel={() => setEditing(false)}
+          onCompanyDeleted={() => {
+            setEditing(false);
+            onCompanyDeleted?.();
+          }}
+          saveLabel="Save"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="company-profile">
@@ -38,7 +65,7 @@ export default function CompanyProfile({ company }: CompanyProfileProps) {
             {'☆'.repeat(5 - Math.round(company.review_average || 0))}
           </span>
           <span className="rating-text">
-            {company.review_average ? company.review_average.toFixed(1) : 'No'} 
+            {company.review_average ? company.review_average.toFixed(1) : ''} 
             ({company.review_count || 0} reviews)
           </span>
         </div>
@@ -49,31 +76,24 @@ export default function CompanyProfile({ company }: CompanyProfileProps) {
           <label>Address:</label>
           <p>{company.address}</p>
         </div>
-
         <div className="detail-group">
           <label>City:</label>
           <p>{company.city}</p>
         </div>
-
         <div className="detail-group">
           <label>Country:</label>
           <p>{company.country}</p>
         </div>
-
         <div className="detail-group">
           <label>ZIP Code:</label>
           <p>{company.zip_code}</p>
         </div>
-
-        <div className="detail-group">
-          <label>Created:</label>
-          <p>{formatDate(company.created_at)}</p>
-        </div>
-
-        <div className="detail-group">
-          <label>Last Updated:</label>
-          <p>{formatDate(company.updated_at)}</p>
-        </div>
+      </div>
+      <div className="company-actions">
+        <button className="btn-primary" onClick={() => setEditing(true)}>
+          Update Company
+        </button>
+        <DeleteCompanyButton companyId={company.id} onCompanyDeleted={onCompanyDeleted} />
       </div>
     </div>
   );

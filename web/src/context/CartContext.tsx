@@ -30,6 +30,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartId, setCartId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const { user, loading: authLoading } = useAuth();
 
   // Generate or get session ID for guest carts
@@ -45,6 +46,22 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return '';
   };
 
+  // Get CSRF token once and cache it
+  const getCSRFToken = async (): Promise<string> => {
+    if (csrfToken) {
+      return csrfToken;
+    }
+    
+    try {
+      const token = await api.getCSRFToken('/users/register');
+      setCsrfToken(token);
+      return token;
+    } catch (error) {
+      console.error('Failed to get CSRF token:', error);
+      throw error;
+    }
+  };
+
   const getCart = async () => {
     if (authLoading) {
       return;
@@ -52,8 +69,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
     setLoading(true);
     try {
-      // The backend GetCartItems handler doesn't expect a request body
-      // It gets cart info from JWT (authenticated users) or session cookie (guest users)
       const items = await api.post<CartItem[]>('/cart/get');
       setCartItems(items || []);
     } catch (error) {
@@ -74,12 +89,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
 
     if (user) {
-      // For authenticated users, we'll need to get their cart ID
-      // This could be stored in user context or fetched from user profile
-      // For now, we'll use a placeholder
       setCartId('user_cart');
     } else {
-      // For guest users, use session ID
       const sessionId = getSessionId();
       setCartId(sessionId);
     }
@@ -97,17 +108,26 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    setLoading(true);
+    // Optimistic update
+    const newItems = [...cartItems];
+    items.forEach(newItem => {
+      const existingIndex = newItems.findIndex(item => item.product_id === newItem.product_id);
+      if (existingIndex >= 0) {
+        newItems[existingIndex].quantity += newItem.quantity;
+      } else {
+        newItems.push(newItem);
+      }
+    });
+    setCartItems(newItems);
+
     try {
-      // First get CSRF token
-      await api.getCSRFToken('/cart/add');
-      
+      await getCSRFToken();
       await api.post('/cart/add', items, {}, true);
-      await getCart(); // Refresh cart after adding items
+      // Don't refresh cart - we already updated optimistically
     } catch (error) {
+      // Revert optimistic update on error
+      setCartItems(cartItems);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -116,17 +136,20 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    setLoading(true);
+    // Optimistic update
+    const newItems = cartItems.filter(item => 
+      !items.some(removeItem => removeItem.product_id === item.product_id)
+    );
+    setCartItems(newItems);
+
     try {
-      // First get CSRF token
-      await api.getCSRFToken('/cart/remove');
-      
+      await getCSRFToken();
       await api.post('/cart/remove', items, {}, true);
-      await getCart(); // Refresh cart after removing items
+      // Don't refresh cart - we already updated optimistically
     } catch (error) {
+      // Revert optimistic update on error
+      setCartItems(cartItems);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -135,17 +158,24 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    setLoading(true);
+    // Optimistic update
+    const newItems = [...cartItems];
+    items.forEach(updateItem => {
+      const existingIndex = newItems.findIndex(item => item.product_id === updateItem.product_id);
+      if (existingIndex >= 0) {
+        newItems[existingIndex].quantity = updateItem.quantity;
+      }
+    });
+    setCartItems(newItems);
+
     try {
-      // First get CSRF token
-      await api.getCSRFToken('/cart/update');
-      
+      await getCSRFToken();
       await api.post('/cart/update', items, {}, true);
-      await getCart(); // Refresh cart after updating items
+      // Don't refresh cart - we already updated optimistically
     } catch (error) {
+      // Revert optimistic update on error
+      setCartItems(cartItems);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -154,17 +184,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    setLoading(true);
+    // Optimistic update
+    setCartItems([]);
+
     try {
-      // First get CSRF token
-      await api.getCSRFToken('/cart/clear');
-      
+      await getCSRFToken();
       await api.post('/cart/clear', {}, {}, true);
-      setCartItems([]);
+      // Don't refresh cart - we already updated optimistically
     } catch (error) {
+      // Revert optimistic update on error
+      setCartItems(cartItems);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 

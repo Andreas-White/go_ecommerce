@@ -1,0 +1,55 @@
+.checkout-container {
+  min-height: 100vh;
+  background-color: var(--background-color);
+  padding: 2rem 0;
+  margin-top: 1rem;
+}
+
+.checkout-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.checkout-title {
+  text-align: center;
+  color: var(--text-color);
+  margin-bottom: 2rem;
+  font-size: 2.5rem;
+  font-weight: 600;
+}
+
+.checkout-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+  font-size: 1.2rem;
+  color: var(--text-color);
+}
+
+.checkout-steps {
+  background: var(--card-background);
+  border-radius: 12px;
+  box-shadow: 0 4px 6px var(--shadow-color);
+  padding: 2rem;
+  margin-top: 2rem;
+}
+
+
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .checkout-content {
+    padding: 0 0.5rem;
+  }
+  
+  .checkout-title {
+    font-size: 2rem;
+  }
+  
+  .checkout-steps {
+    padding: 1rem;
+    margin-top: 1rem;
+  }
+} 

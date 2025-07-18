@@ -33,6 +33,7 @@ export default function Header() {
                 height={80}
                 className="logo-dark"
                 style={{ objectFit: 'contain' }}
+                priority
               />
               <Image
                 src="/Logo2.png"

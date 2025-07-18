@@ -26,6 +26,7 @@ interface CreateUpdateCompanyFormProps {
   onCompanyUpdated?: (company: Company) => void;
   onCompanyDeleted?: () => void;
   onCancel?: () => void;
+  saveLabel?: string;
 }
 
 export default function CreateUpdateCompanyForm({ 
@@ -33,7 +34,8 @@ export default function CreateUpdateCompanyForm({
   onCompanyCreated, 
   onCompanyUpdated, 
   onCompanyDeleted,
-  onCancel 
+  onCancel,
+  saveLabel 
 }: CreateUpdateCompanyFormProps) {
   const [formData, setFormData] = useState({
     id: '',
@@ -192,10 +194,10 @@ export default function CreateUpdateCompanyForm({
             {loading ? (
               <>
                 <LoadingSpinner />
-                {isEditing ? 'Updating...' : 'Creating...'}
+                {isEditing ? (saveLabel || 'Updating...') : 'Creating...'}
               </>
             ) : (
-              isEditing ? 'Update Company' : 'Create Company'
+              isEditing ? (saveLabel || 'Update Company') : 'Create Company'
             )}
           </button>
           {isEditing && (

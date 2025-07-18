@@ -38,36 +38,35 @@ export default function DeleteCompanyButton({ companyId, onCompanyDeleted }: Del
 
   if (showConfirmation) {
     return (
-      <div className="delete-confirmation">
-        {error && <Alert type="error">{error}</Alert>}
-        
-        <div className="confirmation-content">
-          <h4>Delete Company</h4>
-          <p>Are you sure you want to delete this company? This action cannot be undone.</p>
-          
-          <div className="confirmation-actions">
-            <button
-              className="btn-danger"
-              onClick={handleDelete}
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <LoadingSpinner />
-                  Deleting...
-                </>
-              ) : (
-                'Delete Company'
-              )}
-            </button>
-            
-            <button
-              className="btn-secondary"
-              onClick={() => setShowConfirmation(false)}
-              disabled={loading}
-            >
-              Cancel
-            </button>
+      <div className="delete-company-confirmation-overlay">
+        <div className="delete-confirmation-modal">
+          {error && <Alert type="error">{error}</Alert>}
+          <div className="confirmation-content">
+            <h4>Delete Company</h4>
+            <p>Are you sure you want to delete this company? This action cannot be undone.</p>
+            <div className="confirmation-actions">
+              <button
+                className="btn-danger"
+                onClick={handleDelete}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <LoadingSpinner />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Company'
+                )}
+              </button>
+              <button
+                className="btn-secondary"
+                onClick={() => setShowConfirmation(false)}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       </div>

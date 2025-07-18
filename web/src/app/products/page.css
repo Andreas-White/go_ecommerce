@@ -73,6 +73,13 @@
   justify-content: center;
 }
 
+.product-card-image {
+  max-height: 240px;
+  max-width: 100%;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
 .product-image-text {
   color: var(--text-color);
   opacity: 0.7;

@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import Alert from '@/components/ui/Alert';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import './CreateProductForm.css';
+import { useRef } from 'react';
 
 interface Company {
   id: string;
@@ -45,6 +46,7 @@ const CATEGORIES = [
   'Health & Beauty',
   'Automotive',
   'Food & Beverages',
+  'Shoes',
   'Other'
 ];
 
@@ -59,6 +61,10 @@ export default function CreateProductForm({ onProductCreated, onCancel }: Create
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -68,17 +74,74 @@ export default function CreateProductForm({ onProductCreated, onCancel }: Create
     }));
   };
 
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('Only image files are allowed.');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setError(null);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('Only image files are allowed.');
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+    setError(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const uploadImage = async (): Promise<string | null> => {
+    if (!imageFile) return null;
+    setUploading(true);
+    const formData = new FormData();
+    formData.append('file', imageFile);
+    const res = await fetch('/api/upload-image', {
+      method: 'POST',
+      body: formData,
+    });
+    setUploading(false);
+    if (!res.ok) {
+      setError('Image upload failed.');
+      return null;
+    }
+    const data = await res.json();
+    return data.url;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    let imageUrl = formData.image_url;
+    if (imageFile) {
+      const uploadedUrl = await uploadImage();
+      if (!uploadedUrl) {
+        setLoading(false);
+        return;
+      }
+      imageUrl = uploadedUrl;
+    }
 
     try {
       // Get CSRF token first
       await api.getCSRFToken('/users/register');
 
       // Create product
-      const newProduct = await api.post<Product>('/products/create', formData, {}, true);
+      const newProduct = await api.post<Product>('/products/create', { ...formData, image_url: imageUrl }, {}, true);
       onProductCreated(newProduct);
       
       // Reset form
@@ -90,6 +153,8 @@ export default function CreateProductForm({ onProductCreated, onCancel }: Create
         category_id: '',
         image_url: ''
       });
+      setImageFile(null);
+      setImagePreview(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -179,15 +244,28 @@ export default function CreateProductForm({ onProductCreated, onCancel }: Create
         </div>
 
         <div className="form-group">
-          <label htmlFor="image_url">Image URL</label>
-          <input
-            type="url"
-            id="image_url"
-            name="image_url"
-            value={formData.image_url}
-            onChange={handleInputChange}
-            placeholder="https://example.com/image.jpg"
-          />
+          <label>Product Image</label>
+          <div
+            className="image-upload-dropzone"
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onClick={() => fileInputRef.current?.click()}
+            style={{ cursor: 'pointer', border: '2px dashed var(--border-color)', padding: '1rem', textAlign: 'center', background: '#fafbfc' }}
+          >
+            {imagePreview ? (
+              <img src={imagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: 120, marginBottom: 8 }} />
+            ) : (
+              <span>Drag & drop an image here, or click to browse</span>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              ref={fileInputRef}
+              onChange={handleImageChange}
+            />
+          </div>
+          {uploading && <div>Uploading image...</div>}
         </div>
 
         <div className="form-actions">

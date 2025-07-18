@@ -12,6 +12,7 @@ import DeleteCompanyButton from '@/components/company/DeleteCompanyButton';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Alert from '@/components/ui/Alert';
 import './page.css';
+import ProducerOrderList, { ProducerOrder } from '@/components/orders/ProducerOrderList';
 
 interface Company {
   id: string;
@@ -46,6 +47,7 @@ export default function ProducerDashboard() {
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [orders, setOrders] = useState<ProducerOrder[]>([]);
 
   useEffect(() => {
     if (!loading) {
@@ -85,6 +87,14 @@ export default function ProducerDashboard() {
         // No products is expected for new producers
         setProducts([]);
       }
+
+      // Fetch orders for producer
+      try {
+        const ordersData = await api.get<ProducerOrder[]>('/orders/producer');
+        setOrders(ordersData || []);
+      } catch (err) {
+        setOrders([]);
+      }
     } catch (err) {
       setError('Failed to load producer data');
       console.error('Error fetching producer data:', err);
@@ -119,6 +129,10 @@ export default function ProducerDashboard() {
 
   const handleProductDeleted = (productId: string) => {
     setProducts(products.filter(p => p.id !== productId));
+  };
+
+  const handleOrderFulfilled = (orderId: string) => {
+    setOrders(orders => orders.filter(order => order.id !== orderId));
   };
 
   if (loading || loadingData) {
@@ -174,13 +188,11 @@ export default function ProducerDashboard() {
             />
           ) : company ? (
             <div className="company-content">
-              <CompanyProfile company={company} />
-              <div className="company-actions">
-                <CreateUpdateCompanyForm
-                  company={company}
-                  onCompanyUpdated={handleCompanyUpdated}
-                />
-              </div>
+              <CompanyProfile 
+                company={company} 
+                onCompanyUpdated={handleCompanyUpdated}
+                onCompanyDeleted={handleCompanyDeleted}
+              />
             </div>
           ) : (
             <div className="no-company">
@@ -239,6 +251,14 @@ export default function ProducerDashboard() {
               </button>
             </div>
           )}
+        </section>
+
+        {/* Orders Section */}
+        <section className="orders-section">
+          <div className="section-header">
+            <h2>Orders for Your Products</h2>
+          </div>
+          <ProducerOrderList orders={orders} onOrderFulfilled={handleOrderFulfilled} />
         </section>
       </div>
     </div>

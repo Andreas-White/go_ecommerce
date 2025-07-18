@@ -16,7 +16,7 @@
 }
 
 .product-card-image-container {
-  height: 180px;
+  height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -24,7 +24,7 @@
 }
 
 .product-card-image {
-  max-height: 160px;
+  max-height: 240px;
   max-width: 100%;
   border-radius: 8px;
   object-fit: contain;
