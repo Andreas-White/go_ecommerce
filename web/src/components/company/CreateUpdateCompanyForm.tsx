@@ -79,18 +79,15 @@ export default function CreateUpdateCompanyForm({
     setSuccess(null);
 
     try {
-      // Get CSRF token first
-      await api.getCSRFToken('/users/register');
-
       if (isEditing) {
-        // Update existing company
+        // Update existing company - CSRF token will be fetched automatically
         const result = await api.put<Company>('/companies/update', formData, {}, true);
         setSuccess('Company updated successfully!');
         if (onCompanyUpdated) {
           onCompanyUpdated(result);
         }
       } else {
-        // Create new company
+        // Create new company - CSRF token will be fetched automatically
         const result = await api.post<Company>('/companies/create', 
         {
           name: formData.name,

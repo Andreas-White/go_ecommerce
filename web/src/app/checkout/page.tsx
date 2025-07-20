@@ -82,9 +82,6 @@ export default function CheckoutPage() {
     // Process checkout to get order summary
     setLoading(true);
     try {
-      // Get CSRF token first
-      await api.getCSRFToken('/users/register');
-
       // Get cart items to extract cart ID
       const cartItemsWithDetails = await api.post<Array<{ cart_id: string }>>(
         '/cart/get'
@@ -120,9 +117,6 @@ export default function CheckoutPage() {
 
     setLoading(true);
     try {
-      // Get CSRF token first
-      await api.getCSRFToken('/users/register');
-
       await api.post(
         '/orders/confirm',
         {

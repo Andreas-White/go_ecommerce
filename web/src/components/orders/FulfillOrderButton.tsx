@@ -21,8 +21,7 @@ export default function FulfillOrderButton({
     setLoading(true);
     setError(null);
     try {
-      // Get CSRF token and ensure it's in the cookie
-      await api.getCSRFToken('/users/register');
+      // CSRF token will be fetched automatically
       await api.post(
         '/orders/fulfill',
         {

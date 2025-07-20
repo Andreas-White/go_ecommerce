@@ -22,10 +22,7 @@ export default function DeleteProductButton({ productId, productName, onProductD
     setError(null);
 
     try {
-      // Get CSRF token first
-      await api.getCSRFToken('/users/register');
-
-      // Delete product
+      // Delete product - CSRF token will be fetched automatically
       await api.delete(`/products/delete?id=${productId}`, undefined, {}, true);
       
       onProductDeleted(productId);

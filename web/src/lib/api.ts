@@ -5,6 +5,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8
 
 // CSRF token management
 let csrfToken: string | null = null;
+let isFetchingCSRFToken = false;
 
 function getCSRFToken(): string | null {
   if (typeof window !== 'undefined') {
@@ -22,6 +23,51 @@ function setCSRFToken(token: string) {
   csrfToken = token;
 }
 
+function clearCSRFToken() {
+  csrfToken = null;
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('csrf_token');
+  }
+}
+
+// Determine which endpoint to use for CSRF token fetching based on the request path
+function getCSRFTokenEndpoint(path: string): string {
+  if (path.startsWith('/users/login')) {
+    return '/users/login';
+  } else if (path.startsWith('/users/register')) {
+    return '/users/register';
+  } else if (path.startsWith('/auth/')) {
+    return '/auth/change-password';
+  } else {
+    // Default endpoint for most operations
+    return '/users/register';
+  }
+}
+
+// Get CSRF token from server
+async function getCSRFTokenFromServer(endpoint: string): Promise<string> {
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to get CSRF token: ${response.status}`);
+    }
+    
+    // The CSRF token should now be in the cookie
+    const token = getCSRFToken();
+    if (token) {
+      return token;
+    }
+    throw new Error('CSRF token not found in cookies after fetch');
+  } catch (error) {
+    console.error('CSRF token fetch error:', error);
+    throw new Error('Failed to get CSRF token from server');
+  }
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -36,7 +82,21 @@ async function request<T>(
 
   // Add CSRF token for state-changing operations
   if (requireCSRF) {
-    const token = getCSRFToken();
+    let token = getCSRFToken();
+    
+    // If no token available and we're not already fetching one, fetch it automatically
+    if (!token && !isFetchingCSRFToken) {
+      isFetchingCSRFToken = true;
+      try {
+        const csrfEndpoint = getCSRFTokenEndpoint(path);
+        token = await getCSRFTokenFromServer(csrfEndpoint);
+      } catch (error) {
+        // Don't throw here, let the request proceed and handle the error response
+      } finally {
+        isFetchingCSRFToken = false;
+      }
+    }
+    
     if (token) {
       headers['X-CSRF-Token'] = token;
     }
@@ -52,11 +112,14 @@ async function request<T>(
   if (res.status === 401) {
     // Clear any stored tokens but don't redirect automatically
     // Let the calling code handle the redirect
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('csrf_token');
-      csrfToken = null;
-    }
+    clearCSRFToken();
     throw new Error('Unauthorized');
+  }
+
+  if (res.status === 403) {
+    // Clear CSRF token on 403 errors as it might be invalid
+    clearCSRFToken();
+    throw new Error('Forbidden - CSRF token may be invalid');
   }
 
   if (!res.ok) {
@@ -79,25 +142,6 @@ async function request<T>(
   return data;
 }
 
-// Get CSRF token from server
-async function getCSRFTokenFromServer(endpoint: string): Promise<string> {
-  try {
-    await fetch(`${API_BASE_URL}${endpoint}`, {
-      method: 'GET',
-      credentials: 'include',
-    });
-    
-    // The CSRF token should now be in the cookie
-    const token = getCSRFToken();
-    if (token) {
-      return token;
-    }
-    throw new Error('Failed to get CSRF token');
-  } catch (error) {
-    throw new Error('Failed to get CSRF token from server');
-  }
-}
-
 export const api = {
   get: <T>(path: string, headers?: Record<string, string>) => request<T>('GET', path, undefined, headers),
   post: <T>(path: string, body?: any, headers?: Record<string, string>, requireCSRF: boolean = false) => 
@@ -107,4 +151,5 @@ export const api = {
   delete: <T>(path: string, body?: any, headers?: Record<string, string>, requireCSRF: boolean = false) => 
     request<T>('DELETE', path, body, headers, requireCSRF),
   getCSRFToken: getCSRFTokenFromServer,
+  clearCSRFToken, // Export for manual clearing if needed
 }; 

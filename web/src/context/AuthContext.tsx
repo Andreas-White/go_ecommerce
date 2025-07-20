@@ -46,11 +46,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
-      // First get CSRF token
-      await api.getCSRFToken('/users/login');
-      
-      // Then login
-      const res = await api.post<{ message: string; csrf_token: string }>(
+      // Login - CSRF token will be fetched automatically
+      await api.post<{ message: string; csrf_token: string }>(
         '/users/login', 
         { email, password },
         {},
@@ -59,6 +56,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // User is now authenticated via cookies, fetch user data
       await checkAuth();
+    } catch (error) {
+      // If it's a CSRF error, clear the token and retry once
+      if (error instanceof Error && error.message.includes('CSRF')) {
+        api.clearCSRFToken();
+        try {
+          await api.post<{ message: string; csrf_token: string }>(
+            '/users/login', 
+            { email, password },
+            {},
+            true // require CSRF
+          );
+          await checkAuth();
+        } catch (retryError) {
+          throw retryError; // Re-throw the retry error
+        }
+      } else {
+        throw error; // Re-throw non-CSRF errors
+      }
     } finally {
       setLoading(false);
     }
@@ -66,30 +81,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
-      // First get CSRF token
-      await api.getCSRFToken('/auth/logout');
-      
-      // Call logout endpoint to clear cookies
+      // Call logout endpoint to clear cookies - CSRF token will be fetched automatically
       await api.post('/auth/logout', {}, {}, true);
     } catch (error) {
       // Even if logout fails, clear local state
     } finally {
       setUser(null);
-      // Clear any stored CSRF tokens
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('csrf_token');
-      }
+      // Clear CSRF token using the API client's function
+      api.clearCSRFToken();
     }
   };
 
   const register = async (data: Record<string, any>) => {
     setLoading(true);
     try {
-      // First get CSRF token
-      await api.getCSRFToken('/users/register');
-      
-      // Then register
-      const res = await api.post<{ message: string; csrf_token: string }>(
+      // Register - CSRF token will be fetched automatically
+      await api.post<{ message: string; csrf_token: string }>(
         '/users/register', 
         data,
         {},
@@ -98,6 +105,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       // User is automatically logged in after registration
       await checkAuth();
+    } catch (error) {
+      // If it's a CSRF error, clear the token and retry once
+      if (error instanceof Error && error.message.includes('CSRF')) {
+        api.clearCSRFToken();
+        try {
+          await api.post<{ message: string; csrf_token: string }>(
+            '/users/register', 
+            data,
+            {},
+            true // require CSRF
+          );
+          await checkAuth();
+        } catch (retryError) {
+          throw retryError; // Re-throw the retry error
+        }
+      } else {
+        throw error; // Re-throw non-CSRF errors
+      }
     } finally {
       setLoading(false);
     }
@@ -105,10 +130,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const changePassword = async (data: { current_password: string; new_password: string }) => {
     try {
-      // First get CSRF token
-      await api.getCSRFToken('/auth/change-password');
-      
-      // Then change password
+      // Change password - CSRF token will be fetched automatically
       await api.post<{ message: string }>(
         '/auth/change-password',
         data,

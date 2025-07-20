@@ -137,10 +137,7 @@ export default function CreateProductForm({ onProductCreated, onCancel }: Create
     }
 
     try {
-      // Get CSRF token first
-      await api.getCSRFToken('/users/register');
-
-      // Create product
+      // Create product - CSRF token will be fetched automatically
       const newProduct = await api.post<Product>('/products/create', { ...formData, image_url: imageUrl }, {}, true);
       onProductCreated(newProduct);
       

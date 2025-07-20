@@ -17,7 +17,7 @@ export default function DeleteOrderButton({ orderId, disabled, onDeleted }: Dele
     setLoading(true);
     setError(null);
     try {
-      await api.getCSRFToken('/users/register');
+      // CSRF token will be fetched automatically
       await api.post(
         '/orders/delete',
         { order_id: orderId },

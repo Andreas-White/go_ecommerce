@@ -150,10 +150,7 @@ export default function EditProductButton({ product, onProductUpdated, onCancel 
     }
 
     try {
-      // Get CSRF token first
-      await api.getCSRFToken('/users/register');
-
-      // Update product
+      // Update product - CSRF token will be fetched automatically
       const updatedProduct = await api.put<Product>(`/products/update?id=${product.id}`, { ...formData, image_url: imageUrl }, {}, true);
       onProductUpdated(updatedProduct);
     } catch (err) {

@@ -21,7 +21,7 @@ export default function CancelOrderButton({ orderId, status, onCanceled }: Cance
     setLoading(true);
     setError(null);
     try {
-      await api.getCSRFToken('/users/register');
+      // CSRF token will be fetched automatically
       await api.post(
         '/orders/cancel',
         { order_id: orderId },

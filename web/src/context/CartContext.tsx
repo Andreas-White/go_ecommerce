@@ -30,7 +30,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [cartId, setCartId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [csrfToken, setCsrfToken] = useState<string | null>(null);
   const { user, loading: authLoading } = useAuth();
 
   // Generate or get session ID for guest carts
@@ -44,22 +43,6 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       return sessionId;
     }
     return '';
-  };
-
-  // Get CSRF token once and cache it
-  const getCSRFToken = async (): Promise<string> => {
-    if (csrfToken) {
-      return csrfToken;
-    }
-    
-    try {
-      const token = await api.getCSRFToken('/users/register');
-      setCsrfToken(token);
-      return token;
-    } catch (error) {
-      console.error('Failed to get CSRF token:', error);
-      throw error;
-    }
   };
 
   const getCart = async () => {
@@ -121,7 +104,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setCartItems(newItems);
 
     try {
-      await getCSRFToken();
+      // CSRF token will be fetched automatically
       await api.post('/cart/add', items, {}, true);
       // Don't refresh cart - we already updated optimistically
     } catch (error) {
@@ -143,7 +126,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setCartItems(newItems);
 
     try {
-      await getCSRFToken();
+      // CSRF token will be fetched automatically
       await api.post('/cart/remove', items, {}, true);
       // Don't refresh cart - we already updated optimistically
     } catch (error) {
@@ -169,7 +152,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setCartItems(newItems);
 
     try {
-      await getCSRFToken();
+      // CSRF token will be fetched automatically
       await api.post('/cart/update', items, {}, true);
       // Don't refresh cart - we already updated optimistically
     } catch (error) {
@@ -188,7 +171,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setCartItems([]);
 
     try {
-      await getCSRFToken();
+      // CSRF token will be fetched automatically
       await api.post('/cart/clear', {}, {}, true);
       // Don't refresh cart - we already updated optimistically
     } catch (error) {

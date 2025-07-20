@@ -21,10 +21,7 @@ export default function DeleteCompanyButton({ companyId, onCompanyDeleted }: Del
     setError(null);
 
     try {
-      // Get CSRF token first
-      await api.getCSRFToken('/users/register');
-
-      // Delete company
+      // Delete company - CSRF token will be fetched automatically
       await api.delete(`/companies/delete?company_id=${companyId}`, undefined, {}, true);
       
       onCompanyDeleted?.();
