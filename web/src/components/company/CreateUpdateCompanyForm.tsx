@@ -91,7 +91,14 @@ export default function CreateUpdateCompanyForm({
         }
       } else {
         // Create new company
-        const result = await api.post<Company>('/companies/create', formData, {}, true);
+        const result = await api.post<Company>('/companies/create', 
+        {
+          name: formData.name,
+          address: formData.address,
+          city: formData.city,
+          country: formData.country,
+          zip_code: formData.zip_code
+        }, {}, true);
         setSuccess('Company created successfully!');
         if (onCompanyCreated) {
           onCompanyCreated(result);

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { useState, useEffect } from 'react';
 import { useCart } from '../../context/CartContext';
 import { api } from '../../lib/api';
@@ -41,7 +41,10 @@ export default function ProductsPage() {
 
       if (category) {
         // Use category-specific endpoint
-        productsData = await api.get<Product[]>(`/products/category?category=${category}`) || [];
+        productsData =
+          (await api.get<Product[]>(
+            `/products/category?category=${category}`
+          )) || [];
       } else {
         // Use general products endpoint with search and sort
         const params = new URLSearchParams();
@@ -49,7 +52,8 @@ export default function ProductsPage() {
         if (sortBy) params.append('sortBy', sortBy);
         if (sortOrder) params.append('sortOrder', sortOrder);
 
-        productsData = await api.get<Product[]>(`/products?${params.toString()}`) || [];
+        productsData =
+          (await api.get<Product[]>(`/products?${params.toString()}`)) || [];
       }
 
       setProducts(productsData);
@@ -64,10 +68,13 @@ export default function ProductsPage() {
 
   const handleAddToCart = async (product: Product) => {
     try {
-      await addToCart([{
-        product_id: product.id,
-        quantity: 1
-      }]);
+      await addToCart([
+        {
+          product_id: product.id,
+          price: product.price,
+          quantity: 1,
+        },
+      ]);
       // Show success message (you could add a toast notification here)
       alert(`${product.name} added to cart!`);
     } catch (error) {
@@ -112,18 +119,16 @@ export default function ProductsPage() {
         onSortOrderChange={setSortOrder}
       />
 
-      {error && (
-        <div className="products-error">
-          {error}
-        </div>
-      )}
+      {error && <div className="products-error">{error}</div>}
 
       {products.length === 0 ? (
         <div className="products-empty">
           <div className="products-empty-icon">📦</div>
           <h2 className="products-empty-title">No products found</h2>
           <p className="products-empty-text">
-            {searchTerm || category ? 'Try adjusting your search terms or category filter.' : 'No products are available at the moment.'}
+            {searchTerm || category
+              ? 'Try adjusting your search terms or category filter.'
+              : 'No products are available at the moment.'}
           </p>
         </div>
       ) : (
@@ -131,38 +136,44 @@ export default function ProductsPage() {
           {products.map((product) => (
             <div key={product.id} className="product-card">
               {product.image_url ? (
-                <img src={product.image_url} alt={product.name} className="product-card-image" />
+                <img
+                  src={product.image_url}
+                  alt={product.name}
+                  className="product-card-image"
+                />
               ) : (
                 <div className="product-image-placeholder">
                   <span className="product-image-text">No Image</span>
                 </div>
               )}
-              
-              <h3 className="product-name">
-                {product.name}
-              </h3>
-              
+
+              <h3 className="product-name">{product.name}</h3>
+
               {product.company && (
-                <p className="product-company">
-                  by {product.company.name}
-                </p>
+                <p className="product-company">by {product.company.name}</p>
               )}
-              
-              <p className="product-description">
-                {product.description}
-              </p>
-              
+
+              <p className="product-description">{product.description}</p>
+
               <div className="product-price-stock">
                 <span className="product-price">
                   ${product.price.toFixed(2)}
                 </span>
-                <span className={`product-stock${product.stock > 0 ? ' product-stock-available' : ' product-stock-unavailable'}`}>
-                  {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+                <span
+                  className={`product-stock${
+                    product.stock > 0
+                      ? ' product-stock-available'
+                      : ' product-stock-unavailable'
+                  }`}
+                >
+                  {product.stock > 0
+                    ? `${product.stock} in stock`
+                    : 'Out of stock'}
                 </span>
               </div>
-              
+
               <div className="product-actions">
-                <Link 
+                <Link
                   href={`/product/${product.id}`}
                   className="product-view-btn"
                 >
@@ -171,7 +182,11 @@ export default function ProductsPage() {
                 <button
                   onClick={() => handleAddToCart(product)}
                   disabled={product.stock <= 0}
-                  className={`product-add-btn${product.stock > 0 ? ' product-add-btn-available' : ' product-add-btn-unavailable'}`}
+                  className={`product-add-btn${
+                    product.stock > 0
+                      ? ' product-add-btn-available'
+                      : ' product-add-btn-unavailable'
+                  }`}
                 >
                   Add to Cart
                 </button>
@@ -182,4 +197,4 @@ export default function ProductsPage() {
       )}
     </div>
   );
-} 
+}

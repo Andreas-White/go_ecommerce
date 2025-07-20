@@ -22,6 +22,8 @@ type IOrderService interface {
 	ProcessPayment(ctx context.Context, orderID uuid.UUID) error
 	FulfillOrder(ctx context.Context, producerID uuid.UUID, fulfillmentRequest models.OrderFulfillmentRequest) (*models.OrderFulfillmentResponse, error)
 	GetSalesReport(ctx context.Context, producerID uuid.UUID, request models.SalesReportRequest) (*models.SalesReportResponse, error)
+	CancelOrder(ctx context.Context, orderID uuid.UUID) error
+	SoftDeleteOrder(ctx context.Context, orderID uuid.UUID) error
 }
 
 type OrderService struct {
@@ -318,9 +320,9 @@ func (s *OrderService) FulfillOrder(ctx context.Context, producerID uuid.UUID, f
 
 	// 4. Validate the new status
 	validStatuses := map[string]bool{
-		"accepted":  true,
-		"preparing": true,
-		"shipped":   true,
+		"accepted": true,
+		"shipped":  true,
+		"canceled": true,
 	}
 	if !validStatuses[fulfillmentRequest.NewStatus] {
 		return nil, utils.HandleServiceErrors(ctx, fmt.Errorf("invalid status: %s", fulfillmentRequest.NewStatus), "service/FulfillOrder")
@@ -358,6 +360,73 @@ func (s *OrderService) FulfillOrder(ctx context.Context, producerID uuid.UUID, f
 	}
 
 	return response, nil
+}
+
+func (s *OrderService) CancelOrder(ctx context.Context, orderID uuid.UUID) error {
+	// 1. Get the order with details
+	orderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, orderID)
+	if err != nil {
+		return utils.HandleServiceErrors(ctx, err, "service/CancelOrder")
+	}
+
+	// 2. Verify the order is in a valid state for cancellation
+	if orderWithDetails.Order.Status != "processing" && orderWithDetails.Order.Status != "accepted" {
+		return utils.HandleServiceErrors(ctx, errors.New("order is not in processing or accepted status"), "service/CancelOrder")
+	}
+
+	// 3. Update product stock
+	for _, item := range orderWithDetails.Items {
+		err = s.orderRepo.UpdateProductStock(ctx, item.ProductID, item.Quantity)
+		if err != nil {
+			return utils.HandleServiceErrors(ctx, err, "service/CancelOrder")
+		}
+	}
+
+	// 4. Refund the payment
+	err = s.orderRepo.UpdatePaymentStatus(ctx, orderWithDetails.Payment.ID, "refunded", nil)
+	if err != nil {
+		return utils.HandleServiceErrors(ctx, err, "service/CancelOrder")
+	}
+
+	// 5. Update order status
+	err = s.orderRepo.UpdateOrderStatus(ctx, orderID, "canceled", "refunded")
+	if err != nil {
+		return utils.HandleServiceErrors(ctx, err, "service/CancelOrder")
+	}
+
+	return nil
+}
+
+func (s *OrderService) SoftDeleteOrder(ctx context.Context, orderID uuid.UUID) error {
+	// 1. Get the order with details
+	orderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, orderID)
+	if err != nil {
+		return utils.HandleServiceErrors(ctx, err, "service/SoftDeleteOrder")
+	}
+
+	// 2. Verify the order is in a valid state for soft deletion
+	if orderWithDetails.Order.Status != "pending" && orderWithDetails.Order.Status != "processing" {
+		return utils.HandleServiceErrors(ctx, errors.New("order is not in pending or processing status"), "service/SoftDeleteOrder")
+	}
+
+	// 3. Update product stock
+	for _, item := range orderWithDetails.Items {
+		err = s.orderRepo.UpdateProductStock(ctx, item.ProductID, item.Quantity)
+		if err != nil {
+			return utils.HandleServiceErrors(ctx, err, "service/SoftDeleteOrder")
+		}
+	}
+
+	// 4. Refund the payment
+	if orderWithDetails.Payment.Status == "paid" {
+		err = s.orderRepo.UpdatePaymentStatus(ctx, orderWithDetails.Payment.ID, "refunded", nil)
+		if err != nil {
+			return utils.HandleServiceErrors(ctx, err, "service/SoftDeleteOrder")
+		}
+	}
+
+	// 5. Soft delete the order
+	return s.orderRepo.SoftDeleteOrder(ctx, orderID)
 }
 
 // GetSalesReport retrieves sales analytics for a producer

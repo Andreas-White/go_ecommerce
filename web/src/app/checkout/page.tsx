@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '../../context/CartContext';
@@ -40,7 +40,7 @@ interface OrderSummary {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cartItems, loading: cartLoading } = useCart();
+  const { cartItems, loading: cartLoading, clearCart } = useCart();
   const { user, loading: authLoading } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -50,10 +50,10 @@ export default function CheckoutPage() {
     country: '',
     zip_code: '',
     method: 'standard',
-    cost: 5.99
+    cost: 5.99,
   });
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo>({
-    payment_method: 'credit_card'
+    payment_method: 'credit_card',
   });
   const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
 
@@ -63,7 +63,7 @@ export default function CheckoutPage() {
       router.push('/login');
       return;
     }
-    
+
     if (!cartLoading && cartItems.length === 0) {
       router.push('/cart');
       return;
@@ -78,26 +78,33 @@ export default function CheckoutPage() {
   const handlePaymentSubmit = async (payment: PaymentInfo) => {
     setPaymentInfo(payment);
     setCurrentStep(3);
-    
+
     // Process checkout to get order summary
     setLoading(true);
     try {
       // Get CSRF token first
       await api.getCSRFToken('/users/register');
-      
+
       // Get cart items to extract cart ID
-      const cartItemsWithDetails = await api.post<Array<{cart_id: string}>>('/cart/get');
+      const cartItemsWithDetails = await api.post<Array<{ cart_id: string }>>(
+        '/cart/get'
+      );
       if (!cartItemsWithDetails || cartItemsWithDetails.length === 0) {
         throw new Error('Cart is empty');
       }
-      
+
       const cartId = cartItemsWithDetails[0].cart_id;
-      
-      const summary = await api.post<OrderSummary>('/orders/checkout', {
-        cart_id: cartId,
-        shipping_info: shippingInfo,
-        payment_info: payment
-      }, undefined, true); // requireCSRF: true
+
+      const summary = await api.post<OrderSummary>(
+        '/orders/checkout',
+        {
+          cart_id: cartId,
+          shipping_info: shippingInfo,
+          payment_info: payment,
+        },
+        undefined,
+        true
+      ); // requireCSRF: true
       setOrderSummary(summary);
     } catch (error) {
       console.error('Failed to process checkout:', error);
@@ -110,16 +117,23 @@ export default function CheckoutPage() {
 
   const handleOrderConfirm = async () => {
     if (!orderSummary) return;
-    
+
     setLoading(true);
     try {
       // Get CSRF token first
       await api.getCSRFToken('/users/register');
-      
-      await api.post('/orders/confirm', {
-        order_id: orderSummary.order_id
-      }, undefined, true); // requireCSRF: true
-      
+
+      await api.post(
+        '/orders/confirm',
+        {
+          order_id: orderSummary.order_id,
+        },
+        undefined,
+        true
+      ); // requireCSRF: true
+
+      await clearCart();
+
       // Redirect to order confirmation page
       router.push(`/order-confirmation/${orderSummary.order_id}`);
     } catch (error) {
@@ -154,27 +168,27 @@ export default function CheckoutPage() {
     <div className="checkout-container">
       <div className="checkout-content">
         <h1 className="checkout-title">Checkout</h1>
-        
+
         <CheckoutStepper currentStep={currentStep} />
-        
+
         <div className="checkout-steps">
           {currentStep === 1 && (
-            <ShippingForm 
+            <ShippingForm
               shippingInfo={shippingInfo}
               onSubmit={handleShippingSubmit}
             />
           )}
-          
+
           {currentStep === 2 && (
-            <PaymentForm 
+            <PaymentForm
               paymentInfo={paymentInfo}
               onSubmit={handlePaymentSubmit}
               onBack={() => handleBackToStep(1)}
             />
           )}
-          
+
           {currentStep === 3 && (
-            <OrderSummaryDisplay 
+            <OrderSummaryDisplay
               orderSummary={orderSummary}
               loading={loading}
               onConfirm={handleOrderConfirm}
@@ -185,4 +199,4 @@ export default function CheckoutPage() {
       </div>
     </div>
   );
-} 
+}

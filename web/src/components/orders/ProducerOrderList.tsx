@@ -1,6 +1,7 @@
 import React from 'react';
 import FulfillOrderButton from './FulfillOrderButton';
 import './OrderList.css';
+import CancelOrderButton from './CancelOrderButton';
 
 // Accept both flat and nested order structures
 export type ProducerOrderLike = {
@@ -26,20 +27,32 @@ export type ProducerOrderLike = {
 
 interface ProducerOrderListProps {
   orders: ProducerOrderLike[];
-  onOrderFulfilled: (orderId: string) => void;
+  onOrderFulfilled: (orderId: string, newStatus: string) => void;
 }
 
-const statusDisplay: Record<string, string> = {
+const orderStatusDisplay: Record<string, string> = {
+  processing: 'Processing',
   pending: 'Pending',
-  paid: 'Paid',
+  accepted: 'Accepted',
   shipped: 'Shipped',
-  fulfilled: 'Fulfilled',
-  cancelled: 'Cancelled',
+  delivered: 'Delivered',
+  canceled: 'Canceled',
 };
 
-export default function ProducerOrderList({ orders, onOrderFulfilled }: ProducerOrderListProps) {
+const orderPaymentStatusDisplay: Record<string, string> = {
+  unpaid: 'Unpaid',
+  paid: 'Paid',
+  refunded: 'Refunded',
+};
+
+export default function ProducerOrderList({
+  orders,
+  onOrderFulfilled,
+}: ProducerOrderListProps) {
   if (!orders.length) {
-    return <div className="order-list-empty">No orders for your products yet.</div>;
+    return (
+      <div className="order-list-empty">No orders for your products yet.</div>
+    );
   }
 
   function getOrderTotal(order: ProducerOrderLike): string {
@@ -63,13 +76,28 @@ export default function ProducerOrderList({ orders, onOrderFulfilled }: Producer
     return order.status || order.order?.status || '';
   }
 
+  function getOrderPaymentStatus(order: ProducerOrderLike): string {
+    return order.payment_status || order.order?.payment_status || '';
+  }
+
   function getOrderCreatedAt(order: ProducerOrderLike): string {
     return order.created_at || order.order?.created_at || '';
   }
 
+  function getOrderNextStatus(order: ProducerOrderLike): string {
+    const status = getOrderStatus(order);
+    switch (status) {
+      case 'processing':
+        return 'accepted';
+      case 'accepted':
+        return 'shipped';
+    }
+    return status;
+  }
+
   function isActionable(order: ProducerOrderLike): boolean {
     const status = getOrderStatus(order);
-    return status !== 'shipped' && status !== 'fulfilled' && status !== 'cancelled';
+    return status !== 'shipped' && status !== 'canceled';
   }
 
   return (
@@ -77,29 +105,54 @@ export default function ProducerOrderList({ orders, onOrderFulfilled }: Producer
       <table className="order-list-table">
         <thead>
           <tr>
-            <th>Order ID</th>
             <th>Status</th>
+            <th>Payment Status</th>
             <th>Total</th>
             <th>Date</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody>
-          {orders.map(order => {
+          {orders.map((order) => {
             const orderId = getOrderId(order);
             const status = getOrderStatus(order);
+            const nextStatus = getOrderNextStatus(order);
+            const paymentStatus = getOrderPaymentStatus(order);
             const createdAt = getOrderCreatedAt(order);
             return (
               <tr key={orderId}>
-                <td>{orderId}</td>
-                <td>{statusDisplay[status] || status}</td>
+                <td>{orderStatusDisplay[status] || status}</td>
+                <td>
+                  {orderPaymentStatusDisplay[paymentStatus] || paymentStatus}
+                </td>
                 <td>{getOrderTotal(order)}</td>
-                <td>{createdAt ? new Date(createdAt).toLocaleString() : 'N/A'}</td>
+                <td>
+                  {createdAt ? new Date(createdAt).toLocaleString() : 'N/A'}
+                </td>
                 <td>
                   {isActionable(order) ? (
-                    <FulfillOrderButton orderId={orderId} onFulfilled={() => onOrderFulfilled(orderId)} />
+                    <>
+                      {status !== 'canceled' && <FulfillOrderButton
+                        orderId={orderId}
+                        onFulfilled={() => onOrderFulfilled(orderId, nextStatus)}
+                        status={status}
+                        nextStatus={nextStatus}
+                      />}
+                      {status !== 'canceled' && <CancelOrderButton
+                        orderId={orderId}
+                        status={status}
+                        onCanceled={() => window.location.reload()}
+                      />}
+                    </>
                   ) : (
-                    <span className="order-status-fulfilled">{statusDisplay[status] || status}</span>
+                    <>
+                      {status !== 'canceled' && <span className="order-status-shipped">
+                        {orderStatusDisplay[status] || status}
+                      </span>}
+                      {status === 'canceled' && <span className="order-status-canceled">
+                        {orderStatusDisplay[status] || status}
+                      </span>}
+                    </>
                   )}
                 </td>
               </tr>
@@ -109,4 +162,4 @@ export default function ProducerOrderList({ orders, onOrderFulfilled }: Producer
       </table>
     </div>
   );
-} 
+}

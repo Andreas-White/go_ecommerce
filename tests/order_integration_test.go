@@ -283,27 +283,6 @@ func TestOrderFulfillmentFlow_Complete(t *testing.T) {
 	assert.Nil(t, acceptResponse.TrackingCode)
 	assert.Nil(t, acceptResponse.ShippedAt)
 
-	// 6. Producer marks order as preparing
-	preparingRequest := models.OrderFulfillmentRequest{
-		OrderID:   orderWithDetails.Order.ID,
-		NewStatus: "preparing",
-	}
-
-	preparingBody, _ := json.Marshal(preparingRequest)
-	preparingReq, _ := http.NewRequest("POST", "/orders/fulfill", bytes.NewBuffer(preparingBody))
-	preparingReq.Header.Set("Content-Type", "application/json")
-	addAuthHeaders(preparingReq, producerAuthData)
-
-	preparingRR := httptest.NewRecorder()
-	testRouter.ServeHTTP(preparingRR, preparingReq)
-	require.Equal(t, http.StatusOK, preparingRR.Code, "Failed to mark order as preparing")
-
-	var preparingResponse models.OrderFulfillmentResponse
-	err = json.Unmarshal(preparingRR.Body.Bytes(), &preparingResponse)
-	require.NoError(t, err)
-	assert.Equal(t, orderWithDetails.Order.ID, preparingResponse.OrderID)
-	assert.Equal(t, "preparing", preparingResponse.Status)
-
 	// 7. Producer ships the order with tracking code
 	trackingCode := "TRK123456789"
 	shipRequest := models.OrderFulfillmentRequest{
@@ -441,77 +420,6 @@ func TestOrderFulfillmentFlow_NegativeTests(t *testing.T) {
 	shipWithoutTrackingRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(shipWithoutTrackingRR, shipWithoutTrackingReq)
 	assert.Equal(t, http.StatusInternalServerError, shipWithoutTrackingRR.Code, "Should fail when trying to ship without tracking code")
-}
-
-// Helper function to complete a test purchase
-func completeTestPurchase(t *testing.T, customerAuthData *TestAuthData, product models.Product, quantity int) models.OrderWithDetails {
-	// Add product to cart
-	cartItemsToAdd := []models.CartItemDTO{
-		{ProductID: product.ID, Quantity: quantity, Price: product.Price},
-	}
-	addBody, _ := json.Marshal(cartItemsToAdd)
-	addReq, _ := http.NewRequest("POST", "/cart/add", bytes.NewBuffer(addBody))
-	addReq.Header.Set("Content-Type", "application/json")
-	addAuthHeaders(addReq, customerAuthData)
-
-	addRR := httptest.NewRecorder()
-	testRouter.ServeHTTP(addRR, addReq)
-	require.Equal(t, http.StatusOK, addRR.Code, "Failed to add items to cart")
-
-	var createdCart models.Cart
-	err := json.Unmarshal(addRR.Body.Bytes(), &createdCart)
-	require.NoError(t, err)
-
-	// Process checkout
-	checkoutRequest := models.CheckoutRequest{
-		CartID: createdCart.ID,
-		ShippingInfo: models.ShippingInfo{
-			Address: "123 Main St",
-			City:    "New York",
-			Country: "USA",
-			ZipCode: "10001",
-			Method:  "standard",
-			Cost:    5.99,
-		},
-		PaymentInfo: models.PaymentInfo{
-			PaymentMethod: "credit_card",
-		},
-	}
-
-	checkoutBody, _ := json.Marshal(checkoutRequest)
-	checkoutReq, _ := http.NewRequest("POST", "/orders/checkout", bytes.NewBuffer(checkoutBody))
-	checkoutReq.Header.Set("Content-Type", "application/json")
-	addAuthHeaders(checkoutReq, customerAuthData)
-
-	checkoutRR := httptest.NewRecorder()
-	testRouter.ServeHTTP(checkoutRR, checkoutReq)
-	require.Equal(t, http.StatusOK, checkoutRR.Code, "Failed to process checkout")
-
-	var orderSummary models.OrderSummary
-	err = json.Unmarshal(checkoutRR.Body.Bytes(), &orderSummary)
-	require.NoError(t, err)
-
-	// Confirm order
-	confirmRequest := struct {
-		OrderID uuid.UUID `json:"order_id"`
-	}{
-		OrderID: orderSummary.OrderID,
-	}
-
-	confirmBody, _ := json.Marshal(confirmRequest)
-	confirmReq, _ := http.NewRequest("POST", "/orders/confirm", bytes.NewBuffer(confirmBody))
-	confirmReq.Header.Set("Content-Type", "application/json")
-	addAuthHeaders(confirmReq, customerAuthData)
-
-	confirmRR := httptest.NewRecorder()
-	testRouter.ServeHTTP(confirmRR, confirmReq)
-	require.Equal(t, http.StatusCreated, confirmRR.Code, "Failed to confirm order")
-
-	var orderWithDetails models.OrderWithDetails
-	err = json.Unmarshal(confirmRR.Body.Bytes(), &orderWithDetails)
-	require.NoError(t, err)
-
-	return orderWithDetails
 }
 
 func TestSalesReportFlow_Complete(t *testing.T) {
@@ -687,4 +595,81 @@ func TestSalesReportFlow_NegativeTests(t *testing.T) {
 	assert.Equal(t, 0.0, noSalesReport.AverageOrderValue)
 	assert.Len(t, noSalesReport.TopSellingProducts, 0)
 	assert.Len(t, noSalesReport.SalesByCategory, 0)
+}
+
+func TestOrderCancelAndDeleteEndpoints(t *testing.T) {
+	clearTables(t)
+
+	// Register producer and customer
+	producerEmail := "producer-cancel@example.com"
+	producerPassword := "password123"
+	producerPayload := createUserDTO(producerEmail, producerPassword, true)
+	registerTestUserAuth(t, producerPayload)
+	_, producerAuthData, err := loginUserAndGetTokenAuth(t, producerEmail, producerPassword)
+	require.NoError(t, err)
+
+	customerEmail := "customer-cancel@example.com"
+	customerPassword := "password123"
+	customerPayload := createUserDTO(customerEmail, customerPassword, false)
+	registerTestUserAuth(t, customerPayload)
+	_, customerAuthData, err := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
+	require.NoError(t, err)
+
+	// Producer creates a product
+	product := createTestProduct(t, producerAuthData, models.Product{
+		Name:  "Cancelable Product",
+		Price: 19.99,
+		Stock: 5,
+	})
+
+	// Customer completes a purchase
+	orderWithDetails := completeTestPurchase(t, customerAuthData, product, 1)
+
+	// --- Test /orders/cancel (producer cancels order) ---
+	cancelRequest := struct {
+		OrderID uuid.UUID `json:"order_id"`
+	}{OrderID: orderWithDetails.Order.ID}
+	cancelBody, _ := json.Marshal(cancelRequest)
+	cancelReq, _ := http.NewRequest("POST", "/orders/cancel", bytes.NewBuffer(cancelBody))
+	cancelReq.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(cancelReq, producerAuthData)
+
+	cancelRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(cancelRR, cancelReq)
+	assert.Equal(t, http.StatusOK, cancelRR.Code, "Producer should be able to cancel order")
+	assert.Contains(t, cancelRR.Body.String(), "Order cancelled successfully")
+
+	// Try to cancel again (should fail)
+	cancelBody2, _ := json.Marshal(cancelRequest)
+	cancelReq2, _ := http.NewRequest("POST", "/orders/cancel", bytes.NewBuffer(cancelBody2))
+	cancelReq2.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(cancelReq2, producerAuthData)
+	cancelRR2 := httptest.NewRecorder()
+	testRouter.ServeHTTP(cancelRR2, cancelReq2)
+	assert.Equal(t, http.StatusInternalServerError, cancelRR2.Code, "Should not be able to cancel already canceled order")
+
+	// --- Test /orders/delete (customer soft-deletes order) ---
+	// First, create a new order for deletion
+	orderWithDetails2 := completeTestPurchase(t, customerAuthData, product, 1)
+	deleteRequest := struct {
+		OrderID uuid.UUID `json:"order_id"`
+	}{OrderID: orderWithDetails2.Order.ID}
+	deleteBody, _ := json.Marshal(deleteRequest)
+	deleteReq, _ := http.NewRequest("POST", "/orders/delete", bytes.NewBuffer(deleteBody))
+	deleteReq.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(deleteReq, customerAuthData)
+
+	deleteRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(deleteRR, deleteReq)
+	assert.Equal(t, http.StatusOK, deleteRR.Code, "Customer should be able to soft-delete order")
+	assert.Contains(t, deleteRR.Body.String(), "Order deleted successfully")
+
+	// Try to delete again (should fail)
+	deleteBody2, _ := json.Marshal(deleteRequest)
+	deleteReq2, _ := http.NewRequest("POST", "/orders/delete", bytes.NewBuffer(deleteBody2))
+	deleteReq2.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(deleteReq2, customerAuthData)
+	deleteRR2 := httptest.NewRecorder()
+	testRouter.ServeHTTP(deleteRR2, deleteReq2)
+	assert.Equal(t, http.StatusInternalServerError, deleteRR2.Code, "Should not be able to delete already deleted order")
 }

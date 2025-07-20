@@ -162,6 +162,8 @@ func TestMain(m *testing.M) {
 	testRouter.Handle("/orders/producer", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetProducerOrders)))
 	testRouter.Handle("/orders/fulfill", testAuthenticator.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(testOrderHandler.FulfillOrder))))
 	testRouter.Handle("/orders/sales-report", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetSalesReport)))
+	testRouter.Handle("/orders/cancel", testAuthenticator.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(testOrderHandler.CancelOrder))))
+	testRouter.Handle("/orders/delete", testAuthenticator.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(testOrderHandler.CustomerDeleteOrder))))
 
 	// Review routes
 	testRouter.Handle("/reviews/add", testAuthenticator.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(testReviewHandler.AddReview))))

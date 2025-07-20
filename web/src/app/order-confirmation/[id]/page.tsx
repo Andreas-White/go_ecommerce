@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
@@ -40,15 +40,21 @@ export default function OrderConfirmationPage() {
   const params = useParams();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [orderDetails, setOrderDetails] = useState<OrderWithDetails | null>(null);
+  const [orderDetails, setOrderDetails] = useState<OrderWithDetails | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [productMap, setProductMap] = useState<{ [productId: string]: any }>({});
+  const [productMap, setProductMap] = useState<{ [productId: string]: any }>(
+    {}
+  );
 
   // Memoize unique product IDs to avoid unnecessary re-computations
   const uniqueProductIds = useMemo(() => {
     if (!orderDetails) return [];
-    return Array.from(new Set(orderDetails.items.map(item => item.product_id)));
+    return Array.from(
+      new Set(orderDetails.items.map((item) => item.product_id))
+    );
   }, [orderDetails]);
 
   // Fetch products only when the set of unique product IDs changes
@@ -60,23 +66,25 @@ export default function OrderConfirmationPage() {
       }
 
       const newMap: { [productId: string]: any } = {};
-      await Promise.all(uniqueProductIds.map(async (id) => {
-        // Only fetch if we don't already have this product
-        if (!productMap[id]) {
-          try {
-            const product = await api.get(`/product?id=${id}`);
-            newMap[id] = product;
-          } catch (e) {
-            // ignore error, leave undefined
+      await Promise.all(
+        uniqueProductIds.map(async (id) => {
+          // Only fetch if we don't already have this product
+          if (!productMap[id]) {
+            try {
+              const product = await api.get(`/product?id=${id}`);
+              newMap[id] = product;
+            } catch (e) {
+              // ignore error, leave undefined
+            }
+          } else {
+            // Keep existing product data
+            newMap[id] = productMap[id];
           }
-        } else {
-          // Keep existing product data
-          newMap[id] = productMap[id];
-        }
-      }));
+        })
+      );
       setProductMap(newMap);
     };
-    
+
     fetchProducts();
   }, [uniqueProductIds]); // Only depend on unique product IDs, not orderDetails
 
@@ -96,7 +104,9 @@ export default function OrderConfirmationPage() {
   const fetchOrderDetails = async () => {
     try {
       setLoading(true);
-      const details = await api.post<OrderWithDetails>('/orders/details', { order_id: orderId });
+      const details = await api.post<OrderWithDetails>('/orders/details', {
+        order_id: orderId,
+      });
       setOrderDetails(details);
     } catch (error) {
       console.error('Failed to fetch order details:', error);
@@ -108,19 +118,27 @@ export default function OrderConfirmationPage() {
 
   const getPaymentMethodLabel = (method: string): string => {
     switch (method) {
-      case 'credit_card': return 'Credit Card';
-      case 'paypal': return 'PayPal';
-      case 'bank_transfer': return 'Bank Transfer';
-      default: return method;
+      case 'credit_card':
+        return 'Credit Card';
+      case 'paypal':
+        return 'PayPal';
+      case 'bank_transfer':
+        return 'Bank Transfer';
+      default:
+        return method;
     }
   };
 
   const getShippingMethodLabel = (method: string): string => {
     switch (method) {
-      case 'standard': return 'Standard Shipping';
-      case 'express': return 'Express Shipping';
-      case 'overnight': return 'Overnight Shipping';
-      default: return method;
+      case 'standard':
+        return 'Standard Shipping';
+      case 'express':
+        return 'Express Shipping';
+      case 'overnight':
+        return 'Overnight Shipping';
+      default:
+        return method;
     }
   };
 
@@ -130,7 +148,7 @@ export default function OrderConfirmationPage() {
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
     });
   };
 
@@ -176,7 +194,8 @@ export default function OrderConfirmationPage() {
           <div className="success-icon">✅</div>
           <h1 className="confirmation-title">Order Confirmed!</h1>
           <p className="confirmation-subtitle">
-            Thank you for your order. We've sent a confirmation email with your order details.
+            Thank you for your order. We've sent a confirmation email with your
+            order details.
           </p>
         </div>
 
@@ -190,15 +209,21 @@ export default function OrderConfirmationPage() {
               </div>
               <div className="info-row">
                 <span className="info-label">Order Date:</span>
-                <span className="info-value">{formatDate(orderDetails.order.created_at)}</span>
+                <span className="info-value">
+                  {formatDate(orderDetails.order.created_at)}
+                </span>
               </div>
               <div className="info-row">
                 <span className="info-label">Status:</span>
-                <span className="info-value status-badge">{orderDetails.order.status}</span>
+                <span className="info-value status-badge">
+                  {orderDetails.order.status}
+                </span>
               </div>
               <div className="info-row">
                 <span className="info-label">Payment Status:</span>
-                <span className="info-value status-badge">{orderDetails.order.payment_status}</span>
+                <span className="info-value status-badge">
+                  {orderDetails.order.payment_status}
+                </span>
               </div>
             </div>
           </div>
@@ -210,7 +235,7 @@ export default function OrderConfirmationPage() {
                 const product = productMap[item.product_id];
                 const price = product?.price || 0;
                 const itemSubtotal = price * item.quantity;
-                
+
                 return (
                   <div key={index} className="order-item">
                     <div className="item-info">
@@ -233,7 +258,9 @@ export default function OrderConfirmationPage() {
             <div className="info-card">
               <div className="info-row">
                 <span className="info-label">Address:</span>
-                <span className="info-value">{orderDetails.shipping.address}</span>
+                <span className="info-value">
+                  {orderDetails.shipping.address}
+                </span>
               </div>
               <div className="info-row">
                 <span className="info-label">City:</span>
@@ -241,15 +268,21 @@ export default function OrderConfirmationPage() {
               </div>
               <div className="info-row">
                 <span className="info-label">Country:</span>
-                <span className="info-value">{orderDetails.shipping.country}</span>
+                <span className="info-value">
+                  {orderDetails.shipping.country}
+                </span>
               </div>
               <div className="info-row">
                 <span className="info-label">ZIP Code:</span>
-                <span className="info-value">{orderDetails.shipping.zip_code}</span>
+                <span className="info-value">
+                  {orderDetails.shipping.zip_code}
+                </span>
               </div>
               <div className="info-row">
                 <span className="info-label">Method:</span>
-                <span className="info-value">{getShippingMethodLabel(orderDetails.shipping.method)}</span>
+                <span className="info-value">
+                  {getShippingMethodLabel(orderDetails.shipping.method)}
+                </span>
               </div>
             </div>
           </div>
@@ -259,15 +292,21 @@ export default function OrderConfirmationPage() {
             <div className="info-card">
               <div className="info-row">
                 <span className="info-label">Payment Method:</span>
-                <span className="info-value">{getPaymentMethodLabel(orderDetails.payment.payment_method)}</span>
+                <span className="info-value">
+                  {getPaymentMethodLabel(orderDetails.payment.payment_method)}
+                </span>
               </div>
               <div className="info-row">
                 <span className="info-label">Amount Paid:</span>
-                <span className="info-value">${orderDetails.payment.amount.toFixed(2)}</span>
+                <span className="info-value">
+                  ${orderDetails.payment.amount.toFixed(2)}
+                </span>
               </div>
               <div className="info-row">
                 <span className="info-label">Payment Status:</span>
-                <span className="info-value status-badge">{orderDetails.payment.status}</span>
+                <span className="info-value status-badge">
+                  {orderDetails.payment.status}
+                </span>
               </div>
             </div>
           </div>
@@ -278,16 +317,23 @@ export default function OrderConfirmationPage() {
               <div className="total-row">
                 <span className="total-label">Subtotal:</span>
                 <span className="total-value">
-                  ${(orderDetails.order.total_amount - orderDetails.shipping.cost).toFixed(2)}
+                  $
+                  {(
+                    orderDetails.order.total_amount - orderDetails.shipping.cost
+                  ).toFixed(2)}
                 </span>
               </div>
               <div className="total-row">
                 <span className="total-label">Shipping:</span>
-                <span className="total-value">${orderDetails.shipping.cost.toFixed(2)}</span>
+                <span className="total-value">
+                  ${orderDetails.shipping.cost.toFixed(2)}
+                </span>
               </div>
               <div className="total-row total-final">
                 <span className="total-label">Total:</span>
-                <span className="total-value">${orderDetails.order.total_amount.toFixed(2)}</span>
+                <span className="total-value">
+                  ${orderDetails.order.total_amount.toFixed(2)}
+                </span>
               </div>
             </div>
           </div>
@@ -297,11 +343,11 @@ export default function OrderConfirmationPage() {
           <Link href="/products" className="btn-secondary">
             Continue Shopping
           </Link>
-          <Link href="/profile" className="btn-primary">
+          <Link href="/orders" className="btn-primary">
             View My Orders
           </Link>
         </div>
       </div>
     </div>
   );
-} 
+}

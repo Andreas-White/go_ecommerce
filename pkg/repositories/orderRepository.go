@@ -25,6 +25,7 @@ type IOrderRepository interface {
 	UpdateProductStock(ctx context.Context, productID uuid.UUID, quantity int) error
 	UpdateShippingTracking(ctx context.Context, orderID uuid.UUID, trackingCode string, shippedAt *time.Time) error
 	GetSalesReport(ctx context.Context, producerID uuid.UUID, startDate, endDate *time.Time, category *string) (*models.SalesReportResponse, error)
+	SoftDeleteOrder(ctx context.Context, orderID uuid.UUID) error
 }
 
 type OrderRepository struct {
@@ -547,4 +548,18 @@ func (r *OrderRepository) GetSalesReport(ctx context.Context, producerID uuid.UU
 	}
 
 	return report, nil
+}
+
+func (r *OrderRepository) SoftDeleteOrder(ctx context.Context, orderID uuid.UUID) error {
+	query := `
+		UPDATE orders SET status = 'canceled_by_user', updated_at = $2 WHERE id = $1
+	`
+
+	now := time.Now()
+	_, err := r.DB.ExecContext(ctx, query, orderID, now)
+	if err != nil {
+		return utils.HandleRepositoryErrors(ctx, err, "repository/SoftDeleteOrder", orderID.String())
+	}
+
+	return nil
 }

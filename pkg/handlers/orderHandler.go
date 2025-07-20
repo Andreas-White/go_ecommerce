@@ -294,3 +294,72 @@ func (h *OrderHandler) GetSalesReport(w http.ResponseWriter, r *http.Request) {
 
 	utils.RespondWithJSON(w, http.StatusOK, report)
 }
+
+func (h *OrderHandler) CancelOrder(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get user from context (must be authenticated)
+	user := middleware.GetUserFromContext(r, w)
+	if user == nil {
+		utils.HandleAPIErrors(nil, w, "handler/CancelOrder", http.StatusUnauthorized, "User must be authenticated")
+		return
+	}
+
+	if !user.IsProducer {
+		utils.HandleAPIErrors(nil, w, "handler/CancelOrder", http.StatusForbidden, "Only producers can cancel orders")
+		return
+	}
+
+	var request struct {
+		OrderID uuid.UUID `json:"order_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		utils.HandleAPIErrors(err, w, "handler/CancelOrder", http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if request.OrderID == uuid.Nil {
+		utils.HandleAPIErrors(nil, w, "handler/CancelOrder", http.StatusBadRequest, "Order ID is required")
+		return
+	}
+
+	err := h.orderService.CancelOrder(ctx, request.OrderID)
+	if err != nil {
+		utils.HandleAPIErrors(err, w, "handler/CancelOrder", http.StatusInternalServerError, "Failed to cancel order")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, "Order cancelled successfully")
+}
+
+func (h *OrderHandler) CustomerDeleteOrder(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get user from context (must be authenticated)
+	user := middleware.GetUserFromContext(r, w)
+	if user == nil {
+		utils.HandleAPIErrors(nil, w, "handler/CustomerDeleteOrder", http.StatusUnauthorized, "User must be authenticated")
+		return
+	}
+
+	var request struct {
+		OrderID uuid.UUID `json:"order_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		utils.HandleAPIErrors(err, w, "handler/CustomerDeleteOrder", http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if request.OrderID == uuid.Nil {
+		utils.HandleAPIErrors(nil, w, "handler/CustomerDeleteOrder", http.StatusBadRequest, "Order ID is required")
+		return
+	}
+
+	err := h.orderService.SoftDeleteOrder(ctx, request.OrderID)
+	if err != nil {
+		utils.HandleAPIErrors(err, w, "handler/CustomerDeleteOrder", http.StatusInternalServerError, "Failed to delete order")
+		return
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, "Order deleted successfully")
+}

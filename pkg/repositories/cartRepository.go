@@ -142,8 +142,17 @@ func (r *CartRepository) GetAllCartItemsByCartID(ctx context.Context, cartID uui
 
 func (r *CartRepository) UpdateCartItems(ctx context.Context, cartItems []models.CartItemDTO) error {
 	for _, item := range cartItems {
-		query := "UPDATE cart_items SET quantity = $1, price = $2 WHERE cart_id = $3 AND product_id = $4"
-		result, err := r.DB.ExecContext(ctx, query, item.Quantity, item.Price, item.CartID, item.ProductID)
+		var result sql.Result
+		var err error
+		var query string
+		if item.Price == 0 {
+			query = "UPDATE cart_items SET quantity = $1 WHERE cart_id = $2 AND product_id = $3"
+			result, err = r.DB.ExecContext(ctx, query, item.Quantity, item.CartID, item.ProductID)
+		} else {
+			query = "UPDATE cart_items SET quantity = $1, price = $2 WHERE cart_id = $3 AND product_id = $4"
+			result, err = r.DB.ExecContext(ctx, query, item.Quantity, item.Price, item.CartID, item.ProductID)
+		}
+
 		if err != nil {
 			return utils.HandleRepositoryErrors(ctx, err, "repository/UpdateCartItems", item.ProductID.String())
 		}

@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
 import Link from 'next/link';
 import './page.css';
+import DeleteOrderButton from '../../components/orders/DeleteOrderButton';
 
 interface Order {
   id: string;
@@ -20,6 +21,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Remove deleteLoading and deleteError state
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -45,13 +47,18 @@ export default function OrdersPage() {
     }
   };
 
+  const handleDeleteOrder = async (orderId: string) => {
+    setOrders((prev) => prev.filter((o) => o.id !== orderId));
+  };
+
   const getStatusBadgeClass = (status: string): string => {
     switch (status.toLowerCase()) {
       case 'pending': return 'status-pending';
       case 'processing': return 'status-processing';
       case 'shipped': return 'status-shipped';
       case 'delivered': return 'status-delivered';
-      case 'cancelled': return 'status-cancelled';
+      case 'canceled': return 'status-cancelled';
+      case 'canceled_by_user': return 'status-cancelled';
       default: return 'status-default';
     }
   };
@@ -60,7 +67,7 @@ export default function OrdersPage() {
     switch (status.toLowerCase()) {
       case 'pending': return 'payment-pending';
       case 'paid': return 'payment-paid';
-      case 'failed': return 'payment-failed';
+      case 'unpaid': return 'payment-failed';
       case 'refunded': return 'payment-refunded';
       default: return 'payment-default';
     }
@@ -147,9 +154,20 @@ export default function OrdersPage() {
                 </div>
 
                 <div className="order-actions">
-                  <Link href={`/orders/${order.id}`} className="btn-secondary">
+                  <button
+                    className="btn-secondary"
+                    style={{ minWidth: 100 }}
+                    onClick={() => router.push(`/orders/${order.id}`)}
+                  >
                     View Details
-                  </Link>
+                  </button>
+                  {/* Delete button for pending/processing orders */}
+                  {(order.status === 'pending' || order.status === 'processing') && (
+                    <DeleteOrderButton
+                      orderId={order.id}
+                      onDeleted={handleDeleteOrder}
+                    />
+                  )}
                 </div>
               </div>
             ))}

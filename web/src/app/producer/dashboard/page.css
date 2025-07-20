@@ -152,8 +152,12 @@
 .order-list-table tr:last-child td {
   border-bottom: none;
 }
-.order-status-fulfilled {
+.order-status-shipped {
   color: var(--success-color, #16a34a);
+  font-weight: 500;
+}
+.order-status-canceled {
+  color: var(--error-color, #ef4444);
   font-weight: 500;
 }
 .order-list-empty {

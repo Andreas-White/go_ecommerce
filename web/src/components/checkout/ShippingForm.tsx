@@ -26,7 +26,16 @@ export default function ShippingForm({ shippingInfo, onSubmit }: ShippingFormPro
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const handleInputChange = (field: keyof ShippingInfo, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    if (field === 'method') {
+      const selected = shippingMethods.find(m => m.value === value);
+      setFormData(prev => ({
+        ...prev,
+        method: value as string,
+        cost: selected ? selected.cost : prev.cost,
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }));
+    }
     
     // Clear error when user starts typing
     if (errors[field]) {

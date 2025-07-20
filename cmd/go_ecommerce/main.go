@@ -109,6 +109,8 @@ func main() {
 	mux.Handle("/orders/producer", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetProducerOrders)))
 	mux.Handle("/orders/fulfill", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(orderHandler.FulfillOrder))))
 	mux.Handle("/orders/sales-report", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetSalesReport)))
+	mux.Handle("/orders/cancel", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(orderHandler.CancelOrder))))
+	mux.Handle("/orders/delete", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(orderHandler.CustomerDeleteOrder))))
 
 	// review routes
 	mux.Handle("/reviews/add", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(reviewHandler.AddReview))))

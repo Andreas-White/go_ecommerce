@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { useCart } from '../../../context/CartContext';
@@ -40,14 +40,14 @@ interface Review {
 export default function ProductDetailsPage() {
   const params = useParams();
   const productId = params.id as string;
-  
+
   const [product, setProduct] = useState<Product | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
-  
+
   const { addToCart } = useCart();
   const { user } = useAuth();
 
@@ -72,7 +72,9 @@ export default function ProductDetailsPage() {
 
   const fetchProductReviews = async () => {
     try {
-      const reviewsData = await api.get<Review[]>(`/reviews/get?product_id=${productId}`);
+      const reviewsData = await api.get<Review[]>(
+        `/reviews/get?product_id=${productId}`
+      );
       setReviews(reviewsData || []);
     } catch (error) {
       console.error('Failed to fetch reviews:', error);
@@ -84,13 +86,16 @@ export default function ProductDetailsPage() {
 
   const handleAddToCart = async () => {
     if (!product) return;
-    
+
     setAddingToCart(true);
     try {
-      await addToCart([{
-        product_id: product.id,
-        quantity: quantity
-      }]);
+      await addToCart([
+        {
+          product_id: product.id,
+          price: product.price,
+          quantity: quantity,
+        },
+      ]);
       alert(`${quantity} ${quantity === 1 ? 'item' : 'items'} added to cart!`);
     } catch (error) {
       console.error('Failed to add to cart:', error);
@@ -142,7 +147,11 @@ export default function ProductDetailsPage() {
         <div className="product-details-main">
           <div className="product-details-image-section">
             {product.image_url ? (
-              <img src={product.image_url} alt={product.name} className="product-details-image" />
+              <img
+                src={product.image_url}
+                alt={product.name}
+                className="product-details-image"
+              />
             ) : (
               <div className="product-details-image-placeholder">
                 <span>No Image Available</span>
@@ -152,7 +161,7 @@ export default function ProductDetailsPage() {
 
           <div className="product-details-info">
             <h1 className="product-details-title">{product.name}</h1>
-            
+
             {product.company && (
               <p className="product-details-company">
                 by {product.company.name}
@@ -173,8 +182,16 @@ export default function ProductDetailsPage() {
             </div>
 
             <div className="product-details-stock">
-              <span className={`product-details-stock-status${product.stock > 0 ? ' product-details-stock-available' : ' product-details-stock-unavailable'}`}>
-                {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+              <span
+                className={`product-details-stock-status${
+                  product.stock > 0
+                    ? ' product-details-stock-available'
+                    : ' product-details-stock-unavailable'
+                }`}
+              >
+                {product.stock > 0
+                  ? `${product.stock} in stock`
+                  : 'Out of stock'}
               </span>
             </div>
 
@@ -214,12 +231,14 @@ export default function ProductDetailsPage() {
             {product.company && (
               <div className="product-details-seller">
                 <h3>Seller Information</h3>
-                <p><strong>{product.company.name}</strong></p>
-                {product.company.address && (
-                  <p>{product.company.address}</p>
-                )}
+                <p>
+                  <strong>{product.company.name}</strong>
+                </p>
+                {product.company.address && <p>{product.company.address}</p>}
                 {product.company.city && product.company.country && (
-                  <p>{product.company.city}, {product.company.country}</p>
+                  <p>
+                    {product.company.city}, {product.company.country}
+                  </p>
                 )}
               </div>
             )}
@@ -228,7 +247,7 @@ export default function ProductDetailsPage() {
 
         <div className="product-details-reviews">
           <h2>Customer Reviews</h2>
-          
+
           {reviews.length === 0 ? (
             <p className="product-details-no-reviews">
               No reviews yet. Be the first to review this product!
@@ -242,7 +261,9 @@ export default function ProductDetailsPage() {
                       {renderStars(review.rating)}
                     </span>
                     <span className="product-details-review-author">
-                      {review.user ? `${review.user.first_name} ${review.user.last_name}` : 'Anonymous'}
+                      {review.user
+                        ? `${review.user.first_name} ${review.user.last_name}`
+                        : 'Anonymous'}
                     </span>
                     <span className="product-details-review-date">
                       {new Date(review.created_at).toLocaleDateString()}
@@ -260,8 +281,8 @@ export default function ProductDetailsPage() {
 
           {/* Add Review Form for authenticated users */}
           {user && (
-            <AddReviewForm 
-              productId={product.id} 
+            <AddReviewForm
+              productId={product.id}
               onReviewSubmitted={fetchProductReviews}
             />
           )}
@@ -269,4 +290,4 @@ export default function ProductDetailsPage() {
       </div>
     </div>
   );
-} 
+}

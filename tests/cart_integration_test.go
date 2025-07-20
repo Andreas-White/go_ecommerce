@@ -254,12 +254,19 @@ func TestCartFlow_GuestUser(t *testing.T) {
 	err = json.Unmarshal(getRRAfterUpdate.Body.Bytes(), &updatedItems)
 	require.NoError(t, err)
 	require.Len(t, updatedItems, 2, "Guest cart should have 2 items after updating")
-	assert.Equal(t, product1.ID, updatedItems[0].ProductID)
-	assert.Equal(t, cartID, updatedItems[0].CartID)
-	assert.Equal(t, 2, updatedItems[0].Quantity)
-	assert.Equal(t, product2.ID, updatedItems[1].ProductID)
-	assert.Equal(t, cartID, updatedItems[1].CartID)
-	assert.Equal(t, 20, updatedItems[1].Quantity)
+	// Instead of assuming order, match by ProductID
+	for _, item := range updatedItems {
+		switch item.ProductID {
+		case product1.ID:
+			assert.Equal(t, cartID, item.CartID)
+			assert.Equal(t, 2, item.Quantity)
+		case product2.ID:
+			assert.Equal(t, cartID, item.CartID)
+			assert.Equal(t, 20, item.Quantity)
+		default:
+			t.Errorf("Unexpected product ID in cart: %v", item.ProductID)
+		}
+	}
 
 	// 7. Guest removes one product from the cart
 	itemToRemove := []models.CartItemDTO{

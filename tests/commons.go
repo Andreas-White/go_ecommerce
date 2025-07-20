@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -204,4 +205,75 @@ func createUserDTO(email string, password string, isProducer bool) models.UserDT
 		Country:    "Testland",
 		ZipCode:    54321,
 	}
+}
+
+// Helper function to complete a test purchase
+func completeTestPurchase(t *testing.T, customerAuthData *TestAuthData, product models.Product, quantity int) models.OrderWithDetails {
+	// Add product to cart
+	cartItemsToAdd := []models.CartItemDTO{
+		{ProductID: product.ID, Quantity: quantity, Price: product.Price},
+	}
+	addBody, _ := json.Marshal(cartItemsToAdd)
+	addReq, _ := http.NewRequest("POST", "/cart/add", bytes.NewBuffer(addBody))
+	addReq.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(addReq, customerAuthData)
+
+	addRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(addRR, addReq)
+	require.Equal(t, http.StatusOK, addRR.Code, "Failed to add items to cart")
+
+	var createdCart models.Cart
+	err := json.Unmarshal(addRR.Body.Bytes(), &createdCart)
+	require.NoError(t, err)
+
+	// Process checkout
+	checkoutRequest := models.CheckoutRequest{
+		CartID: createdCart.ID,
+		ShippingInfo: models.ShippingInfo{
+			Address: "123 Main St",
+			City:    "New York",
+			Country: "USA",
+			ZipCode: "10001",
+			Method:  "standard",
+			Cost:    5.99,
+		},
+		PaymentInfo: models.PaymentInfo{
+			PaymentMethod: "credit_card",
+		},
+	}
+
+	checkoutBody, _ := json.Marshal(checkoutRequest)
+	checkoutReq, _ := http.NewRequest("POST", "/orders/checkout", bytes.NewBuffer(checkoutBody))
+	checkoutReq.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(checkoutReq, customerAuthData)
+
+	checkoutRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(checkoutRR, checkoutReq)
+	require.Equal(t, http.StatusOK, checkoutRR.Code, "Failed to process checkout")
+
+	var orderSummary models.OrderSummary
+	err = json.Unmarshal(checkoutRR.Body.Bytes(), &orderSummary)
+	require.NoError(t, err)
+
+	// Confirm order
+	confirmRequest := struct {
+		OrderID uuid.UUID `json:"order_id"`
+	}{
+		OrderID: orderSummary.OrderID,
+	}
+
+	confirmBody, _ := json.Marshal(confirmRequest)
+	confirmReq, _ := http.NewRequest("POST", "/orders/confirm", bytes.NewBuffer(confirmBody))
+	confirmReq.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(confirmReq, customerAuthData)
+
+	confirmRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(confirmRR, confirmReq)
+	require.Equal(t, http.StatusCreated, confirmRR.Code, "Failed to confirm order")
+
+	var orderWithDetails models.OrderWithDetails
+	err = json.Unmarshal(confirmRR.Body.Bytes(), &orderWithDetails)
+	require.NoError(t, err)
+
+	return orderWithDetails
 }

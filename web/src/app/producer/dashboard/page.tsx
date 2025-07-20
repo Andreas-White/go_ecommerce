@@ -12,7 +12,9 @@ import DeleteCompanyButton from '@/components/company/DeleteCompanyButton';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Alert from '@/components/ui/Alert';
 import './page.css';
-import ProducerOrderList, { ProducerOrder } from '@/components/orders/ProducerOrderList';
+import ProducerOrderList, {
+  ProducerOrderLike,
+} from '@/components/orders/ProducerOrderList';
 
 interface Company {
   id: string;
@@ -47,7 +49,7 @@ export default function ProducerDashboard() {
   const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [orders, setOrders] = useState<ProducerOrder[]>([]);
+  const [orders, setOrders] = useState<ProducerOrderLike[]>([]);
 
   useEffect(() => {
     if (!loading) {
@@ -55,7 +57,7 @@ export default function ProducerDashboard() {
         router.push('/login');
         return;
       }
-      
+
       if (!user.is_producer) {
         router.push('/');
         return;
@@ -90,7 +92,9 @@ export default function ProducerDashboard() {
 
       // Fetch orders for producer
       try {
-        const ordersData = await api.get<ProducerOrder[]>('/orders/producer');
+        const ordersData = await api.get<ProducerOrderLike[]>(
+          '/orders/producer'
+        );
         setOrders(ordersData || []);
       } catch (err) {
         setOrders([]);
@@ -124,15 +128,30 @@ export default function ProducerDashboard() {
   };
 
   const handleProductUpdated = (updatedProduct: Product) => {
-    setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    setProducts(
+      products.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+    );
   };
 
   const handleProductDeleted = (productId: string) => {
-    setProducts(products.filter(p => p.id !== productId));
+    setProducts(products.filter((p) => p.id !== productId));
   };
 
-  const handleOrderFulfilled = (orderId: string) => {
-    setOrders(orders => orders.filter(order => order.id !== orderId));
+  const handleOrderFulfilled = (orderId: string, newStatus: string) => {
+    setOrders((orders) =>
+      orders.map((order) => {
+        if (order.id === orderId) {
+          return { ...order, status: newStatus };
+        }
+        if (order.order?.id === orderId) {
+          return {
+            ...order,
+            order: { ...order.order, status: newStatus },
+          };
+        }
+        return order;
+      })
+    );
   };
 
   if (loading || loadingData) {
@@ -161,9 +180,7 @@ export default function ProducerDashboard() {
         <p>Manage your company profile and products</p>
       </div>
 
-      {error && (
-        <Alert type="error">{error}</Alert>
-      )}
+      {error && <Alert type="error">{error}</Alert>}
 
       <div className="dashboard-content">
         {/* Company Section */}
@@ -171,7 +188,7 @@ export default function ProducerDashboard() {
           <div className="section-header">
             <h2>Company Profile</h2>
             {!company && (
-              <button 
+              <button
                 className="btn-primary"
                 onClick={() => setShowCreateCompany(true)}
               >
@@ -188,8 +205,8 @@ export default function ProducerDashboard() {
             />
           ) : company ? (
             <div className="company-content">
-              <CompanyProfile 
-                company={company} 
+              <CompanyProfile
+                company={company}
                 onCompanyUpdated={handleCompanyUpdated}
                 onCompanyDeleted={handleCompanyDeleted}
               />
@@ -197,7 +214,7 @@ export default function ProducerDashboard() {
           ) : (
             <div className="no-company">
               <p>You haven't created a company profile yet.</p>
-              <button 
+              <button
                 className="btn-primary"
                 onClick={() => setShowCreateCompany(true)}
               >
@@ -212,7 +229,7 @@ export default function ProducerDashboard() {
           <div className="section-header">
             <h2>Your Products</h2>
             {company && (
-              <button 
+              <button
                 className="btn-primary"
                 onClick={() => setShowCreateProduct(true)}
               >
@@ -243,7 +260,7 @@ export default function ProducerDashboard() {
           {company && (products || []).length === 0 && (
             <div className="no-products">
               <p>You haven't added any products yet.</p>
-              <button 
+              <button
                 className="btn-primary"
                 onClick={() => setShowCreateProduct(true)}
               >
@@ -258,9 +275,12 @@ export default function ProducerDashboard() {
           <div className="section-header">
             <h2>Orders for Your Products</h2>
           </div>
-          <ProducerOrderList orders={orders} onOrderFulfilled={handleOrderFulfilled} />
+          <ProducerOrderList
+            orders={orders}
+            onOrderFulfilled={handleOrderFulfilled}
+          />
         </section>
       </div>
     </div>
   );
-} 
+}
