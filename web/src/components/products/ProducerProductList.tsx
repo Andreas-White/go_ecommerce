@@ -4,6 +4,7 @@ import { useState } from 'react';
 import EditProductButton from './EditProductButton';
 import DeleteProductButton from './DeleteProductButton';
 import './ProducerProductList.css';
+import { Button } from '@/components/ui';
 
 interface Company {
   id: string;
@@ -105,12 +106,12 @@ export default function ProducerProductList({
               </div>
             </div>
             <div className="product-actions">
-              <button
-                className="btn-edit"
+              <Button
+                variant="secondary"
                 onClick={() => handleEditStart(product)}
               >
                 Edit
-              </button>
+              </Button>
               <DeleteProductButton
                 productId={product.id}
                 productName={product.name}

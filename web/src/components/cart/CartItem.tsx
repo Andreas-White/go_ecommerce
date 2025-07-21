@@ -1,5 +1,6 @@
 import React from 'react';
 import './CartItem.css';
+import { Button } from '@/components/ui';
 
 export default function CartItem({
   item,
@@ -31,32 +32,35 @@ export default function CartItem({
         <p className="cart-item-price">${price.toFixed(2)} each</p>
       </div>
       <div className="cart-item-quantity">
-        <button
+        <Button
+          variant="secondary"
           onClick={() => onQuantityChange(item.product_id, item.quantity - 1)}
           disabled={updating}
           className="cart-quantity-btn"
         >
           -
-        </button>
+        </Button>
         <span className="cart-quantity-display">{item.quantity}</span>
-        <button
+        <Button
+          variant="secondary"
           onClick={() => onQuantityChange(item.product_id, item.quantity + 1)}
           disabled={updating}
           className="cart-quantity-btn"
         >
           +
-        </button>
+        </Button>
       </div>
       <div className="cart-item-subtotal">
         <p className="cart-item-total">${(price * item.quantity).toFixed(2)}</p>
       </div>
-      <button
+      <Button
+        variant="destructive"
         onClick={() => onRemove(item.product_id)}
         disabled={updating}
         className="cart-remove-btn"
       >
         Remove
-      </button>
+      </Button>
     </div>
   );
 }

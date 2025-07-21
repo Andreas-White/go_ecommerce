@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import './error.css';
+import { Button } from '@/components/ui';
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }, reset: () => void }) {
   return (
@@ -9,7 +10,9 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
       <p className="error-message">Oops! Something went wrong on our end.</p>
       <p className="error-message">Please try again, or come back later.</p>
       <div className="error-actions">
-        <button className="error-btn" onClick={() => reset()}>Retry</button>
+        <Button variant="secondary" onClick={() => reset()}>
+          Retry
+        </Button>
         <Link href="/" className="error-link">Go to Home</Link>
         <Link href="/products" className="error-link">Browse Products</Link>
       </div>

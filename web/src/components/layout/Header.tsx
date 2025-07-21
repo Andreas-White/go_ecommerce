@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import './Header.css';
+import { Button } from '@/components/ui';
 
 export default function Header() {
   const { user, logout, loading } = useAuth();
@@ -65,12 +66,13 @@ export default function Header() {
                   Producer Dashboard
                 </Link>
               )}
-              <button 
-                className="button-primary header-logout-btn" 
+              <Button 
+                variant="primary" 
+                className="header-logout-btn" 
                 onClick={handleLogout}
               >
                 Logout
-              </button>
+              </Button>
             </>
           ) : (
             <>

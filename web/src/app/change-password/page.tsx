@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import Link from 'next/link';
 import './page.css';
+import { Button } from '@/components/ui';
 
 export default function ChangePasswordPage() {
   const [formData, setFormData] = useState({
@@ -179,13 +180,9 @@ export default function ChangePasswordPage() {
           )}
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="change-password-submit-btn"
-        >
-          {loading ? 'Changing Password...' : 'Change Password'}
-        </button>
+        <Button type="submit" variant="primary" disabled={loading} isLoading={loading}>
+          Change Password
+        </Button>
       </form>
 
       <div className="change-password-back-link">

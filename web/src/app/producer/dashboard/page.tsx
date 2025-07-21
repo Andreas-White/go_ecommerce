@@ -15,6 +15,7 @@ import './page.css';
 import ProducerOrderList, {
   ProducerOrderLike,
 } from '@/components/orders/ProducerOrderList';
+import { Button } from '@/components/ui';
 
 interface Company {
   id: string;
@@ -188,12 +189,12 @@ export default function ProducerDashboard() {
           <div className="section-header">
             <h2>Company Profile</h2>
             {!company && (
-              <button
-                className="btn-primary"
+              <Button
+                variant="primary"
                 onClick={() => setShowCreateCompany(true)}
               >
                 Create Company
-              </button>
+              </Button>
             )}
           </div>
 
@@ -214,12 +215,12 @@ export default function ProducerDashboard() {
           ) : (
             <div className="no-company">
               <p>You haven't created a company profile yet.</p>
-              <button
-                className="btn-primary"
+              <Button
+                variant="primary"
                 onClick={() => setShowCreateCompany(true)}
               >
                 Create Your First Company
-              </button>
+              </Button>
             </div>
           )}
         </section>
@@ -229,12 +230,12 @@ export default function ProducerDashboard() {
           <div className="section-header">
             <h2>Your Products</h2>
             {company && (
-              <button
-                className="btn-primary"
+              <Button
+                variant="primary"
                 onClick={() => setShowCreateProduct(true)}
               >
                 Add New Product
-              </button>
+              </Button>
             )}
           </div>
 
@@ -260,12 +261,12 @@ export default function ProducerDashboard() {
           {company && (products || []).length === 0 && (
             <div className="no-products">
               <p>You haven't added any products yet.</p>
-              <button
-                className="btn-primary"
+              <Button
+                variant="primary"
                 onClick={() => setShowCreateProduct(true)}
               >
                 Add Your First Product
-              </button>
+              </Button>
             </div>
           )}
         </section>

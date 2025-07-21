@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 import Alert from '@/components/ui/Alert';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import { Button } from '@/components/ui';
 import './DeleteProductButton.css';
 
 interface DeleteProductButtonProps {
@@ -43,8 +44,8 @@ export default function DeleteProductButton({ productId, productName, onProductD
             <h4>Delete Product</h4>
             <p>Are you sure you want to delete "{productName}"? This action cannot be undone.</p>
             <div className="confirmation-actions">
-              <button
-                className="btn-danger"
+              <Button
+                variant="destructive"
                 onClick={handleDelete}
                 disabled={loading}
               >
@@ -56,14 +57,14 @@ export default function DeleteProductButton({ productId, productName, onProductD
                 ) : (
                   'Delete Product'
                 )}
-              </button>
-              <button
-                className="btn-secondary"
+              </Button>
+              <Button
+                variant="secondary"
                 onClick={() => setShowConfirmation(false)}
                 disabled={loading}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -72,11 +73,11 @@ export default function DeleteProductButton({ productId, productName, onProductD
   }
 
   return (
-    <button
-      className="btn-delete"
+    <Button
+      variant="destructive"
       onClick={() => setShowConfirmation(true)}
     >
       Delete
-    </button>
+    </Button>
   );
 } 

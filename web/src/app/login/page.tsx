@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import Link from 'next/link';
 import './page.css';
+import { Button } from '@/components/ui';
 
 function LoginForm() {
   const [formData, setFormData] = useState({
@@ -144,13 +145,9 @@ function LoginForm() {
           )}
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="login-submit-btn"
-        >
-          {loading ? 'Logging In...' : 'Log In'}
-        </button>
+        <Button type="submit" variant="primary" disabled={loading} isLoading={loading}>
+          Login
+        </Button>
       </form>
 
       <div className="login-link-register">

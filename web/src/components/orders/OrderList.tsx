@@ -1,6 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
 import './OrderList.css';
+import { Button } from '../ui';
+import { useRouter } from 'next/navigation';
 
 interface Order {
   id: string;
@@ -47,6 +49,7 @@ const formatDate = (dateString: string): string => {
 };
 
 export default function OrderList({ orders, loading = false }: OrderListProps) {
+  const router = useRouter();
   if (loading) {
     return (
       <div className="order-list-loading">
@@ -98,9 +101,12 @@ export default function OrderList({ orders, loading = false }: OrderListProps) {
           </div>
 
           <div className="order-actions">
-            <Link href={`/orders/${order.id}`} className="btn-secondary">
+            <Button
+              variant="secondary"
+              onClick={() => router.push(`/orders/${order.id}`)}
+            >
               View Details
-            </Link>
+            </Button>
           </div>
         </div>
       ))}

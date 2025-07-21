@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '@/lib/api';
 import ConfirmModal from '../ui/ConfirmModal';
+import { Button } from '@/components/ui';
 
 interface CancelOrderButtonProps {
   orderId: string;
@@ -39,14 +40,15 @@ export default function CancelOrderButton({ orderId, status, onCanceled }: Cance
 
   return (
     <div style={{ display: 'inline-block', marginLeft: 8 }}>
-      <button
-        className="btn-secondary delete-order-btn"
+      <Button
+        variant="secondary"
+        className="delete-order-btn"
         onClick={() => setShowModal(true)}
         disabled={loading}
         style={{ minWidth: 100 }}
       >
         {loading ? 'Cancelling...' : 'Cancel Order'}
-      </button>
+      </Button>
       <ConfirmModal
         open={showModal}
         title="Cancel Order"

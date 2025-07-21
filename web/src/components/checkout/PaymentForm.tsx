@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './PaymentForm.css';
+import { Button } from '@/components/ui';
 
 interface PaymentInfo {
   payment_method: string;
@@ -115,12 +116,12 @@ export default function PaymentForm({ paymentInfo, onSubmit, onBack }: PaymentFo
         </div>
 
         <div className="form-actions">
-          <button type="button" onClick={onBack} className="btn-secondary">
+          <Button type="button" onClick={onBack} variant="secondary">
             Back to Shipping
-          </button>
-          <button type="submit" className="btn-primary">
+          </Button>
+          <Button type="submit" variant="primary">
             Review Order
-          </button>
+          </Button>
         </div>
       </form>
     </div>

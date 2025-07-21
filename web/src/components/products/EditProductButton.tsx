@@ -6,6 +6,7 @@ import Alert from '@/components/ui/Alert';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import './EditProductButton.css';
 import { useRef } from 'react';
+import { Button } from '@/components/ui';
 
 interface Company {
   id: string;
@@ -257,9 +258,9 @@ export default function EditProductButton({ product, onProductUpdated, onCancel 
               {uploading && <div>Uploading image...</div>}
             </div>
             <div className="form-actions">
-              <button
+              <Button
                 type="submit"
-                className="btn-primary"
+                variant="primary"
                 disabled={loading}
               >
                 {loading ? (
@@ -270,15 +271,15 @@ export default function EditProductButton({ product, onProductUpdated, onCancel 
                 ) : (
                   'Update Product'
                 )}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn-secondary"
+                variant="secondary"
                 onClick={onCancel}
                 disabled={loading}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </form>
         </div>

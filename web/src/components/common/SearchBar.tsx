@@ -1,6 +1,7 @@
 import React from 'react';
 import Input from '../ui/Input';
 import './SearchBar.css';
+import { Button } from '@/components/ui';
 
 export default function SearchBar({ value, onChange, onSubmit }: {
   value: string;
@@ -22,9 +23,9 @@ export default function SearchBar({ value, onChange, onSubmit }: {
         placeholder="Search products..."
         className="search-bar-input"
       />
-      <button type="submit" className="search-bar-button">
+      <Button type="submit" variant="primary" className="search-bar-button">
         🔍
-      </button>
+      </Button>
     </form>
   );
 } 

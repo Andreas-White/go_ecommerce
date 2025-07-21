@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import Link from 'next/link';
 import './page.css';
+import { Button } from '@/components/ui';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -221,13 +222,9 @@ export default function RegisterPage() {
           </label>
         </div>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="register-submit-btn"
-        >
-          {loading ? 'Creating Account...' : 'Create Account'}
-        </button>
+        <Button type="submit" variant="primary" disabled={loading} isLoading={loading}>
+          Register
+        </Button>
       </form>
 
       <div className="register-link-login">

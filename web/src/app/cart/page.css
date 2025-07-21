@@ -68,19 +68,6 @@
   text-align: right;
 }
 
-.cart-clear-btn {
-  padding: 8px 16px;
-  background: #fee;
-  color: #c33;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.cart-clear-btn:disabled {
-  cursor: not-allowed;
-}
-
 .cart-summary-section {
   width: 300px;
 }

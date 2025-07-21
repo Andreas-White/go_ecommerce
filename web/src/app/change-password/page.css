@@ -67,27 +67,6 @@
   margin-top: 0.25rem;
 }
 
-.change-password-submit-btn {
-  width: 100%;
-  padding: 12px;
-  background: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: opacity 0.3s ease;
-}
-
-.change-password-submit-btn:hover {
-  opacity: 0.9;
-}
-
-.change-password-submit-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .change-password-back-link {
   text-align: center;
   margin-top: 1rem;

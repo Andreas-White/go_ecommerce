@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './ShippingForm.css';
+import { Button } from '@/components/ui';
 
 interface ShippingInfo {
   address: string;
@@ -176,9 +177,9 @@ export default function ShippingForm({ shippingInfo, onSubmit }: ShippingFormPro
         </div>
 
         <div className="form-actions">
-          <button type="submit" className="btn-primary">
+          <Button type="submit" variant="primary">
             Continue to Payment
-          </button>
+          </Button>
         </div>
       </form>
     </div>

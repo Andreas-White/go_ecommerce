@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../../lib/api';
 import './OrderSummaryDisplay.css';
+import { Button } from '@/components/ui';
 
 interface ShippingInfo {
   address: string;
@@ -216,17 +217,17 @@ export default function OrderSummaryDisplay({
       </div>
 
       <div className="form-actions">
-        <button type="button" onClick={onBack} className="btn-secondary">
+        <Button type="button" onClick={onBack} variant="secondary">
           Back to Payment
-        </button>
-        <button 
+        </Button>
+        <Button 
           type="button" 
           onClick={onConfirm} 
-          className="btn-primary"
+          variant="primary"
           disabled={loading}
         >
           {loading ? 'Confirming Order...' : 'Confirm Order'}
-        </button>
+        </Button>
       </div>
     </div>
   );

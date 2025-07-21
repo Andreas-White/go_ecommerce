@@ -6,6 +6,7 @@ import Link from 'next/link';
 import './page.css';
 import { api } from '../../lib/api';
 import CartItem from '../../components/cart/CartItem';
+import { Button } from '@/components/ui';
 
 export default function CartPage() {
   const { cartItems, loading, removeFromCart, updateCartItems, clearCart } =
@@ -152,13 +153,13 @@ export default function CartPage() {
               })}
 
               <div className="cart-clear-section">
-                <button
+                <Button
                   onClick={handleClearCart}
                   disabled={updating}
-                  className="cart-clear-btn"
+                  variant="secondary"
                 >
                   Clear Cart
-                </button>
+                </Button>
               </div>
             </div>
           </div>

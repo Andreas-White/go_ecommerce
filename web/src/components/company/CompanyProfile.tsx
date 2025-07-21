@@ -4,6 +4,7 @@ import './CompanyProfile.css';
 import { useState } from 'react';
 import CreateUpdateCompanyForm from './CreateUpdateCompanyForm';
 import DeleteCompanyButton from './DeleteCompanyButton';
+import { Button } from '@/components/ui';
 
 interface Company {
   id: string;
@@ -90,9 +91,9 @@ export default function CompanyProfile({ company, onCompanyUpdated, onCompanyDel
         </div>
       </div>
       <div className="company-actions">
-        <button className="btn-primary" onClick={() => setEditing(true)}>
+        <Button variant="primary" onClick={() => setEditing(true)}>
           Update Company
-        </button>
+        </Button>
         <DeleteCompanyButton companyId={company.id} onCompanyDeleted={onCompanyDeleted} />
       </div>
     </div>

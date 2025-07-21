@@ -6,6 +6,7 @@ import Alert from '@/components/ui/Alert';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import './CreateUpdateCompanyForm.css';
 import DeleteCompanyButton from './DeleteCompanyButton';
+import { Button } from '@/components/ui';
 
 interface Company {
   id: string;
@@ -190,9 +191,9 @@ export default function CreateUpdateCompanyForm({
         </div>
 
         <div className="form-actions">
-          <button
+          <Button
             type="submit"
-            className="btn-primary"
+            variant="primary"
             disabled={loading}
           >
             {loading ? (
@@ -203,20 +204,20 @@ export default function CreateUpdateCompanyForm({
             ) : (
               isEditing ? (saveLabel || 'Update Company') : 'Create Company'
             )}
-          </button>
+          </Button>
           {isEditing && (
             <DeleteCompanyButton companyId={company.id} onCompanyDeleted={onCompanyDeleted} />
           )}
           
           {onCancel && (
-            <button
+            <Button
               type="button"
-              className="btn-secondary"
+              variant="secondary"
               onClick={onCancel}
               disabled={loading}
             >
               Cancel
-            </button>
+            </Button>
           )}
         </div>
       </form>

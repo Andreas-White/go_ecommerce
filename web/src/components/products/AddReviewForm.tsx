@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { api } from '../../lib/api';
 import { useAuth } from '../../context/AuthContext';
 import './AddReviewForm.css';
+import { Button } from '@/components/ui';
 
 interface AddReviewFormProps {
   productId: string;
@@ -69,9 +70,9 @@ export default function AddReviewForm({ productId, onReviewSubmitted }: AddRevie
           placeholder="Share your thoughts about this product..."
         />
       </div>
-      <button type="submit" disabled={submitting} className="add-review-submit-btn">
+      <Button type="submit" variant="primary" disabled={submitting} isLoading={submitting}>
         {submitting ? 'Submitting...' : 'Submit Review'}
-      </button>
+      </Button>
     </form>
   );
 } 

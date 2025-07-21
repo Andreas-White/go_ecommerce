@@ -2,10 +2,11 @@
 import { useState, useEffect } from 'react';
 import { useCart } from '../../context/CartContext';
 import { api } from '../../lib/api';
-import Link from 'next/link';
 import ProductFilterSort from '../../components/products/ProductFilterSort';
 import SearchBar from '../../components/common/SearchBar';
 import './page.css';
+import { Button } from '@/components/ui';
+import { useRouter } from 'next/navigation';
 
 interface Product {
   id: string;
@@ -29,7 +30,7 @@ export default function ProductsPage() {
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
   const { addToCart } = useCart();
-
+  const router = useRouter();
   useEffect(() => {
     fetchProducts();
   }, [searchTerm, category, sortBy, sortOrder]);
@@ -173,13 +174,14 @@ export default function ProductsPage() {
               </div>
 
               <div className="product-actions">
-                <Link
-                  href={`/product/${product.id}`}
-                  className="product-view-btn"
+                <Button
+                  variant="secondary"
+                  onClick={() => router.push(`/product/${product.id}`)}
                 >
                   View Details
-                </Link>
-                <button
+                </Button>
+                <Button
+                  variant="primary"
                   onClick={() => handleAddToCart(product)}
                   disabled={product.stock <= 0}
                   className={`product-add-btn${
@@ -189,7 +191,7 @@ export default function ProductsPage() {
                   }`}
                 >
                   Add to Cart
-                </button>
+                </Button>
               </div>
             </div>
           ))}

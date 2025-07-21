@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '@/lib/api';
 import ConfirmModal from '../ui/ConfirmModal';
+import { Button } from '@/components/ui';
 
 interface DeleteOrderButtonProps {
   orderId: string;
@@ -35,14 +36,15 @@ export default function DeleteOrderButton({ orderId, disabled, onDeleted }: Dele
 
   return (
     <div className="delete-order-btn-wrapper">
-      <button
-        className="btn-secondary delete-order-btn"
+      <Button
+        variant="secondary"
+        className="delete-order-btn"
         onClick={() => setShowModal(true)}
         disabled={loading || disabled}
         style={{ minWidth: 100 }}
       >
         {loading ? 'Deleting...' : 'Delete Order'}
-      </button>
+      </Button>
       <ConfirmModal
         open={showModal}
         title="Delete Order"

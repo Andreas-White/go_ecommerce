@@ -1,5 +1,6 @@
 import React from 'react';
 import './ShippingTracking.css';
+import { Button } from '@/components/ui';
 
 interface ShippingInfo {
   status: string;
@@ -127,13 +128,13 @@ export default function ShippingTracking({ shipping }: ShippingTrackingProps) {
             <h3 className="info-title">Tracking Code</h3>
             <div className="tracking-code-container">
               <code className="tracking-code">{shipping.tracking_code}</code>
-              <button 
-                className="copy-button"
+              <Button
+                variant="secondary"
                 onClick={() => navigator.clipboard.writeText(shipping.tracking_code!)}
                 title="Copy tracking code"
               >
                 📋
-              </button>
+              </Button>
             </div>
           </div>
         )}

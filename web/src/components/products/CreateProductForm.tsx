@@ -6,6 +6,7 @@ import Alert from '@/components/ui/Alert';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import './CreateProductForm.css';
 import { useRef } from 'react';
+import { Button } from '@/components/ui';
 
 interface Company {
   id: string;
@@ -266,9 +267,9 @@ export default function CreateProductForm({ onProductCreated, onCancel }: Create
         </div>
 
         <div className="form-actions">
-          <button
+          <Button
             type="submit"
-            className="btn-primary"
+            variant="primary"
             disabled={loading}
           >
             {loading ? (
@@ -279,16 +280,16 @@ export default function CreateProductForm({ onProductCreated, onCancel }: Create
             ) : (
               'Create Product'
             )}
-          </button>
+          </Button>
           
-          <button
+          <Button
             type="button"
-            className="btn-secondary"
+            variant="secondary"
             onClick={onCancel}
             disabled={loading}
           >
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </div>

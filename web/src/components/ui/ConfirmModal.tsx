@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { Button } from '@/components/ui';
 
 interface ConfirmModalProps {
   open: boolean;
@@ -28,21 +29,12 @@ const modalContent = ({
       <h3>{title}</h3>
       <p>{message}</p>
       <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-        <button
-          className="btn-secondary btn-cancel"
-          onClick={onCancel}
-          disabled={loading}
-        >
+        <Button variant="secondary" className="btn-cancel" onClick={onCancel} disabled={loading}>
           {cancelLabel}
-        </button>
-        <button
-          className={`btn-secondary ${confirmClassName}`.trim()}
-          onClick={onConfirm}
-          disabled={loading}
-          style={{ minWidth: 100 }}
-        >
+        </Button>
+        <Button variant="secondary" className={confirmClassName} onClick={onConfirm} disabled={loading} style={{ minWidth: 100 }}>
           {loading ? 'Processing...' : confirmLabel}
-        </button>
+        </Button>
       </div>
     </div>
   </div>

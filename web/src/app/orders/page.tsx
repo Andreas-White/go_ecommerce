@@ -6,6 +6,7 @@ import { api } from '../../lib/api';
 import Link from 'next/link';
 import './page.css';
 import DeleteOrderButton from '../../components/orders/DeleteOrderButton';
+import { Button } from '@/components/ui';
 
 interface Order {
   id: string;
@@ -98,9 +99,9 @@ export default function OrdersPage() {
         <div className="error-icon">❌</div>
         <h2>Error Loading Orders</h2>
         <p>{error}</p>
-        <button onClick={fetchOrders} className="btn-primary">
+        <Button onClick={fetchOrders} variant="primary">
           Try Again
-        </button>
+        </Button>
       </div>
     );
   }
@@ -154,13 +155,13 @@ export default function OrdersPage() {
                 </div>
 
                 <div className="order-actions">
-                  <button
+                  <Button
                     className="btn-secondary"
                     style={{ minWidth: 100 }}
                     onClick={() => router.push(`/orders/${order.id}`)}
                   >
                     View Details
-                  </button>
+                  </Button>
                   {/* Delete button for pending/processing orders */}
                   {(order.status === 'pending' || order.status === 'processing') && (
                     <DeleteOrderButton

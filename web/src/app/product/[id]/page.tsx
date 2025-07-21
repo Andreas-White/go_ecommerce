@@ -7,6 +7,7 @@ import { api } from '../../../lib/api';
 import Link from 'next/link';
 import './page.css';
 import AddReviewForm from '../../../components/products/AddReviewForm';
+import { Button } from '@/components/ui';
 
 interface Product {
   id: string;
@@ -218,13 +219,13 @@ export default function ProductDetailsPage() {
                   </select>
                 </div>
 
-                <button
+                <Button
                   onClick={handleAddToCart}
                   disabled={addingToCart}
                   className="product-details-add-btn"
                 >
                   {addingToCart ? 'Adding...' : 'Add to Cart'}
-                </button>
+                </Button>
               </div>
             )}
 

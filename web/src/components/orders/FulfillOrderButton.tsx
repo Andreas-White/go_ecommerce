@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '@/lib/api';
+import { Button } from '@/components/ui';
 
 interface FulfillOrderButtonProps {
   orderId: string;
@@ -42,8 +43,8 @@ export default function FulfillOrderButton({
 
   return (
     <div style={{ display: 'inline-block' }}>
-      <button
-        className="btn-primary"
+      <Button
+        variant="primary"
         onClick={handleFulfill}
         disabled={loading || status === 'delivered'}
         style={{ minWidth: 100 }}
@@ -53,7 +54,7 @@ export default function FulfillOrderButton({
           : status === 'delivered'
           ? 'Delivered'
           : 'Mark as ' + nextStatus}
-      </button>
+      </Button>
       {error && (
         <div
           className="order-fulfill-error"
