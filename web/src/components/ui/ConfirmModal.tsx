@@ -45,14 +45,16 @@ const modalContent = ({
         </button>
       </div>
     </div>
-    <div className="modal-backdrop" onClick={onCancel} />
   </div>
 );
 
 export default function ConfirmModal(props: ConfirmModalProps) {
   if (!props.open) return null;
   return ReactDOM.createPortal(
-    modalContent(props),
+    <>
+      <div className="modal-backdrop" onClick={props.onCancel} />
+      {modalContent(props)}
+    </>,
     typeof window !== 'undefined' && window.document.body ? window.document.body : document.body
   );
 } 

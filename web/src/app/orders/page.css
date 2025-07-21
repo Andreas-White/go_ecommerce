@@ -345,31 +345,3 @@
     justify-content: space-between;
   }
 } 
-
-.modal-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-dialog {
-  background: var(--card-background);
-  border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.18);
-  padding: 2rem 2.5rem;
-  min-width: 320px;
-  max-width: 90vw;
-  z-index: 1001;
-  position: relative;
-  color: var(--text-color);
-}
-
-.modal-backdrop {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.35);
-  z-index: 1000;
-} 
