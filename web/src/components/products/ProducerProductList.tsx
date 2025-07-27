@@ -36,10 +36,10 @@ interface ProducerProductListProps {
   onProductDeleted: (productId: string) => void;
 }
 
-export default function ProducerProductList({ 
-  products, 
-  onProductUpdated, 
-  onProductDeleted 
+export default function ProducerProductList({
+  products,
+  onProductUpdated,
+  onProductDeleted,
 }: ProducerProductListProps) {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
@@ -95,7 +95,11 @@ export default function ProducerProductList({
                 </div>
                 <div className="detail-item">
                   <span className="label">Stock:</span>
-                  <span className={`value ${product.stock === 0 ? 'out-of-stock' : ''}`}>
+                  <span
+                    className={`value ${
+                      product.stock === 0 ? 'out-of-stock' : ''
+                    }`}
+                  >
                     {product.stock} units
                   </span>
                 </div>
@@ -123,4 +127,4 @@ export default function ProducerProductList({
       </div>
     </div>
   );
-} 
+}

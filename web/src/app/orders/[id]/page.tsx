@@ -5,6 +5,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../lib/api';
 import Link from 'next/link';
 import './page.css';
+import Button from '@/components/ui/Button';
 
 interface OrderWithDetails {
   order: {
@@ -175,9 +176,9 @@ export default function OrderDetailsPage() {
         <div className="error-icon">❌</div>
         <h2>Error Loading Order</h2>
         <p>{error}</p>
-        <Link href="/orders" className="btn-primary">
-          Back to Orders
-        </Link>
+        <Button onClick={() => router.back()} variant="tertiary">
+          ← Back to Orders
+        </Button>
       </div>
     );
   }
@@ -188,9 +189,9 @@ export default function OrderDetailsPage() {
         <div className="error-icon">❌</div>
         <h2>Order Not Found</h2>
         <p>The order you're looking for could not be found.</p>
-        <Link href="/orders" className="btn-primary">
-          Back to Orders
-        </Link>
+        <Button onClick={() => router.back()} variant="tertiary">
+          ← Back to Orders
+        </Button>
       </div>
     );
   }
@@ -205,9 +206,9 @@ export default function OrderDetailsPage() {
   return (
     <div className="order-details-container">
       <div className="order-details-header">
-        <Link href="/orders" className="back-link">
+        <Button onClick={() => router.back()} variant="tertiary">
           ← Back to Orders
-        </Link>
+        </Button>
         <h1 className="order-details-title">Order Details</h1>
         <p className="order-details-subtitle">Order #{orderDetails.order.id.slice(0, 8)}</p>
       </div>

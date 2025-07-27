@@ -6,6 +6,7 @@ import (
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/services"
 	"go_ecommerce/pkg/utils"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -324,6 +325,7 @@ func (h *OrderHandler) CancelOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err := h.orderService.CancelOrder(ctx, request.OrderID)
+	log.Println("order cancelled", request.OrderID)
 	if err != nil {
 		utils.HandleAPIErrors(err, w, "handler/CancelOrder", http.StatusInternalServerError, "Failed to cancel order")
 		return

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/utils"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -236,6 +237,7 @@ func (r *OrderRepository) UpdateOrderStatus(ctx context.Context, orderID uuid.UU
 		UPDATE orders SET status = $2, payment_status = $3, updated_at = $4
 		WHERE id = $1
 	`
+	log.Println("updating order status", orderID, status, paymentStatus)
 
 	now := time.Now()
 	_, err := r.DB.ExecContext(ctx, query, orderID, status, paymentStatus, now)
@@ -301,7 +303,7 @@ func (r *OrderRepository) GetOrdersByProducerID(ctx context.Context, producerID 
 		FROM orders o
 		JOIN order_items oi ON o.id = oi.order_id
 		JOIN products p ON oi.product_id = p.id
-		WHERE p.user_id = $1 AND o.payment_status = 'paid'
+		WHERE p.user_id = $1 AND o.payment_status != 'pending'
 		ORDER BY o.created_at DESC
 	`
 

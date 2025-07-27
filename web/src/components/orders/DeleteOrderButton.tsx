@@ -9,7 +9,11 @@ interface DeleteOrderButtonProps {
   onDeleted: (orderId: string) => void;
 }
 
-export default function DeleteOrderButton({ orderId, disabled, onDeleted }: DeleteOrderButtonProps) {
+export default function DeleteOrderButton({
+  orderId,
+  disabled,
+  onDeleted,
+}: DeleteOrderButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -19,12 +23,7 @@ export default function DeleteOrderButton({ orderId, disabled, onDeleted }: Dele
     setError(null);
     try {
       // CSRF token will be fetched automatically
-      await api.post(
-        '/orders/delete',
-        { order_id: orderId },
-        {},
-        true
-      );
+      await api.post('/orders/delete', { order_id: orderId }, {}, true);
       onDeleted(orderId);
       setShowModal(false);
     } catch (err: any) {
@@ -35,10 +34,9 @@ export default function DeleteOrderButton({ orderId, disabled, onDeleted }: Dele
   };
 
   return (
-    <div className="delete-order-btn-wrapper">
+    <div>
       <Button
-        variant="secondary"
-        className="delete-order-btn"
+        variant="destructive"
         onClick={() => setShowModal(true)}
         disabled={loading || disabled}
         style={{ minWidth: 100 }}
@@ -53,13 +51,8 @@ export default function DeleteOrderButton({ orderId, disabled, onDeleted }: Dele
         onCancel={() => setShowModal(false)}
         loading={loading}
         confirmLabel="Delete Order"
-        confirmClassName="delete-order-btn"
       />
-      {error && !showModal && (
-        <div className="order-delete-error">
-          {error}
-        </div>
-      )}
+      {error && !showModal && <div className="order-delete-error">{error}</div>}
     </div>
   );
-} 
+}

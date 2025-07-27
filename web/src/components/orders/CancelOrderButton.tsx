@@ -9,7 +9,11 @@ interface CancelOrderButtonProps {
   onCanceled: (orderId: string) => void;
 }
 
-export default function CancelOrderButton({ orderId, status, onCanceled }: CancelOrderButtonProps) {
+export default function CancelOrderButton({
+  orderId,
+  status,
+  onCanceled,
+}: CancelOrderButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -23,12 +27,8 @@ export default function CancelOrderButton({ orderId, status, onCanceled }: Cance
     setError(null);
     try {
       // CSRF token will be fetched automatically
-      await api.post(
-        '/orders/cancel',
-        { order_id: orderId },
-        {},
-        true
-      );
+      await api.post('/orders/cancel', { order_id: orderId }, {}, true);
+      console.log('order cancelled');
       onCanceled(orderId);
       setShowModal(false);
     } catch (err: any) {
@@ -41,11 +41,11 @@ export default function CancelOrderButton({ orderId, status, onCanceled }: Cance
   return (
     <div style={{ display: 'inline-block', marginLeft: 8 }}>
       <Button
-        variant="secondary"
-        className="delete-order-btn"
+        variant="destructive"
+        // className="delete-order-btn"
         onClick={() => setShowModal(true)}
         disabled={loading}
-        style={{ minWidth: 100 }}
+        // style={{ minWidth: 100 }}
       >
         {loading ? 'Cancelling...' : 'Cancel Order'}
       </Button>
@@ -57,13 +57,15 @@ export default function CancelOrderButton({ orderId, status, onCanceled }: Cance
         onCancel={() => setShowModal(false)}
         loading={loading}
         confirmLabel="Cancel Order"
-        confirmClassName="delete-order-btn"
       />
       {error && !showModal && (
-        <div className="order-cancel-error" style={{ color: 'red', fontSize: 12 }}>
+        <div
+          className="order-cancel-error"
+          style={{ color: 'red', fontSize: 12 }}
+        >
           {error}
         </div>
       )}
     </div>
   );
-} 
+}

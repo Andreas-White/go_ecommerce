@@ -1,6 +1,6 @@
 import React from 'react';
 import FulfillOrderButton from './FulfillOrderButton';
-import './OrderList.css';
+import './ProducerOrderList.css';
 import CancelOrderButton from './CancelOrderButton';
 
 // Accept both flat and nested order structures
@@ -132,26 +132,36 @@ export default function ProducerOrderList({
                 <td>
                   {isActionable(order) ? (
                     <>
-                      {status !== 'canceled' && <FulfillOrderButton
-                        orderId={orderId}
-                        onFulfilled={() => onOrderFulfilled(orderId, nextStatus)}
-                        status={status}
-                        nextStatus={nextStatus}
-                      />}
-                      {status !== 'canceled' && <CancelOrderButton
-                        orderId={orderId}
-                        status={status}
-                        onCanceled={() => window.location.reload()}
-                      />}
+                      {status !== 'canceled' && (
+                        <FulfillOrderButton
+                          orderId={orderId}
+                          onFulfilled={() =>
+                            onOrderFulfilled(orderId, nextStatus)
+                          }
+                          status={status}
+                          nextStatus={nextStatus}
+                        />
+                      )}
+                      {status !== 'canceled' && (
+                        <CancelOrderButton
+                          orderId={orderId}
+                          status={status}
+                          onCanceled={() => window.location.reload()}
+                        />
+                      )}
                     </>
                   ) : (
                     <>
-                      {status !== 'canceled' && <span className="order-status-shipped">
-                        {orderStatusDisplay[status] || status}
-                      </span>}
-                      {status === 'canceled' && <span className="order-status-canceled">
-                        {orderStatusDisplay[status] || status}
-                      </span>}
+                      {status !== 'canceled' && (
+                        <span className="order-status-shipped">
+                          {orderStatusDisplay[status] || status}
+                        </span>
+                      )}
+                      {status === 'canceled' && (
+                        <span className="order-status-canceled">
+                          {orderStatusDisplay[status] || status}
+                        </span>
+                      )}
                     </>
                   )}
                 </td>

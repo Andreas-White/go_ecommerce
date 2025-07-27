@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import Link from 'next/link';
 import './page.css';
+import { Button } from '@/components/ui';
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
@@ -66,35 +67,26 @@ export default function ProfilePage() {
         <h2 className="profile-section-title">Account Settings</h2>
         
         <div className="profile-settings">
-          <Link 
-            href="/change-password"
-            className="profile-btn profile-btn-primary"
-          >
+          <Button variant="primary" onClick={() => router.push('/change-password')}>
             Change Password
-          </Link>
+          </Button>
 
           {user.is_producer && (
-            <Link 
-              href="/my-products"
-              className="profile-btn profile-btn-secondary"
-            >
+            <Button variant="primary" onClick={() => router.push('/my-products')}>
               Manage My Products
-            </Link>
+            </Button>
           )}
 
-          <Link 
-            href="/orders"
-            className="profile-btn profile-btn-secondary"
-          >
+          <Button variant="secondary" onClick={() => router.push('/orders')}>
             View My Orders
-          </Link>
+          </Button>
         </div>
       </div>
 
       <div className="profile-back-link">
-        <Link href="/" className="profile-link">
+        <Button variant="tertiary" onClick={() => router.push('/')}>
           Back to Home
-        </Link>
+        </Button>
       </div>
     </div>
   );

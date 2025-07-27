@@ -7,8 +7,10 @@ import './page.css';
 import { api } from '../../lib/api';
 import CartItem from '../../components/cart/CartItem';
 import { Button } from '@/components/ui';
+import { useRouter } from 'next/navigation';
 
 export default function CartPage() {
+  const router = useRouter();
   const { cartItems, loading, removeFromCart, updateCartItems, clearCart } =
     useCart();
   const { user } = useAuth();
@@ -191,22 +193,28 @@ export default function CartPage() {
               </div>
 
               {user ? (
-                <Link href="/checkout" className="cart-checkout-btn">
+                <Button variant="secondary" onClick={() => router.push('/checkout')}>
                   Proceed to Checkout
-                </Link>
+                </Button>
               ) : (
                 <div className="cart-login-prompt">
                   <p className="cart-login-text">Please log in to checkout</p>
-                  <Link href="/login" className="cart-checkout-btn">
+                  <Button
+                    variant="secondary"
+                    onClick={() => router.push('/login')}
+                  >
                     Login to Checkout
-                  </Link>
+                  </Button>
                 </div>
               )}
 
               <div className="cart-continue-shopping">
-                <Link href="/products" className="cart-continue-link">
+                <Button
+                  variant="tertiary"
+                  onClick={() => router.push('/products')}
+                >
                   Continue Shopping
-                </Link>
+                </Button>
               </div>
             </div>
           </div>

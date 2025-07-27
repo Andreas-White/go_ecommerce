@@ -72,6 +72,12 @@
   margin-top: 1rem;
 }
 
+.change-password-button-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
 .change-password-link {
   color: var(--primary-color);
   text-decoration: none;

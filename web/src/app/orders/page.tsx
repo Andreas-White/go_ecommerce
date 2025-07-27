@@ -3,10 +3,10 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
-import Link from 'next/link';
-import './page.css';
-import DeleteOrderButton from '../../components/orders/DeleteOrderButton';
 import { Button } from '@/components/ui';
+import OrderCard from '@/components/orders/OrderCard';
+import '@/components/orders/OrderCard.css';
+import './page.css';
 
 interface Order {
   id: string;
@@ -120,57 +120,23 @@ export default function OrdersPage() {
           <p className="empty-text">
             You haven't placed any orders yet. Start shopping to see your order history here!
           </p>
-          <Link href="/products" className="btn-primary">
+          <Button variant="secondary" onClick={() => router.push('/products')}>
             Browse Products
-          </Link>
+          </Button>
         </div>
       ) : (
         <div className="orders-content">
           <div className="orders-list">
             {orders.map((order) => (
-              <div key={order.id} className="order-card">
-                <div className="order-header">
-                  <div className="order-info">
-                    <h3 className="order-id">Order #{order.id.slice(0, 8)}</h3>
-                    <p className="order-date">{formatDate(order.created_at)}</p>
-                  </div>
-                  <div className="order-amount">
-                    ${order.total_amount.toFixed(2)}
-                  </div>
-                </div>
-                
-                <div className="order-status">
-                  <div className="status-section">
-                    <span className="status-label">Order Status:</span>
-                    <span className={`status-badge ${getStatusBadgeClass(order.status)}`}>
-                      {order.status}
-                    </span>
-                  </div>
-                  <div className="status-section">
-                    <span className="status-label">Payment Status:</span>
-                    <span className={`status-badge ${getPaymentStatusBadgeClass(order.payment_status)}`}>
-                      {order.payment_status}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="order-actions">
-                  <Button
-                    className="btn-secondary"
-                    style={{ minWidth: 100 }}
-                    onClick={() => router.push(`/orders/${order.id}`)}
-                  >
-                    View Details
-                  </Button>
-                  {/* Delete button for pending/processing orders */}
-                  {(order.status === 'pending' || order.status === 'processing') && (
-                    <DeleteOrderButton
-                      orderId={order.id}
-                      onDeleted={handleDeleteOrder}
-                    />
-                  )}
-                </div>
-              </div>
+              <OrderCard
+                key={order.id}
+                order={order}
+                onViewDetails={(orderId) => router.push(`/orders/${orderId}`)}
+                onDelete={handleDeleteOrder}
+                getStatusBadgeClass={getStatusBadgeClass}
+                getPaymentStatusBadgeClass={getPaymentStatusBadgeClass}
+                formatDate={formatDate}
+              />
             ))}
           </div>
         </div>

@@ -5,6 +5,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../lib/api';
 import Link from 'next/link';
 import './page.css';
+import { Button } from '@/components/ui';
 
 interface OrderWithDetails {
   order: {
@@ -167,9 +168,9 @@ export default function OrderConfirmationPage() {
         <div className="error-icon">❌</div>
         <h2>Error Loading Order</h2>
         <p>{error}</p>
-        <Link href="/profile" className="btn-primary">
+        <Button variant="secondary" onClick={() => router.push('/profile')}>
           Go to Profile
-        </Link>
+        </Button>
       </div>
     );
   }
@@ -180,9 +181,9 @@ export default function OrderConfirmationPage() {
         <div className="error-icon">❌</div>
         <h2>Order Not Found</h2>
         <p>The order you're looking for could not be found.</p>
-        <Link href="/profile" className="btn-primary">
+        <Button variant="secondary" onClick={() => router.push('/profile')}>
           Go to Profile
-        </Link>
+        </Button>
       </div>
     );
   }
@@ -340,12 +341,15 @@ export default function OrderConfirmationPage() {
         </div>
 
         <div className="confirmation-actions">
-          <Link href="/products" className="btn-secondary">
+          <Button
+            variant="secondary"
+            onClick={() => router.push('/products')}
+          >
             Continue Shopping
-          </Link>
-          <Link href="/orders" className="btn-primary">
+          </Button>
+          <Button variant="secondary" onClick={() => router.push('/orders')}>
             View My Orders
-          </Link>
+          </Button>
         </div>
       </div>
     </div>

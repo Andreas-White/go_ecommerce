@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useAuth } from '../../context/AuthContext';
@@ -9,7 +9,7 @@ import { Button } from '@/components/ui';
 export default function Header() {
   const { user, logout, loading } = useAuth();
   const { cartItems } = useCart();
-  
+
   // Calculate total items in cart
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
@@ -42,12 +42,11 @@ export default function Header() {
                 width={240}
                 height={80}
                 className="logo-light"
-                style={{ objectFit: 'contain'}}
+                style={{ objectFit: 'contain' }}
               />
             </div>
           </Link>
           <Link href="/products">Products</Link>
-          <Link href="/categories">Categories</Link>
         </div>
         <div className="header-right">
           <Link href="/cart" className="header-cart">
@@ -66,9 +65,9 @@ export default function Header() {
                   Producer Dashboard
                 </Link>
               )}
-              <Button 
-                variant="primary" 
-                className="header-logout-btn" 
+              <Button
+                variant="primary"
+                className="header-logout-btn"
                 onClick={handleLogout}
               >
                 Logout
@@ -84,4 +83,4 @@ export default function Header() {
       </nav>
     </header>
   );
-} 
+}

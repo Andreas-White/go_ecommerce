@@ -29,10 +29,16 @@ const modalContent = ({
       <h3>{title}</h3>
       <p>{message}</p>
       <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-        <Button variant="secondary" className="btn-cancel" onClick={onCancel} disabled={loading}>
+        <Button variant="secondary" onClick={onCancel} disabled={loading}>
           {cancelLabel}
         </Button>
-        <Button variant="secondary" className={confirmClassName} onClick={onConfirm} disabled={loading} style={{ minWidth: 100 }}>
+        <Button
+          variant="destructive"
+          className={confirmClassName}
+          onClick={onConfirm}
+          disabled={loading}
+          style={{ minWidth: 100 }}
+        >
           {loading ? 'Processing...' : confirmLabel}
         </Button>
       </div>
@@ -47,6 +53,8 @@ export default function ConfirmModal(props: ConfirmModalProps) {
       <div className="modal-backdrop" onClick={props.onCancel} />
       {modalContent(props)}
     </>,
-    typeof window !== 'undefined' && window.document.body ? window.document.body : document.body
+    typeof window !== 'undefined' && window.document.body
+      ? window.document.body
+      : document.body
   );
-} 
+}

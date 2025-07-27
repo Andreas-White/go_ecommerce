@@ -222,7 +222,7 @@ export default function ProductDetailsPage() {
                 <Button
                   onClick={handleAddToCart}
                   disabled={addingToCart}
-                  className="product-details-add-btn"
+                  variant='primary'
                 >
                   {addingToCart ? 'Adding...' : 'Add to Cart'}
                 </Button>

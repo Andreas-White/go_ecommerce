@@ -1,5 +1,8 @@
 .header {
   box-shadow: 0 2px 8px var(--shadow-color);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .header-nav {

@@ -179,16 +179,18 @@ export default function ChangePasswordPage() {
             </div>
           )}
         </div>
+        <div className="change-password-button-container">
+          <Button type="submit" variant="primary" disabled={loading} isLoading={loading}>
+            Change Password
+          </Button>
 
-        <Button type="submit" variant="primary" disabled={loading} isLoading={loading}>
-          Change Password
-        </Button>
+        </div>
       </form>
 
       <div className="change-password-back-link">
-        <Link href="/profile" className="change-password-link">
+        <Button variant="tertiary" onClick={() => router.push('/profile')}>
           Back to Profile
-        </Link>
+        </Button>
       </div>
     </div>
   );

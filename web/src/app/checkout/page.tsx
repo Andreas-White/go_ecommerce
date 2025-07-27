@@ -151,11 +151,11 @@ export default function CheckoutPage() {
   }
 
   if (!user) {
-    return null; // Will redirect to login
+    router.push('/login');
   }
 
   if (cartItems.length === 0) {
-    return null; // Will redirect to cart
+    router.push('/cart');
   }
 
   return (
