@@ -41,7 +41,6 @@ export default function OrdersPage() {
       const userOrders = await api.get<Order[]>('/orders/user');
       setOrders(userOrders || []);
     } catch (error) {
-      console.error('Failed to fetch orders:', error);
       setError('Failed to load order history. Please try again.');
     } finally {
       setLoading(false);
@@ -120,7 +119,7 @@ export default function OrdersPage() {
           <p className="empty-text">
             You haven't placed any orders yet. Start shopping to see your order history here!
           </p>
-          <Button variant="secondary" onClick={() => router.push('/products')}>
+          <Button variant="secondary" href='/products'>
             Browse Products
           </Button>
         </div>

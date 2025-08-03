@@ -48,17 +48,21 @@ const CATEGORIES = [
   'Health & Beauty',
   'Automotive',
   'Food & Beverages',
-  'Other'
+  'Other',
 ];
 
-export default function EditProductButton({ product, onProductUpdated, onCancel }: EditProductButtonProps) {
+export default function EditProductButton({
+  product,
+  onProductUpdated,
+  onCancel,
+}: EditProductButtonProps) {
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     price: 0,
     stock: 0,
     category_id: '',
-    image_url: ''
+    image_url: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,17 +78,22 @@ export default function EditProductButton({ product, onProductUpdated, onCancel 
       price: product.price || 0,
       stock: product.stock || 0,
       category_id: product.category_id || '',
-      image_url: product.image_url || ''
+      image_url: product.image_url || '',
     });
     setImagePreview(product.image_url || null);
     setImageFile(null);
   }, [product]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: name === 'price' || name === 'stock' ? parseFloat(value) || 0 : value
+      [name]:
+        name === 'price' || name === 'stock' ? parseFloat(value) || 0 : value,
     }));
   };
 
@@ -152,7 +161,12 @@ export default function EditProductButton({ product, onProductUpdated, onCancel 
 
     try {
       // Update product - CSRF token will be fetched automatically
-      const updatedProduct = await api.put<Product>(`/products/update?id=${product.id}`, { ...formData, image_url: imageUrl }, {}, true);
+      const updatedProduct = await api.put<Product>(
+        `/products/update?id=${product.id}`,
+        { ...formData, image_url: imageUrl },
+        {},
+        true
+      );
       onProductUpdated(updatedProduct);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -166,7 +180,11 @@ export default function EditProductButton({ product, onProductUpdated, onCancel 
       <div className="edit-product-modal">
         <div className="edit-product-form">
           <h4>Edit Product</h4>
-          {error && <Alert type="error">{error}</Alert>}
+          {error && (
+            <Alert type="error" onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="name">Product Name *</label>
@@ -226,7 +244,7 @@ export default function EditProductButton({ product, onProductUpdated, onCancel 
                 required
               >
                 <option value="">Select a category</option>
-                {CATEGORIES.map(category => (
+                {CATEGORIES.map((category) => (
                   <option key={category} value={category}>
                     {category}
                   </option>
@@ -240,10 +258,24 @@ export default function EditProductButton({ product, onProductUpdated, onCancel 
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
                 onClick={() => fileInputRef.current?.click()}
-                style={{ cursor: 'pointer', border: '2px dashed var(--border-color)', padding: '1rem', textAlign: 'center', background: '#fafbfc' }}
+                style={{
+                  cursor: 'pointer',
+                  border: '2px dashed var(--border-color)',
+                  padding: '1rem',
+                  textAlign: 'center',
+                  background: '#fafbfc',
+                }}
               >
                 {imagePreview ? (
-                  <img src={imagePreview} alt="Preview" style={{ maxWidth: '100%', maxHeight: 120, marginBottom: 8 }} />
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: 120,
+                      marginBottom: 8,
+                    }}
+                  />
                 ) : (
                   <span>Drag & drop an image here, or click to browse</span>
                 )}
@@ -258,11 +290,7 @@ export default function EditProductButton({ product, onProductUpdated, onCancel 
               {uploading && <div>Uploading image...</div>}
             </div>
             <div className="form-actions">
-              <Button
-                type="submit"
-                variant="primary"
-                disabled={loading}
-              >
+              <Button type="submit" variant="primary" disabled={loading}>
                 {loading ? (
                   <>
                     <LoadingSpinner />
@@ -286,4 +314,4 @@ export default function EditProductButton({ product, onProductUpdated, onCancel 
       </div>
     </div>
   );
-} 
+}

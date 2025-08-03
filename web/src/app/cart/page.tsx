@@ -6,11 +6,10 @@ import Link from 'next/link';
 import './page.css';
 import { api } from '../../lib/api';
 import CartItem from '../../components/cart/CartItem';
-import { Button } from '@/components/ui';
-import { useRouter } from 'next/navigation';
+import { Alert, Button } from '@/components/ui';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 export default function CartPage() {
-  const router = useRouter();
   const { cartItems, loading, removeFromCart, updateCartItems, clearCart } =
     useCart();
   const { user } = useAuth();
@@ -18,6 +17,8 @@ export default function CartPage() {
   const [productMap, setProductMap] = useState<{ [productId: string]: any }>(
     {}
   );
+  const [cartAlert, setCartAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isClearCartModalOpen, setIsClearCartModalOpen] = useState(false);
 
   // Memoize unique product IDs to avoid unnecessary re-computations
   const uniqueProductIds = useMemo(() => {
@@ -68,8 +69,9 @@ export default function CartPage() {
         await updateCartItems([
           { product_id: productId, quantity: newQuantity },
         ]);
+        setCartAlert({ type: 'success', message: 'Quantity updated' });
       } catch (error) {
-        console.error('Failed to update quantity:', error);
+        setCartAlert({ type: 'error', message: 'Failed to update quantity' });
       } finally {
         setUpdating(false);
       }
@@ -82,8 +84,9 @@ export default function CartPage() {
       setUpdating(true);
       try {
         await removeFromCart([{ product_id: productId, quantity: 1 }]);
+        setCartAlert({ type: 'success', message: 'Item removed from cart' });
       } catch (error) {
-        console.error('Failed to remove item:', error);
+        setCartAlert({ type: 'error', message: 'Failed to remove item from cart' });
       } finally {
         setUpdating(false);
       }
@@ -91,16 +94,20 @@ export default function CartPage() {
     [removeFromCart]
   );
 
-  const handleClearCart = useCallback(async () => {
-    if (confirm('Are you sure you want to clear your cart?')) {
-      setUpdating(true);
-      try {
-        await clearCart();
-      } catch (error) {
-        console.error('Failed to clear cart:', error);
-      } finally {
-        setUpdating(false);
-      }
+  const handleClearCart = useCallback(() => {
+    setIsClearCartModalOpen(true);
+  }, []);
+
+  const confirmClearCart = useCallback(async () => {
+    setUpdating(true);
+    try {
+      await clearCart();
+      setCartAlert({ type: 'success', message: 'Cart cleared' });
+    } catch (error) {
+      setCartAlert({ type: 'error', message: 'Failed to clear cart' });
+    } finally {
+      setUpdating(false);
+      setIsClearCartModalOpen(false);
     }
   }, [clearCart]);
 
@@ -122,6 +129,12 @@ export default function CartPage() {
   return (
     <div className="cart-container">
       <h1 className="cart-title">Shopping Cart</h1>
+
+      {cartAlert && (
+        <Alert type={cartAlert.type} onClose={() => setCartAlert(null)}>
+          {cartAlert.message}
+        </Alert>
+      )}
 
       {cartItems.length === 0 ? (
         <div className="cart-empty">
@@ -193,7 +206,7 @@ export default function CartPage() {
               </div>
 
               {user ? (
-                <Button variant="secondary" onClick={() => router.push('/checkout')}>
+                <Button variant="secondary" href='/checkout'>
                   Proceed to Checkout
                 </Button>
               ) : (
@@ -201,7 +214,7 @@ export default function CartPage() {
                   <p className="cart-login-text">Please log in to checkout</p>
                   <Button
                     variant="secondary"
-                    onClick={() => router.push('/login')}
+                    href='/login'
                   >
                     Login to Checkout
                   </Button>
@@ -211,7 +224,7 @@ export default function CartPage() {
               <div className="cart-continue-shopping">
                 <Button
                   variant="tertiary"
-                  onClick={() => router.push('/products')}
+                  href='/products'
                 >
                   Continue Shopping
                 </Button>
@@ -220,6 +233,15 @@ export default function CartPage() {
           </div>
         </div>
       )}
+      <ConfirmModal
+        open={isClearCartModalOpen}
+        onCancel={() => setIsClearCartModalOpen(false)}
+        onConfirm={confirmClearCart}
+        title="Clear Cart"
+        message="Are you sure you want to clear your cart?"
+        loading={updating}
+        confirmLabel="Clear"
+      />
     </div>
   );
 }

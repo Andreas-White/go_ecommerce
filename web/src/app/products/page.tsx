@@ -5,8 +5,10 @@ import { api } from '../../lib/api';
 import ProductFilterSort from '../../components/products/ProductFilterSort';
 import SearchBar from '../../components/common/SearchBar';
 import './page.css';
-import { Button } from '@/components/ui';
 import { useRouter } from 'next/navigation';
+import ProductGrid from '../../components/products/ProductGrid';
+import '../../components/products/ProductGrid.css';
+import Alert from '@/components/ui/Alert';
 
 interface Product {
   id: string;
@@ -31,6 +33,10 @@ export default function ProductsPage() {
   const [sortOrder, setSortOrder] = useState('asc');
   const { addToCart } = useCart();
   const router = useRouter();
+  const [cartAlert, setCartAlert] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
   useEffect(() => {
     fetchProducts();
   }, [searchTerm, category, sortBy, sortOrder]);
@@ -60,7 +66,6 @@ export default function ProductsPage() {
       setProducts(productsData);
       setError(null);
     } catch (error) {
-      console.error('Failed to fetch products:', error);
       setError('Failed to load products. Please try again.');
     } finally {
       setLoading(false);
@@ -76,12 +81,17 @@ export default function ProductsPage() {
           quantity: 1,
         },
       ]);
-      // Show success message (you could add a toast notification here)
-      alert(`${product.name} added to cart!`);
+      setCartAlert({
+        type: 'success',
+        message: `${product.name} added to cart!`,
+      });
     } catch (error) {
-      console.error('Failed to add to cart:', error);
-      alert('Failed to add item to cart. Please try again.');
+      setCartAlert({
+        type: 'error',
+        message: 'Failed to add item to cart. Please try again.',
+      });
     }
+    setTimeout(() => setCartAlert(null), 2000);
   };
 
   const handleSearchSubmit = () => {
@@ -120,6 +130,12 @@ export default function ProductsPage() {
         onSortOrderChange={setSortOrder}
       />
 
+      {cartAlert && (
+        <Alert type={cartAlert.type} onClose={() => setCartAlert(null)}>
+          {cartAlert.message}
+        </Alert>
+      )}
+
       {error && <div className="products-error">{error}</div>}
 
       {products.length === 0 ? (
@@ -133,69 +149,11 @@ export default function ProductsPage() {
           </p>
         </div>
       ) : (
-        <div className="products-grid">
-          {products.map((product) => (
-            <div key={product.id} className="product-card">
-              {product.image_url ? (
-                <img
-                  src={product.image_url}
-                  alt={product.name}
-                  className="product-card-image"
-                />
-              ) : (
-                <div className="product-image-placeholder">
-                  <span className="product-image-text">No Image</span>
-                </div>
-              )}
-
-              <h3 className="product-name">{product.name}</h3>
-
-              {product.company && (
-                <p className="product-company">by {product.company.name}</p>
-              )}
-
-              <p className="product-description">{product.description}</p>
-
-              <div className="product-price-stock">
-                <span className="product-price">
-                  ${product.price.toFixed(2)}
-                </span>
-                <span
-                  className={`product-stock${
-                    product.stock > 0
-                      ? ' product-stock-available'
-                      : ' product-stock-unavailable'
-                  }`}
-                >
-                  {product.stock > 0
-                    ? `${product.stock} in stock`
-                    : 'Out of stock'}
-                </span>
-              </div>
-
-              <div className="product-actions">
-                <Button
-                  variant="secondary"
-                  onClick={() => router.push(`/product/${product.id}`)}
-                >
-                  View Details
-                </Button>
-                <Button
-                  variant="primary"
-                  onClick={() => handleAddToCart(product)}
-                  disabled={product.stock <= 0}
-                  className={`product-add-btn${
-                    product.stock > 0
-                      ? ' product-add-btn-available'
-                      : ' product-add-btn-unavailable'
-                  }`}
-                >
-                  Add to Cart
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
+        <ProductGrid
+          products={products}
+          onViewDetails={(productId) => router.push(`/product/${productId}`)}
+          onAddToCart={handleAddToCart}
+        />
       )}
     </div>
   );

@@ -1,19 +1,22 @@
-"use client";
+'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import Link from 'next/link';
 import './page.css';
-import { Button } from '@/components/ui';
+import { Alert, Button } from '@/components/ui';
 
 function LoginForm() {
   const [formData, setFormData] = useState({
     email: '',
-    password: ''
+    password: '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
+  const [loginAlert, setLoginAlert] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+  } | null>(null);
   const { login, user, loading: authLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -29,7 +32,7 @@ function LoginForm() {
   useEffect(() => {
     const messageParam = searchParams.get('message');
     if (messageParam) {
-      setMessage(messageParam);
+      setLoginAlert({ type: 'info', message: messageParam });
     }
   }, [searchParams]);
 
@@ -52,7 +55,7 @@ function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setLoading(true);
@@ -61,6 +64,10 @@ function LoginForm() {
       router.push('/');
     } catch (error) {
       setErrors({ general: 'Invalid email or password. Please try again.' });
+      setLoginAlert({
+        type: 'error',
+        message: 'Invalid email or password. Please try again.',
+      });
     } finally {
       setLoading(false);
     }
@@ -68,16 +75,16 @@ function LoginForm() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
     // Clear error when user starts typing
     if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: '' }));
     }
     if (errors.general) {
-      setErrors(prev => ({ ...prev, general: '' }));
+      setErrors((prev) => ({ ...prev, general: '' }));
     }
   };
 
@@ -92,27 +99,21 @@ function LoginForm() {
 
   return (
     <div className="login-container">
-      <h1 className="login-title">
-        Log In
-      </h1>
-
-      {message && (
-        <div className="login-message-success">
-          {message}
-        </div>
-      )}
+      <h1 className="login-title">Log In</h1>
 
       {errors.general && (
-        <div className="login-message-error">
-          {errors.general}
-        </div>
+        <div className="login-message-error">{errors.general}</div>
+      )}
+
+      {loginAlert && (
+        <Alert type={loginAlert.type} onClose={() => setLoginAlert(null)}>
+          {loginAlert.message}
+        </Alert>
       )}
 
       <form onSubmit={handleSubmit}>
         <div className="login-form-group">
-          <label className="login-label">
-            Email *
-          </label>
+          <label className="login-label">Email *</label>
           <input
             type="email"
             name="email"
@@ -121,31 +122,32 @@ function LoginForm() {
             className={`login-input${errors.email ? ' login-input-error' : ''}`}
           />
           {errors.email && (
-            <div className="login-error-text">
-              {errors.email}
-            </div>
+            <div className="login-error-text">{errors.email}</div>
           )}
         </div>
 
         <div className="login-form-group">
-          <label className="login-label">
-            Password *
-          </label>
+          <label className="login-label">Password *</label>
           <input
             type="password"
             name="password"
             value={formData.password}
             onChange={handleChange}
-            className={`login-input${errors.password ? ' login-input-error' : ''}`}
+            className={`login-input${
+              errors.password ? ' login-input-error' : ''
+            }`}
           />
           {errors.password && (
-            <div className="login-error-text">
-              {errors.password}
-            </div>
+            <div className="login-error-text">{errors.password}</div>
           )}
         </div>
 
-        <Button type="submit" variant="primary" disabled={loading} isLoading={loading}>
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={loading}
+          isLoading={loading}
+        >
           Login
         </Button>
       </form>
@@ -158,9 +160,9 @@ function LoginForm() {
       </div>
 
       <div className="login-link-forgot">
-        <Link href="/change-password" className="login-link-primary login-link-small">
+        <Button variant="tertiary" href="/change-password">
           Forgot your password?
-        </Link>
+        </Button>
       </div>
     </div>
   );
@@ -168,8 +170,14 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="login-loading-container"><div>Loading...</div></div>}>
+    <Suspense
+      fallback={
+        <div className="login-loading-container">
+          <div>Loading...</div>
+        </div>
+      }
+    >
       <LoginForm />
     </Suspense>
   );
-} 
+}

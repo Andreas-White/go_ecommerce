@@ -101,8 +101,6 @@ export default function ProducerDashboard() {
       }
     } catch (err) {
       setError('Failed to load producer data');
-      console.error('Error fetching producer data:', err);
-      // Ensure products is always an array even on error
       setProducts([]);
     } finally {
       setLoadingData(false);
@@ -180,7 +178,11 @@ export default function ProducerDashboard() {
         <p>Manage your company profile and products</p>
       </div>
 
-      {error && <Alert type="error">{error}</Alert>}
+      {error && (
+        <Alert type="error" onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
 
       <div className="dashboard-content">
         {/* Company Section */}

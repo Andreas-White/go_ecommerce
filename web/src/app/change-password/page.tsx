@@ -2,7 +2,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
-import Link from 'next/link';
 import './page.css';
 import { Button } from '@/components/ui';
 
@@ -69,7 +68,6 @@ export default function ChangePasswordPage() {
       });
       setErrors({});
     } catch (error) {
-      console.error('Change password error:', error);
       setErrors({ general: 'Failed to change password. Please check your current password and try again.' });
     } finally {
       setLoading(false);
@@ -188,7 +186,7 @@ export default function ChangePasswordPage() {
       </form>
 
       <div className="change-password-back-link">
-        <Button variant="tertiary" onClick={() => router.push('/profile')}>
+        <Button variant="tertiary" href='/profile'>
           Back to Profile
         </Button>
       </div>

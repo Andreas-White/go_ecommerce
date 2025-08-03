@@ -2,7 +2,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
-import Link from 'next/link';
 import './page.css';
 import { Button } from '@/components/ui';
 
@@ -67,24 +66,24 @@ export default function ProfilePage() {
         <h2 className="profile-section-title">Account Settings</h2>
         
         <div className="profile-settings">
-          <Button variant="primary" onClick={() => router.push('/change-password')}>
+          <Button variant="primary" href='/change-password'>
             Change Password
           </Button>
 
           {user.is_producer && (
-            <Button variant="primary" onClick={() => router.push('/my-products')}>
+            <Button variant="primary" href='/my-products'>
               Manage My Products
             </Button>
           )}
 
-          <Button variant="secondary" onClick={() => router.push('/orders')}>
+          <Button variant="secondary" href='/orders'>
             View My Orders
           </Button>
         </div>
       </div>
 
       <div className="profile-back-link">
-        <Button variant="tertiary" onClick={() => router.push('/')}>
+        <Button variant="tertiary" href='/'>
           Back to Home
         </Button>
       </div>

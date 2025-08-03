@@ -30,13 +30,13 @@ interface CreateUpdateCompanyFormProps {
   saveLabel?: string;
 }
 
-export default function CreateUpdateCompanyForm({ 
-  company, 
-  onCompanyCreated, 
-  onCompanyUpdated, 
+export default function CreateUpdateCompanyForm({
+  company,
+  onCompanyCreated,
+  onCompanyUpdated,
   onCompanyDeleted,
   onCancel,
-  saveLabel 
+  saveLabel,
 }: CreateUpdateCompanyFormProps) {
   const [formData, setFormData] = useState({
     id: '',
@@ -44,7 +44,7 @@ export default function CreateUpdateCompanyForm({
     address: '',
     city: '',
     country: '',
-    zip_code: ''
+    zip_code: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,16 +60,16 @@ export default function CreateUpdateCompanyForm({
         address: company.address || '',
         city: company.city || '',
         country: company.country || '',
-        zip_code: company.zip_code || ''
+        zip_code: company.zip_code || '',
       });
     }
   }, [company]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -82,21 +82,30 @@ export default function CreateUpdateCompanyForm({
     try {
       if (isEditing) {
         // Update existing company - CSRF token will be fetched automatically
-        const result = await api.put<Company>('/companies/update', formData, {}, true);
+        const result = await api.put<Company>(
+          '/companies/update',
+          formData,
+          {},
+          true
+        );
         setSuccess('Company updated successfully!');
         if (onCompanyUpdated) {
           onCompanyUpdated(result);
         }
       } else {
         // Create new company - CSRF token will be fetched automatically
-        const result = await api.post<Company>('/companies/create', 
-        {
-          name: formData.name,
-          address: formData.address,
-          city: formData.city,
-          country: formData.country,
-          zip_code: formData.zip_code
-        }, {}, true);
+        const result = await api.post<Company>(
+          '/companies/create',
+          {
+            name: formData.name,
+            address: formData.address,
+            city: formData.city,
+            country: formData.country,
+            zip_code: formData.zip_code,
+          },
+          {},
+          true
+        );
         setSuccess('Company created successfully!');
         if (onCompanyCreated) {
           onCompanyCreated(result);
@@ -109,7 +118,7 @@ export default function CreateUpdateCompanyForm({
           address: '',
           city: '',
           country: '',
-          zip_code: ''
+          zip_code: '',
         });
       }
     } catch (err) {
@@ -122,9 +131,17 @@ export default function CreateUpdateCompanyForm({
   return (
     <div className="company-form-container">
       <h3>{isEditing ? 'Update Company Profile' : 'Create Company Profile'}</h3>
-      
-      {error && <Alert type="error">{error}</Alert>}
-      {success && <Alert type="success">{success}</Alert>}
+
+      {error && (
+        <Alert type="error" onClose={() => setError(null)}>
+          {error}
+        </Alert>
+      )}
+      {success && (
+        <Alert type="success" onClose={() => setSuccess(null)}>
+          {success}
+        </Alert>
+      )}
 
       <form onSubmit={handleSubmit} className="company-form">
         <div className="form-group">
@@ -191,24 +208,25 @@ export default function CreateUpdateCompanyForm({
         </div>
 
         <div className="form-actions">
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={loading}
-          >
+          <Button type="submit" variant="primary" disabled={loading}>
             {loading ? (
               <>
                 <LoadingSpinner />
-                {isEditing ? (saveLabel || 'Updating...') : 'Creating...'}
+                {isEditing ? saveLabel || 'Updating...' : 'Creating...'}
               </>
+            ) : isEditing ? (
+              saveLabel || 'Update Company'
             ) : (
-              isEditing ? (saveLabel || 'Update Company') : 'Create Company'
+              'Create Company'
             )}
           </Button>
           {isEditing && (
-            <DeleteCompanyButton companyId={company.id} onCompanyDeleted={onCompanyDeleted} />
+            <DeleteCompanyButton
+              companyId={company.id}
+              onCompanyDeleted={onCompanyDeleted}
+            />
           )}
-          
+
           {onCancel && (
             <Button
               type="button"
@@ -223,4 +241,4 @@ export default function CreateUpdateCompanyForm({
       </form>
     </div>
   );
-} 
+}

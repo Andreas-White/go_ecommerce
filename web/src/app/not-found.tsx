@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import './not-found.css';
+import { Button } from '@/components/ui';
 
 export default function NotFound() {
   return (
@@ -7,8 +7,8 @@ export default function NotFound() {
       <h1 className="not-found-title">404 - Page Not Found</h1>
       <p className="not-found-message">Sorry, the page you are looking for does not exist.</p>
       <div className="not-found-links">
-        <Link href="/" className="not-found-link">Go to Home</Link>
-        <Link href="/products" className="not-found-link">Browse Products</Link>
+        <Button variant="tertiary" href='/'>Go to Home</Button>
+        <Button variant="tertiary" href='/products'>Browse Products</Button>
       </div>
     </div>
   );

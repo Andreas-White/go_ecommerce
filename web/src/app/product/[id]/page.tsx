@@ -8,6 +8,7 @@ import Link from 'next/link';
 import './page.css';
 import AddReviewForm from '../../../components/products/AddReviewForm';
 import { Button } from '@/components/ui';
+import Alert from '@/components/ui/Alert';
 
 interface Product {
   id: string;
@@ -48,7 +49,10 @@ export default function ProductDetailsPage() {
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
-
+  const [cartAlert, setCartAlert] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
   const { addToCart } = useCart();
   const { user } = useAuth();
 
@@ -64,7 +68,6 @@ export default function ProductDetailsPage() {
       const productData = await api.get<Product>(`/product?id=${productId}`);
       setProduct(productData);
     } catch (error) {
-      console.error('Failed to fetch product:', error);
       setError('Failed to load product details.');
     } finally {
       setLoading(false);
@@ -78,8 +81,7 @@ export default function ProductDetailsPage() {
       );
       setReviews(reviewsData || []);
     } catch (error) {
-      console.error('Failed to fetch reviews:', error);
-      // Don't set error for reviews as it's not critical
+      setError('Failed to fetch reviews.');
     } finally {
       setLoading(false);
     }
@@ -97,10 +99,17 @@ export default function ProductDetailsPage() {
           quantity: quantity,
         },
       ]);
-      alert(`${quantity} ${quantity === 1 ? 'item' : 'items'} added to cart!`);
+      setCartAlert({
+        type: 'success',
+        message: `${quantity} ${
+          quantity === 1 ? 'item' : 'items'
+        } added to cart!`,
+      });
     } catch (error) {
-      console.error('Failed to add to cart:', error);
-      alert('Failed to add item to cart. Please try again.');
+      setCartAlert({
+        type: 'error',
+        message: 'Failed to add item to cart. Please try again.',
+      });
     } finally {
       setAddingToCart(false);
     }
@@ -143,6 +152,12 @@ export default function ProductDetailsPage() {
         <span> / </span>
         <span>{product.name}</span>
       </div>
+
+      {cartAlert && (
+        <Alert type={cartAlert.type} onClose={() => setCartAlert(null)}>
+          {cartAlert.message}
+        </Alert>
+      )}
 
       <div className="product-details-content">
         <div className="product-details-main">
@@ -222,7 +237,7 @@ export default function ProductDetailsPage() {
                 <Button
                   onClick={handleAddToCart}
                   disabled={addingToCart}
-                  variant='primary'
+                  variant="primary"
                 >
                   {addingToCart ? 'Adding...' : 'Add to Cart'}
                 </Button>

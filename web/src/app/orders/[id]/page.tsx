@@ -105,7 +105,6 @@ export default function OrderDetailsPage() {
       const details = await api.post<OrderWithDetails>('/orders/details', { order_id: orderId });
       setOrderDetails(details);
     } catch (error) {
-      console.error('Failed to fetch order details:', error);
       setError('Failed to load order details. Please try again.');
     } finally {
       setLoading(false);

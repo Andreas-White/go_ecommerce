@@ -9,6 +9,7 @@ import ShippingForm from '../../components/checkout/ShippingForm';
 import PaymentForm from '../../components/checkout/PaymentForm';
 import OrderSummaryDisplay from '../../components/checkout/OrderSummaryDisplay';
 import './page.css';
+import Alert from '@/components/ui/Alert';
 
 interface ShippingInfo {
   address: string;
@@ -56,6 +57,10 @@ export default function CheckoutPage() {
     payment_method: 'credit_card',
   });
   const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
+  const [checkoutAlert, setCheckoutAlert] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   // Redirect if not authenticated or cart is empty
   useEffect(() => {
@@ -104,8 +109,10 @@ export default function CheckoutPage() {
       ); // requireCSRF: true
       setOrderSummary(summary);
     } catch (error) {
-      console.error('Failed to process checkout:', error);
-      alert('Failed to process checkout. Please try again.');
+      setCheckoutAlert({
+        type: 'error',
+        message: 'Failed to process checkout. Please try again.',
+      });
       setCurrentStep(2);
     } finally {
       setLoading(false);
@@ -131,8 +138,10 @@ export default function CheckoutPage() {
       // Redirect to order confirmation page
       router.push(`/order-confirmation/${orderSummary.order_id}`);
     } catch (error) {
-      console.error('Failed to confirm order:', error);
-      alert('Failed to confirm order. Please try again.');
+      setCheckoutAlert({
+        type: 'error',
+        message: 'Failed to confirm order. Please try again.',
+      });
     } finally {
       setLoading(false);
     }
@@ -152,10 +161,12 @@ export default function CheckoutPage() {
 
   if (!user) {
     router.push('/login');
+    return;
   }
 
   if (cartItems.length === 0) {
     router.push('/cart');
+    return;
   }
 
   return (
@@ -164,6 +175,14 @@ export default function CheckoutPage() {
         <h1 className="checkout-title">Checkout</h1>
 
         <CheckoutStepper currentStep={currentStep} />
+        {checkoutAlert && (
+          <Alert
+            type={checkoutAlert.type}
+            onClose={() => setCheckoutAlert(null)}
+          >
+            {checkoutAlert.message}
+          </Alert>
+        )}
 
         <div className="checkout-steps">
           {currentStep === 1 && (

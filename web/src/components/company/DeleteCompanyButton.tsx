@@ -12,7 +12,10 @@ interface DeleteCompanyButtonProps {
   onCompanyDeleted?: () => void;
 }
 
-export default function DeleteCompanyButton({ companyId, onCompanyDeleted }: DeleteCompanyButtonProps) {
+export default function DeleteCompanyButton({
+  companyId,
+  onCompanyDeleted,
+}: DeleteCompanyButtonProps) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,8 +26,13 @@ export default function DeleteCompanyButton({ companyId, onCompanyDeleted }: Del
 
     try {
       // Delete company - CSRF token will be fetched automatically
-      await api.delete(`/companies/delete?company_id=${companyId}`, undefined, {}, true);
-      
+      await api.delete(
+        `/companies/delete?company_id=${companyId}`,
+        undefined,
+        {},
+        true
+      );
+
       onCompanyDeleted?.();
       setShowConfirmation(false);
     } catch (err) {
@@ -38,10 +46,17 @@ export default function DeleteCompanyButton({ companyId, onCompanyDeleted }: Del
     return (
       <div className="delete-company-confirmation-overlay">
         <div className="delete-confirmation-modal">
-          {error && <Alert type="error">{error}</Alert>}
+          {error && (
+            <Alert type="error" onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
           <div className="confirmation-content">
             <h4>Delete Company</h4>
-            <p>Are you sure you want to delete this company? This action cannot be undone.</p>
+            <p>
+              Are you sure you want to delete this company? This action cannot
+              be undone.
+            </p>
             <div className="confirmation-actions">
               <Button
                 variant="destructive"
@@ -72,11 +87,8 @@ export default function DeleteCompanyButton({ companyId, onCompanyDeleted }: Del
   }
 
   return (
-    <Button
-      variant="destructive"
-      onClick={() => setShowConfirmation(true)}
-    >
+    <Button variant="destructive" onClick={() => setShowConfirmation(true)}>
       Delete Company
     </Button>
   );
-} 
+}

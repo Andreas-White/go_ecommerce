@@ -3,7 +3,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../lib/api';
-import Link from 'next/link';
 import './page.css';
 import { Button } from '@/components/ui';
 
@@ -110,7 +109,6 @@ export default function OrderConfirmationPage() {
       });
       setOrderDetails(details);
     } catch (error) {
-      console.error('Failed to fetch order details:', error);
       setError('Failed to load order details. Please try again.');
     } finally {
       setLoading(false);
@@ -168,7 +166,7 @@ export default function OrderConfirmationPage() {
         <div className="error-icon">❌</div>
         <h2>Error Loading Order</h2>
         <p>{error}</p>
-        <Button variant="secondary" onClick={() => router.push('/profile')}>
+        <Button variant="secondary" href='/profile'>
           Go to Profile
         </Button>
       </div>
@@ -181,7 +179,7 @@ export default function OrderConfirmationPage() {
         <div className="error-icon">❌</div>
         <h2>Order Not Found</h2>
         <p>The order you're looking for could not be found.</p>
-        <Button variant="secondary" onClick={() => router.push('/profile')}>
+        <Button variant="secondary" href='/profile'>
           Go to Profile
         </Button>
       </div>
@@ -343,11 +341,11 @@ export default function OrderConfirmationPage() {
         <div className="confirmation-actions">
           <Button
             variant="secondary"
-            onClick={() => router.push('/products')}
+            href='/products'
           >
             Continue Shopping
           </Button>
-          <Button variant="secondary" onClick={() => router.push('/orders')}>
+          <Button variant="secondary" href='/orders'>
             View My Orders
           </Button>
         </div>

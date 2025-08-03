@@ -75,7 +75,6 @@ export default function RegisterPage() {
       // User is automatically logged in after registration
       router.push('/');
     } catch (error) {
-      console.error('Registration error:', error);
       setErrors({ general: 'Registration failed. Please try again.' });
     } finally {
       setLoading(false);

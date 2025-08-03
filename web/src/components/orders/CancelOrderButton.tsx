@@ -28,7 +28,6 @@ export default function CancelOrderButton({
     try {
       // CSRF token will be fetched automatically
       await api.post('/orders/cancel', { order_id: orderId }, {}, true);
-      console.log('order cancelled');
       onCanceled(orderId);
       setShowModal(false);
     } catch (err: any) {

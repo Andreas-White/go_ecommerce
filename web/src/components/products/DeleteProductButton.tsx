@@ -13,7 +13,11 @@ interface DeleteProductButtonProps {
   onProductDeleted: (productId: string) => void;
 }
 
-export default function DeleteProductButton({ productId, productName, onProductDeleted }: DeleteProductButtonProps) {
+export default function DeleteProductButton({
+  productId,
+  productName,
+  onProductDeleted,
+}: DeleteProductButtonProps) {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +29,7 @@ export default function DeleteProductButton({ productId, productName, onProductD
     try {
       // Delete product - CSRF token will be fetched automatically
       await api.delete(`/products/delete?id=${productId}`, undefined, {}, true);
-      
+
       onProductDeleted(productId);
       setShowConfirmation(false);
     } catch (err) {
@@ -39,10 +43,17 @@ export default function DeleteProductButton({ productId, productName, onProductD
     return (
       <div className="delete-product-confirmation-overlay">
         <div className="delete-product-confirmation-modal">
-          {error && <Alert type="error">{error}</Alert>}
+          {error && (
+            <Alert type="error" onClose={() => setError(null)}>
+              {error}
+            </Alert>
+          )}
           <div className="confirmation-content">
             <h4>Delete Product</h4>
-            <p>Are you sure you want to delete "{productName}"? This action cannot be undone.</p>
+            <p>
+              Are you sure you want to delete "{productName}"? This action
+              cannot be undone.
+            </p>
             <div className="confirmation-actions">
               <Button
                 variant="destructive"
@@ -73,11 +84,8 @@ export default function DeleteProductButton({ productId, productName, onProductD
   }
 
   return (
-    <Button
-      variant="destructive"
-      onClick={() => setShowConfirmation(true)}
-    >
+    <Button variant="destructive" onClick={() => setShowConfirmation(true)}>
       Delete
     </Button>
   );
-} 
+}

@@ -1,5 +1,4 @@
 'use client';
-import Link from 'next/link';
 import './error.css';
 import { Button } from '@/components/ui';
 
@@ -13,8 +12,8 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         <Button variant="secondary" onClick={() => reset()}>
           Retry
         </Button>
-        <Link href="/" className="error-link">Go to Home</Link>
-        <Link href="/products" className="error-link">Browse Products</Link>
+        <Button variant="tertiary" href='/'>Go to Home</Button>
+        <Button variant="tertiary" href='/products'>Browse Products</Button>
       </div>
     </div>
   );
