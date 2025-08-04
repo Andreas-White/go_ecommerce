@@ -14,13 +14,26 @@ interface Product {
   };
 }
 
+interface CartItem {
+  id?: string;
+  product_id: string;
+  quantity: number;
+  price?: number;
+}
+
 interface ProductGridProps {
   products: Product[];
+  cartItems: CartItem[];
   onViewDetails: (productId: string) => void;
   onAddToCart: (product: Product) => void;
 }
 
-const ProductGrid: React.FC<ProductGridProps> = ({ products, onViewDetails, onAddToCart }) => (
+const ProductGrid: React.FC<ProductGridProps> = ({
+  products,
+  cartItems,
+  onViewDetails,
+  onAddToCart,
+}) => (
   <div className="products-grid">
     {products.map((product) => (
       <ProductCard
@@ -28,9 +41,10 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, onViewDetails, onAd
         product={product}
         onViewDetails={onViewDetails}
         onAddToCart={onAddToCart}
+        cartItems={cartItems}
       />
     ))}
   </div>
 );
 
-export default ProductGrid; 
+export default ProductGrid;

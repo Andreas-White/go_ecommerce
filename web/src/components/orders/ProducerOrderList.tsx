@@ -2,6 +2,7 @@ import React from 'react';
 import FulfillOrderButton from './FulfillOrderButton';
 import './ProducerOrderList.css';
 import CancelOrderButton from './CancelOrderButton';
+import { Button } from '../ui';
 
 // Accept both flat and nested order structures
 export type ProducerOrderLike = {
@@ -37,6 +38,7 @@ const orderStatusDisplay: Record<string, string> = {
   shipped: 'Shipped',
   delivered: 'Delivered',
   canceled: 'Canceled',
+  canceled_by_user: 'Canceled by User',
 };
 
 const orderPaymentStatusDisplay: Record<string, string> = {
@@ -97,7 +99,17 @@ export default function ProducerOrderList({
 
   function isActionable(order: ProducerOrderLike): boolean {
     const status = getOrderStatus(order);
-    return status !== 'shipped' && status !== 'canceled';
+    return status !== 'shipped' && !isCanceled(order);
+  }
+
+  function isCanceled(order: ProducerOrderLike): boolean {
+    const status = getOrderStatus(order);
+    return status === 'canceled' || status === 'canceled_by_user';
+  }
+
+  function isShipped(order: ProducerOrderLike): boolean {
+    const status = getOrderStatus(order);
+    return status === 'shipped';
   }
 
   return (
@@ -121,7 +133,23 @@ export default function ProducerOrderList({
             const createdAt = getOrderCreatedAt(order);
             return (
               <tr key={orderId}>
-                <td>{orderStatusDisplay[status] || status}</td>
+                <td>
+                  {isShipped(order) && (
+                    <span className="order-status-shipped">
+                      {orderStatusDisplay[status] || status}
+                    </span>
+                  )}
+                  {isCanceled(order) && (
+                    <span className="order-status-canceled">
+                      {orderStatusDisplay[status] || status}
+                    </span>
+                  )}
+                  {!isShipped(order) && !isCanceled(order) && (
+                    <span className="order-status-default">
+                      {orderStatusDisplay[status] || status}
+                    </span>
+                  )}
+                </td>
                 <td>
                   {orderPaymentStatusDisplay[paymentStatus] || paymentStatus}
                 </td>
@@ -130,9 +158,9 @@ export default function ProducerOrderList({
                   {createdAt ? new Date(createdAt).toLocaleString() : 'N/A'}
                 </td>
                 <td>
-                  {isActionable(order) ? (
+                  {isActionable(order) && (
                     <>
-                      {status !== 'canceled' && (
+                      {
                         <FulfillOrderButton
                           orderId={orderId}
                           onFulfilled={() =>
@@ -141,29 +169,21 @@ export default function ProducerOrderList({
                           status={status}
                           nextStatus={nextStatus}
                         />
-                      )}
-                      {status !== 'canceled' && (
+                      }
+                      {
                         <CancelOrderButton
                           orderId={orderId}
                           status={status}
                           onCanceled={() => window.location.reload()}
                         />
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      {status !== 'canceled' && (
-                        <span className="order-status-shipped">
-                          {orderStatusDisplay[status] || status}
-                        </span>
-                      )}
-                      {status === 'canceled' && (
-                        <span className="order-status-canceled">
-                          {orderStatusDisplay[status] || status}
-                        </span>
-                      )}
+                      }
                     </>
                   )}
+                  {
+                    <Button href={`/orders/${orderId}`} variant="secondary">
+                      View Details
+                    </Button>
+                  }
                 </td>
               </tr>
             );

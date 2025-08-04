@@ -17,7 +17,10 @@ export default function CartPage() {
   const [productMap, setProductMap] = useState<{ [productId: string]: any }>(
     {}
   );
-  const [cartAlert, setCartAlert] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [cartAlert, setCartAlert] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+  } | null>(null);
   const [isClearCartModalOpen, setIsClearCartModalOpen] = useState(false);
 
   // Memoize unique product IDs to avoid unnecessary re-computations
@@ -69,7 +72,7 @@ export default function CartPage() {
         await updateCartItems([
           { product_id: productId, quantity: newQuantity },
         ]);
-        setCartAlert({ type: 'success', message: 'Quantity updated' });
+        setCartAlert({ type: 'info', message: 'Quantity updated' });
       } catch (error) {
         setCartAlert({ type: 'error', message: 'Failed to update quantity' });
       } finally {
@@ -84,9 +87,12 @@ export default function CartPage() {
       setUpdating(true);
       try {
         await removeFromCart([{ product_id: productId, quantity: 1 }]);
-        setCartAlert({ type: 'success', message: 'Item removed from cart' });
+        setCartAlert({ type: 'info', message: 'Item removed from cart' });
       } catch (error) {
-        setCartAlert({ type: 'error', message: 'Failed to remove item from cart' });
+        setCartAlert({
+          type: 'error',
+          message: 'Failed to remove item from cart',
+        });
       } finally {
         setUpdating(false);
       }
@@ -102,7 +108,7 @@ export default function CartPage() {
     setUpdating(true);
     try {
       await clearCart();
-      setCartAlert({ type: 'success', message: 'Cart cleared' });
+      setCartAlert({ type: 'info', message: 'Cart cleared' });
     } catch (error) {
       setCartAlert({ type: 'error', message: 'Failed to clear cart' });
     } finally {
@@ -112,7 +118,9 @@ export default function CartPage() {
   }, [clearCart]);
 
   const calculateTotal = useCallback(() => {
+    console.log('cartItems: ', cartItems);
     return cartItems.reduce((total, item) => {
+      console.log('item: ', item);
       const price = item?.price || 0;
       return total + price * item.quantity;
     }, 0);
@@ -206,26 +214,20 @@ export default function CartPage() {
               </div>
 
               {user ? (
-                <Button variant="secondary" href='/checkout'>
+                <Button variant="secondary" href="/checkout">
                   Proceed to Checkout
                 </Button>
               ) : (
                 <div className="cart-login-prompt">
                   <p className="cart-login-text">Please log in to checkout</p>
-                  <Button
-                    variant="secondary"
-                    href='/login'
-                  >
+                  <Button variant="secondary" href="/login">
                     Login to Checkout
                   </Button>
                 </div>
               )}
 
               <div className="cart-continue-shopping">
-                <Button
-                  variant="tertiary"
-                  href='/products'
-                >
+                <Button variant="tertiary" href="/products">
                   Continue Shopping
                 </Button>
               </div>

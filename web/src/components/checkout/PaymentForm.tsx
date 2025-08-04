@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './PaymentForm.css';
 import { Button } from '@/components/ui';
+import { Alert } from '@/components/ui';
 
 interface PaymentInfo {
   payment_method: string;
@@ -13,53 +14,61 @@ interface PaymentFormProps {
 }
 
 const paymentMethods = [
-  { 
-    value: 'credit_card', 
-    label: 'Credit Card', 
+  {
+    value: 'credit_card',
+    label: 'Credit Card',
     description: 'Visa, Mastercard, American Express',
-    icon: '💳'
+    icon: '💳',
   },
-  { 
-    value: 'paypal', 
-    label: 'PayPal', 
+  {
+    value: 'paypal',
+    label: 'PayPal',
     description: 'Pay with your PayPal account',
-    icon: '🔗'
+    icon: '🔗',
   },
-  { 
-    value: 'bank_transfer', 
-    label: 'Bank Transfer', 
+  {
+    value: 'bank_transfer',
+    label: 'Bank Transfer',
     description: 'Direct bank transfer',
-    icon: '🏦'
-  }
+    icon: '🏦',
+  },
 ];
 
-export default function PaymentForm({ paymentInfo, onSubmit, onBack }: PaymentFormProps) {
+export default function PaymentForm({
+  paymentInfo,
+  onSubmit,
+  onBack,
+}: PaymentFormProps) {
   const [formData, setFormData] = useState<PaymentInfo>(paymentInfo);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [paymentAlert, setPaymentAlert] = useState<{
+    type: 'success' | 'error' | 'info';
+    message: string;
+  } | null>(null);
 
   const handleInputChange = (field: keyof PaymentInfo, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
+    setFormData((prev) => ({ ...prev, [field]: value }));
+
     // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+    if (paymentAlert) {
+      setPaymentAlert(null);
     }
   };
 
   const validateForm = (): boolean => {
-    const newErrors: { [key: string]: string } = {};
-
     if (!formData.payment_method) {
-      newErrors.payment_method = 'Please select a payment method';
+      setPaymentAlert({
+        type: 'error',
+        message: 'Please select a payment method',
+      });
+      return false;
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return true;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (validateForm()) {
       onSubmit(formData);
     }
@@ -69,17 +78,21 @@ export default function PaymentForm({ paymentInfo, onSubmit, onBack }: PaymentFo
     <div className="payment-form">
       <h2 className="form-title">Payment Information</h2>
       <p className="form-subtitle">Choose your preferred payment method.</p>
-      
+
       <form onSubmit={handleSubmit}>
         <div className="form-section">
           <h3 className="section-title">Payment Method</h3>
-          
+
           <div className="payment-methods">
             {paymentMethods.map((method) => (
               <div
                 key={method.value}
-                className={`payment-method ${formData.payment_method === method.value ? 'selected' : ''}`}
-                onClick={() => handleInputChange('payment_method', method.value)}
+                className={`payment-method ${
+                  formData.payment_method === method.value ? 'selected' : ''
+                }`}
+                onClick={() =>
+                  handleInputChange('payment_method', method.value)
+                }
               >
                 <div className="method-info">
                   <div className="method-header">
@@ -88,22 +101,31 @@ export default function PaymentForm({ paymentInfo, onSubmit, onBack }: PaymentFo
                       name="payment_method"
                       value={method.value}
                       checked={formData.payment_method === method.value}
-                      onChange={() => handleInputChange('payment_method', method.value)}
+                      onChange={() =>
+                        handleInputChange('payment_method', method.value)
+                      }
                       className="method-radio"
                     />
                     <span className="method-icon">{method.icon}</span>
                     <div className="method-details">
                       <span className="method-label">{method.label}</span>
-                      <span className="method-description">{method.description}</span>
+                      <span className="method-description">
+                        {method.description}
+                      </span>
                     </div>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-          
-          {errors.payment_method && (
-            <span className="error-message">{errors.payment_method}</span>
+
+          {paymentAlert && (
+            <Alert
+              type={paymentAlert.type}
+              onClose={() => setPaymentAlert(null)}
+            >
+              {paymentAlert.message}
+            </Alert>
           )}
         </div>
 
@@ -111,7 +133,10 @@ export default function PaymentForm({ paymentInfo, onSubmit, onBack }: PaymentFo
           <div className="note-icon">🔒</div>
           <div className="note-content">
             <h4>Secure Payment</h4>
-            <p>Your payment information is encrypted and secure. We never store your full payment details.</p>
+            <p>
+              Your payment information is encrypted and secure. We never store
+              your full payment details.
+            </p>
           </div>
         </div>
 
@@ -126,4 +151,4 @@ export default function PaymentForm({ paymentInfo, onSubmit, onBack }: PaymentFo
       </form>
     </div>
   );
-} 
+}

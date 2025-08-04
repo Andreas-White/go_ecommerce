@@ -7,6 +7,7 @@ import (
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/repositories"
 	"go_ecommerce/pkg/utils"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -63,6 +64,9 @@ func (s *OrderService) ProcessCheckout(ctx context.Context, userID uuid.UUID, ch
 	var subtotal float64
 	var orderItems []models.OrderItemSummary
 
+	log.Println("cartItems: ", cartItems)
+	log.Println("checkoutRequest: ", checkoutRequest)
+
 	for _, item := range cartItems {
 		itemSubtotal := float64(item.Quantity) * item.Price
 		subtotal += itemSubtotal
@@ -75,6 +79,9 @@ func (s *OrderService) ProcessCheckout(ctx context.Context, userID uuid.UUID, ch
 			Subtotal:    itemSubtotal,
 		})
 	}
+
+	log.Println("subtotal: ", subtotal)
+	log.Println("checkoutRequest.ShippingInfo.Cost: ", checkoutRequest.ShippingInfo.Cost)
 
 	totalAmount := subtotal + checkoutRequest.ShippingInfo.Cost
 

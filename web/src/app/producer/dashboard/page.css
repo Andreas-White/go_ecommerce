@@ -152,14 +152,6 @@
 .order-list-table tr:last-child td {
   border-bottom: none;
 }
-.order-status-shipped {
-  color: var(--success-color, #16a34a);
-  font-weight: 500;
-}
-.order-status-canceled {
-  color: var(--error-color, #ef4444);
-  font-weight: 500;
-}
 .order-list-empty {
   color: var(--text-muted, #888);
   padding: 1.5rem 0;

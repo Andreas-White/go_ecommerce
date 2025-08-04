@@ -31,10 +31,10 @@ export default function ProductsPage() {
   const [category, setCategory] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
-  const { addToCart } = useCart();
+  const { cartItems, addToCart, updateCartItems } = useCart();
   const router = useRouter();
   const [cartAlert, setCartAlert] = useState<{
-    type: 'success' | 'error';
+    type: 'success' | 'error' | 'info';
     message: string;
   } | null>(null);
   useEffect(() => {
@@ -62,8 +62,10 @@ export default function ProductsPage() {
         productsData =
           (await api.get<Product[]>(`/products?${params.toString()}`)) || [];
       }
-
-      setProducts(productsData);
+      const inStockProducts = productsData.filter(
+        (product) => product.stock > 0
+      );
+      setProducts(inStockProducts);
       setError(null);
     } catch (error) {
       setError('Failed to load products. Please try again.');
@@ -73,25 +75,51 @@ export default function ProductsPage() {
   };
 
   const handleAddToCart = async (product: Product) => {
+    const existingCartItem = cartItems.find(
+      (item) => item.product_id === product.id
+    );
+
     try {
-      await addToCart([
-        {
-          product_id: product.id,
-          price: product.price,
-          quantity: 1,
-        },
-      ]);
-      setCartAlert({
-        type: 'success',
-        message: `${product.name} added to cart!`,
-      });
+      if (existingCartItem) {
+        // If item is already in cart, update its quantity
+        if (existingCartItem.quantity < product.stock) {
+          await updateCartItems([
+            {
+              product_id: product.id,
+              price: product.price,
+              quantity: existingCartItem.quantity + 1,
+            },
+          ]);
+          setCartAlert({
+            type: 'info',
+            message: `Increased ${product.name} quantity!`,
+          });
+        } else {
+          setCartAlert({
+            type: 'error',
+            message: `Cannot add more of ${product.name}. Stock limit reached.`,
+          });
+        }
+      } else {
+        // Otherwise, add the new item to the cart
+        await addToCart([
+          {
+            product_id: product.id,
+            price: product.price,
+            quantity: 1,
+          },
+        ]);
+        setCartAlert({
+          type: 'info',
+          message: `${product.name} added to cart!`,
+        });
+      }
     } catch (error) {
       setCartAlert({
         type: 'error',
-        message: 'Failed to add item to cart. Please try again.',
+        message: 'Failed to update cart. Please try again.',
       });
     }
-    setTimeout(() => setCartAlert(null), 2000);
   };
 
   const handleSearchSubmit = () => {
@@ -151,6 +179,7 @@ export default function ProductsPage() {
       ) : (
         <ProductGrid
           products={products}
+          cartItems={cartItems}
           onViewDetails={(productId) => router.push(`/product/${productId}`)}
           onAddToCart={handleAddToCart}
         />

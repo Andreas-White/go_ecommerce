@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import Link from 'next/link';
 import './page.css';
 import { Alert, Button } from '@/components/ui';
+import validateEmail from '@/lib/validation';
 
 function LoginForm() {
   const [formData, setFormData] = useState({
@@ -39,10 +40,9 @@ function LoginForm() {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
+    const emailError = validateEmail(formData.email);
+    if (emailError) {
+      newErrors.email = emailError;
     }
 
     if (!formData.password) {
@@ -63,7 +63,6 @@ function LoginForm() {
       await login(formData.email, formData.password);
       router.push('/');
     } catch (error) {
-      setErrors({ general: 'Invalid email or password. Please try again.' });
       setLoginAlert({
         type: 'error',
         message: 'Invalid email or password. Please try again.',
@@ -74,6 +73,7 @@ function LoginForm() {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    validateForm();
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -82,9 +82,6 @@ function LoginForm() {
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-    if (errors.general) {
-      setErrors((prev) => ({ ...prev, general: '' }));
     }
   };
 
@@ -100,10 +97,6 @@ function LoginForm() {
   return (
     <div className="login-container">
       <h1 className="login-title">Log In</h1>
-
-      {errors.general && (
-        <div className="login-message-error">{errors.general}</div>
-      )}
 
       {loginAlert && (
         <Alert type={loginAlert.type} onClose={() => setLoginAlert(null)}>

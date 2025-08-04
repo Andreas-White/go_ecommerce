@@ -17,30 +17,52 @@ interface ShippingFormProps {
 }
 
 const shippingMethods = [
-  { value: 'standard', label: 'Standard Shipping', cost: 5.99, days: '3-5 business days' },
-  { value: 'express', label: 'Express Shipping', cost: 12.99, days: '1-2 business days' },
-  { value: 'overnight', label: 'Overnight Shipping', cost: 24.99, days: 'Next business day' }
+  {
+    value: 'standard',
+    label: 'Standard Shipping',
+    cost: 5.99,
+    days: '3-5 business days',
+  },
+  {
+    value: 'express',
+    label: 'Express Shipping',
+    cost: 12.99,
+    days: '1-2 business days',
+  },
+  {
+    value: 'overnight',
+    label: 'Overnight Shipping',
+    cost: 24.99,
+    days: 'Next business day',
+  },
 ];
 
-export default function ShippingForm({ shippingInfo, onSubmit }: ShippingFormProps) {
+export default function ShippingForm({
+  shippingInfo,
+  onSubmit,
+}: ShippingFormProps) {
   const [formData, setFormData] = useState<ShippingInfo>(shippingInfo);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const handleInputChange = (field: keyof ShippingInfo, value: string | number) => {
+  const handleInputChange = (
+    field: keyof ShippingInfo,
+    value: string | number
+  ) => {
+    validateForm();
     if (field === 'method') {
-      const selected = shippingMethods.find(m => m.value === value);
-      setFormData(prev => ({
+      const selected = shippingMethods.find((m) => m.value === value);
+      setFormData((prev) => ({
         ...prev,
         method: value as string,
         cost: selected ? selected.cost : prev.cost,
       }));
     } else {
-      setFormData(prev => ({ ...prev, [field]: value }));
+      setFormData((prev) => ({ ...prev, [field]: value }));
     }
-    
+
     // Clear error when user starts typing
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+      setErrors((prev) => ({ ...prev, [field]: '' }));
     }
   };
 
@@ -66,23 +88,27 @@ export default function ShippingForm({ shippingInfo, onSubmit }: ShippingFormPro
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (validateForm()) {
       onSubmit(formData);
     }
   };
 
-  const selectedMethod = shippingMethods.find(method => method.value === formData.method);
+  const selectedMethod = shippingMethods.find(
+    (method) => method.value === formData.method
+  );
 
   return (
     <div className="shipping-form">
       <h2 className="form-title">Shipping Information</h2>
-      <p className="form-subtitle">Please provide your delivery address and shipping method.</p>
-      
+      <p className="form-subtitle">
+        Please provide your delivery address and shipping method.
+      </p>
+
       <form onSubmit={handleSubmit}>
         <div className="form-section">
           <h3 className="section-title">Delivery Address</h3>
-          
+
           <div className="form-group">
             <label htmlFor="address" className="form-label">
               Street Address *
@@ -95,7 +121,9 @@ export default function ShippingForm({ shippingInfo, onSubmit }: ShippingFormPro
               className={`form-input ${errors.address ? 'error' : ''}`}
               placeholder="Enter your street address"
             />
-            {errors.address && <span className="error-message">{errors.address}</span>}
+            {errors.address && (
+              <span className="error-message">{errors.address}</span>
+            )}
           </div>
 
           <div className="form-row">
@@ -111,7 +139,9 @@ export default function ShippingForm({ shippingInfo, onSubmit }: ShippingFormPro
                 className={`form-input ${errors.city ? 'error' : ''}`}
                 placeholder="Enter city"
               />
-              {errors.city && <span className="error-message">{errors.city}</span>}
+              {errors.city && (
+                <span className="error-message">{errors.city}</span>
+              )}
             </div>
 
             <div className="form-group">
@@ -126,7 +156,9 @@ export default function ShippingForm({ shippingInfo, onSubmit }: ShippingFormPro
                 className={`form-input ${errors.zip_code ? 'error' : ''}`}
                 placeholder="Enter ZIP code"
               />
-              {errors.zip_code && <span className="error-message">{errors.zip_code}</span>}
+              {errors.zip_code && (
+                <span className="error-message">{errors.zip_code}</span>
+              )}
             </div>
           </div>
 
@@ -142,18 +174,22 @@ export default function ShippingForm({ shippingInfo, onSubmit }: ShippingFormPro
               className={`form-input ${errors.country ? 'error' : ''}`}
               placeholder="Enter country"
             />
-            {errors.country && <span className="error-message">{errors.country}</span>}
+            {errors.country && (
+              <span className="error-message">{errors.country}</span>
+            )}
           </div>
         </div>
 
         <div className="form-section">
           <h3 className="section-title">Shipping Method</h3>
-          
+
           <div className="shipping-methods">
             {shippingMethods.map((method) => (
               <div
                 key={method.value}
-                className={`shipping-method ${formData.method === method.value ? 'selected' : ''}`}
+                className={`shipping-method ${
+                  formData.method === method.value ? 'selected' : ''
+                }`}
                 onClick={() => handleInputChange('method', method.value)}
               >
                 <div className="method-info">
@@ -167,7 +203,9 @@ export default function ShippingForm({ shippingInfo, onSubmit }: ShippingFormPro
                       className="method-radio"
                     />
                     <span className="method-label">{method.label}</span>
-                    <span className="method-cost">${method.cost.toFixed(2)}</span>
+                    <span className="method-cost">
+                      ${method.cost.toFixed(2)}
+                    </span>
                   </div>
                   <p className="method-days">{method.days}</p>
                 </div>
@@ -184,4 +222,4 @@ export default function ShippingForm({ shippingInfo, onSubmit }: ShippingFormPro
       </form>
     </div>
   );
-} 
+}

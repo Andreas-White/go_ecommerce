@@ -58,7 +58,7 @@ export default function CheckoutPage() {
   });
   const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
   const [checkoutAlert, setCheckoutAlert] = useState<{
-    type: 'success' | 'error';
+    type: 'success' | 'error' | 'info';
     message: string;
   } | null>(null);
 
@@ -108,10 +108,14 @@ export default function CheckoutPage() {
         true
       ); // requireCSRF: true
       setOrderSummary(summary);
+      setCheckoutAlert({
+        type: 'success',
+        message: 'Order processed successfully.',
+      });
     } catch (error) {
       setCheckoutAlert({
         type: 'error',
-        message: 'Failed to process checkout. Please try again.',
+        message: 'Failed to process order. Please try again.',
       });
       setCurrentStep(2);
     } finally {
@@ -157,16 +161,6 @@ export default function CheckoutPage() {
         <div>Loading checkout...</div>
       </div>
     );
-  }
-
-  if (!user) {
-    router.push('/login');
-    return;
-  }
-
-  if (cartItems.length === 0) {
-    router.push('/cart');
-    return;
   }
 
   return (

@@ -203,6 +203,22 @@
   color: white;
 }
 
+
+.order-status-shipped {
+  color: var(--success-color, #16a34a);
+  font-weight: 500;
+}
+
+.order-status-canceled {
+  color: var(--error-color, #ef4444);
+  font-weight: 500;
+}
+
+.order-status-default {
+  color: var(--info-color, #3b82f6);
+  font-weight: 500;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .order-header {

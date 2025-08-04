@@ -2,20 +2,44 @@ import React from 'react';
 import './CartItem.css';
 import { Button } from '@/components/ui';
 
+interface CartItemType {
+  id?: string;
+  product_id: string;
+  quantity: number;
+  price?: number;
+  product_name?: string;
+  image_url?: string;
+}
+
+interface ProductType {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  category_id: string;
+  image_url?: string;
+  company?: {
+    name: string;
+  };
+}
+
+interface CartItemProps {
+  item: CartItemType;
+  product: ProductType;
+  updating: boolean;
+  onQuantityChange: (productId: string, newQuantity: number) => void;
+  onRemove: (productId: string) => void;
+}
+
 export default function CartItem({
   item,
   product,
   updating,
   onQuantityChange,
   onRemove,
-}: {
-  item: any;
-  product: any;
-  updating: boolean;
-  onQuantityChange: (productId: string, newQuantity: number) => void;
-  onRemove: (productId: string) => void;
-}) {
-  const price = item?.price || 0;
+}: CartItemProps) {
+  const price = product?.price || 0;
   return (
     <div className={`cart-item`}>
       <div className="cart-item-info">

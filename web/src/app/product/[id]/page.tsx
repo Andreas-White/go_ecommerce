@@ -50,7 +50,7 @@ export default function ProductDetailsPage() {
   const [quantity, setQuantity] = useState(1);
   const [addingToCart, setAddingToCart] = useState(false);
   const [cartAlert, setCartAlert] = useState<{
-    type: 'success' | 'error';
+    type: 'success' | 'error' | 'info';
     message: string;
   } | null>(null);
   const { addToCart } = useCart();
@@ -100,7 +100,7 @@ export default function ProductDetailsPage() {
         },
       ]);
       setCartAlert({
-        type: 'success',
+        type: 'info',
         message: `${quantity} ${
           quantity === 1 ? 'item' : 'items'
         } added to cart!`,

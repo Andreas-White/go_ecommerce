@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import styles from './Button.module.css';
 import Spinner from './Spinner';
 
@@ -34,20 +35,24 @@ export default function Button({
 
   if (href) {
     return (
-      <a
+      <Link
         href={href}
         className={classes}
         role="button"
         aria-disabled={disabled || isLoading}
         tabIndex={disabled || isLoading ? -1 : 0}
-        onClick={e => {
-          if (disabled || isLoading) e.preventDefault();
-          if (props.onClick) props.onClick(e as any);
+        onClick={(e) => {
+          if (disabled || isLoading) {
+            e.preventDefault();
+            return;
+          }
+          if (props.onClick) {
+            props.onClick(e as any);
+          }
         }}
       >
-        {isLoading && <Spinner />}
-        {children}
-      </a>
+        {isLoading ? <Spinner /> : children}
+      </Link>
     );
   }
 
@@ -59,8 +64,7 @@ export default function Button({
       aria-disabled={disabled || isLoading}
       {...props}
     >
-      {isLoading && <Spinner />}
-      {children}
+      {isLoading ? <Spinner /> : children}
     </button>
   );
 } 
