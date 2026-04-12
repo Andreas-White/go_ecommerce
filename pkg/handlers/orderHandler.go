@@ -78,60 +78,101 @@ func (h *OrderHandler) ConfirmOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var request struct {
-		OrderID uuid.UUID `json:"order_id"`
+		OrderGroupID uuid.UUID `json:"order_group_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		utils.HandleAPIErrors(err, w, "handler/ConfirmOrder", http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if request.OrderID == uuid.Nil {
-		utils.HandleAPIErrors(nil, w, "handler/ConfirmOrder", http.StatusBadRequest, "Order ID is required")
+	if request.OrderGroupID == uuid.Nil {
+		utils.HandleAPIErrors(nil, w, "handler/ConfirmOrder", http.StatusBadRequest, "Order Group ID is required")
 		return
 	}
 
-	// Confirm the order and process payment
-	orderWithDetails, err := h.orderService.ConfirmOrder(ctx, request.OrderID, user.ID)
+	// Confirm the order group and process payment
+	confirmedOrders, err := h.orderService.ConfirmOrderGroup(ctx, request.OrderGroupID, user.ID)
 	if err != nil {
-		utils.HandleAPIErrors(err, w, "handler/ConfirmOrder", http.StatusInternalServerError, "Failed to confirm order")
+		utils.HandleAPIErrors(err, w, "handler/ConfirmOrder", http.StatusInternalServerError, "Failed to confirm order group")
 		return
 	}
 
-	// Return the complete order details
-	utils.RespondWithJSON(w, http.StatusCreated, orderWithDetails)
+	// Return the complete order details for all confirmed orders
+	utils.RespondWithJSON(w, http.StatusCreated, confirmedOrders)
 }
 
-// GetOrderSummary retrieves the order summary for review
-func (h *OrderHandler) GetOrderSummary(w http.ResponseWriter, r *http.Request) {
+// GetOrderGroupSummary retrieves the order group summary for review
+func (h *OrderHandler) GetOrderGroupSummary(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Get user from context (must be authenticated)
 	user := middleware.GetUserFromContext(r, w)
 	if user == nil {
-		utils.HandleAPIErrors(nil, w, "handler/GetOrderSummary", http.StatusUnauthorized, "User must be authenticated")
+		utils.HandleAPIErrors(nil, w, "handler/GetOrderGroupSummary", http.StatusUnauthorized, "User must be authenticated")
 		return
 	}
 
 	var request struct {
-		OrderID uuid.UUID `json:"order_id"`
+		OrderGroupID uuid.UUID `json:"order_group_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		utils.HandleAPIErrors(err, w, "handler/GetOrderSummary", http.StatusBadRequest, "Invalid request payload")
+		utils.HandleAPIErrors(err, w, "handler/GetOrderGroupSummary", http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
-	if request.OrderID == uuid.Nil {
-		utils.HandleAPIErrors(nil, w, "handler/GetOrderSummary", http.StatusBadRequest, "Order ID is required")
+	if request.OrderGroupID == uuid.Nil {
+		utils.HandleAPIErrors(nil, w, "handler/GetOrderGroupSummary", http.StatusBadRequest, "Order Group ID is required")
 		return
 	}
 
-	orderSummary, err := h.orderService.GetOrderSummary(ctx, request.OrderID)
+	groupSummary, err := h.orderService.GetOrderGroupSummary(ctx, request.OrderGroupID)
 	if err != nil {
-		utils.HandleAPIErrors(err, w, "handler/GetOrderSummary", http.StatusInternalServerError, "Failed to get order summary")
+		utils.HandleAPIErrors(err, w, "handler/GetOrderGroupSummary", http.StatusInternalServerError, "Failed to get order group summary")
 		return
 	}
 
-	utils.RespondWithJSON(w, http.StatusOK, orderSummary)
+	utils.RespondWithJSON(w, http.StatusOK, groupSummary)
+}
+
+// GetOrderGroupDetails retrieves complete order details for a group of orders
+func (h *OrderHandler) GetOrderGroupDetails(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	// Get user from context (must be authenticated)
+	user := middleware.GetUserFromContext(r, w)
+	if user == nil {
+		utils.HandleAPIErrors(nil, w, "handler/GetOrderGroupDetails", http.StatusUnauthorized, "User must be authenticated")
+		return
+	}
+
+	var request struct {
+		OrderGroupID uuid.UUID `json:"order_group_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		utils.HandleAPIErrors(err, w, "handler/GetOrderGroupDetails", http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if request.OrderGroupID == uuid.Nil {
+		utils.HandleAPIErrors(nil, w, "handler/GetOrderGroupDetails", http.StatusBadRequest, "Order Group ID is required")
+		return
+	}
+
+	groupDetails, err := h.orderService.GetOrderGroupDetails(ctx, request.OrderGroupID)
+	if err != nil {
+		utils.HandleAPIErrors(err, w, "handler/GetOrderGroupDetails", http.StatusInternalServerError, "Failed to get order group details")
+		return
+	}
+
+	if len(groupDetails) > 0 {
+		// Verify the order belongs to the authenticated user
+		if groupDetails[0].Order.UserID != user.ID {
+			utils.HandleAPIErrors(nil, w, "handler/GetOrderGroupDetails", http.StatusForbidden, "Access denied")
+			return
+		}
+	}
+
+	utils.RespondWithJSON(w, http.StatusOK, groupDetails)
 }
 
 // GetOrderDetails retrieves complete order details including items, payment, and shipping

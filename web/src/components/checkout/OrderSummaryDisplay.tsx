@@ -31,8 +31,14 @@ interface OrderSummary {
   payment_info: PaymentInfo;
 }
 
+interface OrderGroupSummary {
+  order_group_id: string;
+  total_amount: number;
+  orders: OrderSummary[];
+}
+
 interface OrderSummaryDisplayProps {
-  orderSummary: OrderSummary | null;
+  orderSummary: OrderGroupSummary | null;
   loading: boolean;
   onConfirm: () => void;
   onBack: () => void;
@@ -67,7 +73,8 @@ export default function OrderSummaryDisplay({
   // Memoize unique product IDs to avoid unnecessary re-computations
   const uniqueProductIds = useMemo(() => {
     if (!orderSummary) return [];
-    return Array.from(new Set(orderSummary.items.map(item => item.product_id)));
+    const allItems = orderSummary.orders.flatMap(o => o.items);
+    return Array.from(new Set(allItems.map(item => item.product_id)));
   }, [orderSummary]);
 
   // Fetch products only when the set of unique product IDs changes
@@ -110,13 +117,19 @@ export default function OrderSummaryDisplay({
     );
   }
 
+  const allItems = orderSummary.orders.flatMap(o => o.items);
+  const totalShippingCost = orderSummary.orders.reduce((sum, o) => sum + o.shipping_cost, 0);
+
   // Calculate subtotal using product prices from fetched data
-  const subtotal = orderSummary.items.reduce((sum, item) => {
+  const subtotal = allItems.reduce((sum, item) => {
     const product = productMap[item.product_id];
     const price = product?.price || 0;
     return sum + (price * item.quantity);
   }, 0);
-  const total = subtotal + orderSummary.shipping_cost;
+  const total = orderSummary.total_amount || (subtotal + totalShippingCost);
+
+  // Take shipping and payment info from the first order, as they are shared
+  const firstOrderInfo = orderSummary.orders[0];
 
   return (
     <div className="order-summary">
@@ -128,7 +141,7 @@ export default function OrderSummaryDisplay({
         <div className="summary-section">
           <h3 className="section-title">Order Items</h3>
           <div className="order-items">
-            {orderSummary.items.map((item, index) => {
+            {allItems.map((item, index) => {
               const product = productMap[item.product_id];
               const price = product?.price || 0;
               const itemSubtotal = price * item.quantity;
@@ -156,23 +169,23 @@ export default function OrderSummaryDisplay({
           <div className="info-card">
             <div className="info-row">
               <span className="info-label">Address:</span>
-              <span className="info-value">{orderSummary.shipping_info.address}</span>
+              <span className="info-value">{firstOrderInfo.shipping_info.address}</span>
             </div>
             <div className="info-row">
               <span className="info-label">City:</span>
-              <span className="info-value">{orderSummary.shipping_info.city}</span>
+              <span className="info-value">{firstOrderInfo.shipping_info.city}</span>
             </div>
             <div className="info-row">
               <span className="info-label">Country:</span>
-              <span className="info-value">{orderSummary.shipping_info.country}</span>
+              <span className="info-value">{firstOrderInfo.shipping_info.country}</span>
             </div>
             <div className="info-row">
               <span className="info-label">ZIP Code:</span>
-              <span className="info-value">{orderSummary.shipping_info.zip_code}</span>
+              <span className="info-value">{firstOrderInfo.shipping_info.zip_code}</span>
             </div>
             <div className="info-row">
               <span className="info-label">Method:</span>
-              <span className="info-value">{getShippingMethodLabel(orderSummary.shipping_info.method)}</span>
+              <span className="info-value">{getShippingMethodLabel(firstOrderInfo.shipping_info.method)}</span>
             </div>
           </div>
         </div>
@@ -183,7 +196,7 @@ export default function OrderSummaryDisplay({
           <div className="info-card">
             <div className="info-row">
               <span className="info-label">Payment Method:</span>
-              <span className="info-value">{getPaymentMethodLabel(orderSummary.payment_info.payment_method)}</span>
+              <span className="info-value">{getPaymentMethodLabel(firstOrderInfo.payment_info.payment_method)}</span>
             </div>
           </div>
         </div>
@@ -197,8 +210,8 @@ export default function OrderSummaryDisplay({
               <span className="total-value">${subtotal.toFixed(2)}</span>
             </div>
             <div className="total-row">
-              <span className="total-label">Shipping:</span>
-              <span className="total-value">${orderSummary.shipping_cost.toFixed(2)}</span>
+              <span className="total-label">Shipping (Multiple Producers):</span>
+              <span className="total-value">${totalShippingCost.toFixed(2)}</span>
             </div>
             <div className="total-row total-final">
               <span className="total-label">Total:</span>

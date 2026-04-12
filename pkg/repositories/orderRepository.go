@@ -20,6 +20,7 @@ type IOrderRepository interface {
 	GetOrderByID(ctx context.Context, orderID uuid.UUID) (*models.Order, error)
 	GetOrderWithDetails(ctx context.Context, orderID uuid.UUID) (*models.OrderWithDetails, error)
 	GetOrdersByUserID(ctx context.Context, userID uuid.UUID) ([]models.Order, error)
+	GetOrdersByGroupID(ctx context.Context, groupID uuid.UUID) ([]models.Order, error)
 	GetOrdersByProducerID(ctx context.Context, producerID uuid.UUID) ([]models.OrderWithDetails, error)
 	UpdateOrderStatus(ctx context.Context, orderID uuid.UUID, status string, paymentStatus string) error
 	UpdatePaymentStatus(ctx context.Context, paymentID uuid.UUID, status string, transactionID *string) error
@@ -39,8 +40,8 @@ func NewOrderRepository(db *sql.DB) IOrderRepository {
 
 func (r *OrderRepository) CreateOrder(ctx context.Context, order *models.Order) error {
 	query := `
-		INSERT INTO orders (id, user_id, total_amount, status, payment_status, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO orders (id, order_group_id, user_id, total_amount, status, payment_status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 
 	now := time.Now()
@@ -48,7 +49,7 @@ func (r *OrderRepository) CreateOrder(ctx context.Context, order *models.Order) 
 	order.UpdatedAt = &now
 
 	_, err := r.DB.ExecContext(ctx, query,
-		order.ID, order.UserID, order.TotalAmount, order.Status, order.PaymentStatus,
+		order.ID, order.OrderGroupID, order.UserID, order.TotalAmount, order.Status, order.PaymentStatus,
 		order.CreatedAt, order.UpdatedAt)
 
 	if err != nil {
@@ -120,13 +121,13 @@ func (r *OrderRepository) CreateShipping(ctx context.Context, shipping *models.S
 
 func (r *OrderRepository) GetOrderByID(ctx context.Context, orderID uuid.UUID) (*models.Order, error) {
 	query := `
-		SELECT id, user_id, total_amount, status, payment_status, created_at, updated_at
+		SELECT id, order_group_id, user_id, total_amount, status, payment_status, created_at, updated_at
 		FROM orders WHERE id = $1
 	`
 
 	var order models.Order
 	err := r.DB.QueryRowContext(ctx, query, orderID).Scan(
-		&order.ID, &order.UserID, &order.TotalAmount, &order.Status, &order.PaymentStatus,
+		&order.ID, &order.OrderGroupID, &order.UserID, &order.TotalAmount, &order.Status, &order.PaymentStatus,
 		&order.CreatedAt, &order.UpdatedAt)
 
 	if err != nil {
@@ -207,7 +208,7 @@ func (r *OrderRepository) GetOrderWithDetails(ctx context.Context, orderID uuid.
 
 func (r *OrderRepository) GetOrdersByUserID(ctx context.Context, userID uuid.UUID) ([]models.Order, error) {
 	query := `
-		SELECT id, user_id, total_amount, status, payment_status, created_at, updated_at
+		SELECT id, order_group_id, user_id, total_amount, status, payment_status, created_at, updated_at
 		FROM orders WHERE user_id = $1 ORDER BY created_at DESC
 	`
 
@@ -221,10 +222,37 @@ func (r *OrderRepository) GetOrdersByUserID(ctx context.Context, userID uuid.UUI
 	for rows.Next() {
 		var order models.Order
 		err := rows.Scan(
-			&order.ID, &order.UserID, &order.TotalAmount, &order.Status, &order.PaymentStatus,
+			&order.ID, &order.OrderGroupID, &order.UserID, &order.TotalAmount, &order.Status, &order.PaymentStatus,
 			&order.CreatedAt, &order.UpdatedAt)
 		if err != nil {
 			return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetOrdersByUserID", userID.String())
+		}
+		orders = append(orders, order)
+	}
+
+	return orders, nil
+}
+
+func (r *OrderRepository) GetOrdersByGroupID(ctx context.Context, groupID uuid.UUID) ([]models.Order, error) {
+	query := `
+		SELECT id, order_group_id, user_id, total_amount, status, payment_status, created_at, updated_at
+		FROM orders WHERE order_group_id = $1 ORDER BY created_at DESC
+	`
+
+	rows, err := r.DB.QueryContext(ctx, query, groupID)
+	if err != nil {
+		return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetOrdersByGroupID", groupID.String())
+	}
+	defer rows.Close()
+
+	var orders []models.Order
+	for rows.Next() {
+		var order models.Order
+		err := rows.Scan(
+			&order.ID, &order.OrderGroupID, &order.UserID, &order.TotalAmount, &order.Status, &order.PaymentStatus,
+			&order.CreatedAt, &order.UpdatedAt)
+		if err != nil {
+			return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetOrdersByGroupID", groupID.String())
 		}
 		orders = append(orders, order)
 	}
@@ -299,7 +327,7 @@ func (r *OrderRepository) UpdateProductStock(ctx context.Context, productID uuid
 
 func (r *OrderRepository) GetOrdersByProducerID(ctx context.Context, producerID uuid.UUID) ([]models.OrderWithDetails, error) {
 	query := `
-		SELECT DISTINCT o.id, o.user_id, o.total_amount, o.status, o.payment_status, o.created_at, o.updated_at
+		SELECT DISTINCT o.id, o.order_group_id, o.user_id, o.total_amount, o.status, o.payment_status, o.created_at, o.updated_at
 		FROM orders o
 		JOIN order_items oi ON o.id = oi.order_id
 		JOIN products p ON oi.product_id = p.id
@@ -317,7 +345,7 @@ func (r *OrderRepository) GetOrdersByProducerID(ctx context.Context, producerID 
 	for rows.Next() {
 		var order models.Order
 		err := rows.Scan(
-			&order.ID, &order.UserID, &order.TotalAmount, &order.Status, &order.PaymentStatus,
+			&order.ID, &order.OrderGroupID, &order.UserID, &order.TotalAmount, &order.Status, &order.PaymentStatus,
 			&order.CreatedAt, &order.UpdatedAt)
 		if err != nil {
 			return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetOrdersByProducerID", producerID.String())
@@ -354,7 +382,7 @@ func (r *OrderRepository) UpdateShippingTracking(ctx context.Context, orderID uu
 func (r *OrderRepository) GetSalesReport(ctx context.Context, producerID uuid.UUID, startDate, endDate *time.Time, category *string) (*models.SalesReportResponse, error) {
 	// Build the base query for orders with producer's products
 	baseQuery := `
-		SELECT DISTINCT o.id, o.user_id, o.total_amount, o.status, o.payment_status, o.created_at, o.updated_at
+		SELECT DISTINCT o.id, o.order_group_id, o.user_id, o.total_amount, o.status, o.payment_status, o.created_at, o.updated_at
 		FROM orders o
 		JOIN order_items oi ON o.id = oi.order_id
 		JOIN products p ON oi.product_id = p.id
@@ -400,7 +428,7 @@ func (r *OrderRepository) GetSalesReport(ctx context.Context, producerID uuid.UU
 	for rows.Next() {
 		var order models.Order
 		err := rows.Scan(
-			&order.ID, &order.UserID, &order.TotalAmount, &order.Status, &order.PaymentStatus,
+			&order.ID, &order.OrderGroupID, &order.UserID, &order.TotalAmount, &order.Status, &order.PaymentStatus,
 			&order.CreatedAt, &order.UpdatedAt)
 		if err != nil {
 			return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetSalesReport", producerID.String())

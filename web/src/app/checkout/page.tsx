@@ -24,6 +24,12 @@ interface PaymentInfo {
   payment_method: string;
 }
 
+interface OrderGroupSummary {
+  order_group_id: string;
+  total_amount: number;
+  orders: OrderSummary[];
+}
+
 interface OrderSummary {
   order_id: string;
   total_amount: number;
@@ -56,7 +62,7 @@ export default function CheckoutPage() {
   const [paymentInfo, setPaymentInfo] = useState<PaymentInfo>({
     payment_method: 'credit_card',
   });
-  const [orderSummary, setOrderSummary] = useState<OrderSummary | null>(null);
+  const [orderSummary, setOrderSummary] = useState<OrderGroupSummary | null>(null);
   const [checkoutAlert, setCheckoutAlert] = useState<{
     type: 'success' | 'error' | 'info';
     message: string;
@@ -97,7 +103,7 @@ export default function CheckoutPage() {
 
       const cartId = cartItemsWithDetails[0].cart_id;
 
-      const summary = await api.post<OrderSummary>(
+      const summary = await api.post<OrderGroupSummary>(
         '/orders/checkout',
         {
           cart_id: cartId,
@@ -131,7 +137,7 @@ export default function CheckoutPage() {
       await api.post(
         '/orders/confirm',
         {
-          order_id: orderSummary.order_id,
+          order_group_id: orderSummary.order_group_id,
         },
         undefined,
         true
@@ -140,7 +146,7 @@ export default function CheckoutPage() {
       await clearCart();
 
       // Redirect to order confirmation page
-      router.push(`/order-confirmation/${orderSummary.order_id}`);
+      router.push(`/order-confirmation/${orderSummary.order_group_id}`);
     } catch (error) {
       setCheckoutAlert({
         type: 'error',

@@ -113,7 +113,7 @@ func (r *CartRepository) GetAllCartItemsByCartID(ctx context.Context, cartID uui
 	query := `SELECT 
         ci.id, ci.cart_id, ci.product_id, ci.quantity, ci.price,
         p.name as product_name, p.description as product_description, p.stock as product_stock,
-        p.category as product_category, p.image_url as product_image_url
+        p.category as product_category, p.image_url as product_image_url, p.user_id as product_user_id
         FROM cart_items ci
         JOIN products p ON ci.product_id = p.id
         WHERE ci.cart_id = $1`
@@ -130,7 +130,7 @@ func (r *CartRepository) GetAllCartItemsByCartID(ctx context.Context, cartID uui
 		err := rows.Scan(
 			&item.ID, &item.CartID, &item.ProductID, &item.Quantity, &item.Price,
 			&item.ProductName, &item.ProductDescription, &item.ProductStock,
-			&item.ProductCategory, &item.ProductImageUrl,
+			&item.ProductCategory, &item.ProductImageUrl, &item.ProductUserID,
 		)
 		if err != nil {
 			return nil, utils.HandleRepositoryErrors(ctx, err, "repository/GetAllCartItemsByCartID", cartID.String())

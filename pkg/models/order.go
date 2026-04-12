@@ -8,6 +8,7 @@ import (
 
 type Order struct {
 	ID            uuid.UUID  `json:"id" db:"id"`
+	OrderGroupID  *uuid.UUID `json:"order_group_id,omitempty" db:"order_group_id"`
 	UserID        uuid.UUID  `json:"user_id" db:"user_id"`
 	TotalAmount   float64    `json:"total_amount" db:"total_amount"`
 	Status        string     `json:"status" db:"status"`
@@ -38,6 +39,13 @@ type PaymentInfo struct {
 	PaymentMethod string `json:"payment_method"`
 	// Note: Actual payment details are handled by payment gateway
 	// This is just for method selection
+}
+
+// OrderGroupSummary represents the summary of all orders generated from a checkout
+type OrderGroupSummary struct {
+	OrderGroupID uuid.UUID      `json:"order_group_id"`
+	TotalAmount  float64        `json:"total_amount"`
+	Orders       []OrderSummary `json:"orders"`
 }
 
 // OrderSummary represents the order details for review

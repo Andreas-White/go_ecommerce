@@ -7,20 +7,20 @@ import (
 	"go_ecommerce/pkg/models"
 	"go_ecommerce/pkg/repositories"
 	"go_ecommerce/pkg/utils"
-	"log"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type IOrderService interface {
-	ProcessCheckout(ctx context.Context, userID uuid.UUID, checkoutRequest models.CheckoutRequest) (*models.OrderSummary, error)
-	GetOrderSummary(ctx context.Context, orderID uuid.UUID) (*models.OrderSummary, error)
+	ProcessCheckout(ctx context.Context, userID uuid.UUID, checkoutRequest models.CheckoutRequest) (*models.OrderGroupSummary, error)
+	GetOrderGroupSummary(ctx context.Context, groupID uuid.UUID) (*models.OrderGroupSummary, error)
+	GetOrderGroupDetails(ctx context.Context, groupID uuid.UUID) ([]models.OrderWithDetails, error)
 	GetOrderWithDetails(ctx context.Context, orderID uuid.UUID) (*models.OrderWithDetails, error)
 	GetUserOrders(ctx context.Context, userID uuid.UUID) ([]models.Order, error)
 	GetProducerOrders(ctx context.Context, producerID uuid.UUID) ([]models.OrderWithDetails, error)
-	ConfirmOrder(ctx context.Context, orderID uuid.UUID, userID uuid.UUID) (*models.OrderWithDetails, error)
-	ProcessPayment(ctx context.Context, orderID uuid.UUID) error
+	ConfirmOrderGroup(ctx context.Context, groupID uuid.UUID, userID uuid.UUID) ([]models.OrderWithDetails, error)
+	ProcessGroupPayment(ctx context.Context, groupID uuid.UUID) error
 	FulfillOrder(ctx context.Context, producerID uuid.UUID, fulfillmentRequest models.OrderFulfillmentRequest) (*models.OrderFulfillmentResponse, error)
 	GetSalesReport(ctx context.Context, producerID uuid.UUID, request models.SalesReportRequest) (*models.SalesReportResponse, error)
 	CancelOrder(ctx context.Context, orderID uuid.UUID) error
@@ -41,7 +41,7 @@ func NewOrderService(orderRepo repositories.IOrderRepository, cartRepo repositor
 	}
 }
 
-func (s *OrderService) ProcessCheckout(ctx context.Context, userID uuid.UUID, checkoutRequest models.CheckoutRequest) (*models.OrderSummary, error) {
+func (s *OrderService) ProcessCheckout(ctx context.Context, userID uuid.UUID, checkoutRequest models.CheckoutRequest) (*models.OrderGroupSummary, error) {
 	// 1. Get cart items
 	cartItems, err := s.cartRepo.GetAllCartItemsByCartID(ctx, checkoutRequest.CartID)
 	if err != nil {
@@ -60,153 +60,213 @@ func (s *OrderService) ProcessCheckout(ctx context.Context, userID uuid.UUID, ch
 		}
 	}
 
-	// 3. Calculate totals
-	var subtotal float64
-	var orderItems []models.OrderItemSummary
-
-	log.Println("cartItems: ", cartItems)
-	log.Println("checkoutRequest: ", checkoutRequest)
-
+	// 3. Group cart items by producer (ProductUserID)
+	groupedItems := make(map[uuid.UUID][]models.CartItemProductDetails)
 	for _, item := range cartItems {
-		itemSubtotal := float64(item.Quantity) * item.Price
-		subtotal += itemSubtotal
+		groupedItems[item.ProductUserID] = append(groupedItems[item.ProductUserID], item)
+	}
 
-		orderItems = append(orderItems, models.OrderItemSummary{
-			ProductID:   item.ProductID,
-			ProductName: item.ProductName,
-			Quantity:    item.Quantity,
-			Price:       item.Price,
-			Subtotal:    itemSubtotal,
+	orderGroupID := uuid.New()
+	var groupTotalAmount float64
+	var orderSummaries []models.OrderSummary
+
+	// 4. Create an order for each producer
+	for producerID, items := range groupedItems {
+		_ = producerID // if we need it
+
+		var subtotal float64
+		var dbOrderItems []models.OrderItem
+		var summaryItems []models.OrderItemSummary
+
+		orderID := uuid.New()
+
+		for _, item := range items {
+			itemSubtotal := float64(item.Quantity) * item.Price
+			subtotal += itemSubtotal
+
+			summaryItems = append(summaryItems, models.OrderItemSummary{
+				ProductID:   item.ProductID,
+				ProductName: item.ProductName,
+				Quantity:    item.Quantity,
+				Price:       item.Price,
+				Subtotal:    itemSubtotal,
+			})
+
+			dbOrderItems = append(dbOrderItems, models.OrderItem{
+				ID:        uuid.New(),
+				OrderID:   orderID,
+				ProductID: item.ProductID,
+				Quantity:  item.Quantity,
+				Price:     item.Price,
+			})
+		}
+
+		// Calculate shipping cost per producer
+		// For simplicity, we use a flat rate of $5.00 per producer
+		producerShippingCost := 5.0
+		producerTotalAmount := subtotal + producerShippingCost
+
+		groupTotalAmount += producerTotalAmount
+
+		// Create the order with pending status
+		order := &models.Order{
+			ID:            orderID,
+			OrderGroupID:  &orderGroupID,
+			UserID:        userID,
+			TotalAmount:   producerTotalAmount,
+			Status:        "pending",
+			PaymentStatus: "pending",
+		}
+
+		err = s.orderRepo.CreateOrder(ctx, order)
+		if err != nil {
+			return nil, utils.HandleServiceErrors(ctx, err, "service/ProcessCheckout")
+		}
+
+		err = s.orderRepo.CreateOrderItems(ctx, dbOrderItems)
+		if err != nil {
+			return nil, utils.HandleServiceErrors(ctx, err, "service/ProcessCheckout")
+		}
+
+		// Create payment record for this specific order
+		payment := &models.Payment{
+			ID:            uuid.New(),
+			OrderID:       orderID,
+			Amount:        producerTotalAmount,
+			PaymentMethod: checkoutRequest.PaymentInfo.PaymentMethod,
+			Status:        "pending",
+			TransactionID: nil,
+		}
+
+		err = s.orderRepo.CreatePayment(ctx, payment)
+		if err != nil {
+			return nil, utils.HandleServiceErrors(ctx, err, "service/ProcessCheckout")
+		}
+
+		// Create shipping record for this specific order
+		orderShippingCost := producerShippingCost
+		shipping := &models.Shipping{
+			ID:           uuid.New(),
+			OrderID:      orderID,
+			Method:       &checkoutRequest.ShippingInfo.Method,
+			TrackingCode: nil,
+			Cost:         &orderShippingCost,
+			Address:      checkoutRequest.ShippingInfo.Address,
+			City:         checkoutRequest.ShippingInfo.City,
+			Country:      checkoutRequest.ShippingInfo.Country,
+			ZipCode:      checkoutRequest.ShippingInfo.ZipCode,
+		}
+
+		err = s.orderRepo.CreateShipping(ctx, shipping)
+		if err != nil {
+			return nil, utils.HandleServiceErrors(ctx, err, "service/ProcessCheckout")
+		}
+
+		orderSummaries = append(orderSummaries, models.OrderSummary{
+			OrderID:      orderID,
+			TotalAmount:  producerTotalAmount,
+			ShippingCost: producerShippingCost,
+			Items:        summaryItems,
+			ShippingInfo: checkoutRequest.ShippingInfo,
+			PaymentInfo:  checkoutRequest.PaymentInfo,
 		})
 	}
 
-	log.Println("subtotal: ", subtotal)
-	log.Println("checkoutRequest.ShippingInfo.Cost: ", checkoutRequest.ShippingInfo.Cost)
-
-	totalAmount := subtotal + checkoutRequest.ShippingInfo.Cost
-
-	// 4. Create the order with pending status
-	orderID := uuid.New()
-	order := &models.Order{
-		ID:            orderID,
-		UserID:        userID,
-		TotalAmount:   totalAmount,
-		Status:        "pending",
-		PaymentStatus: "pending",
+	// 5. Create order group summary for review
+	groupSummary := &models.OrderGroupSummary{
+		OrderGroupID: orderGroupID,
+		TotalAmount:  groupTotalAmount,
+		Orders:       orderSummaries,
 	}
 
-	err = s.orderRepo.CreateOrder(ctx, order)
-	if err != nil {
-		return nil, utils.HandleServiceErrors(ctx, err, "service/ProcessCheckout")
-	}
-
-	// 5. Create order items
-	var dbOrderItems []models.OrderItem
-	for _, item := range orderItems {
-		orderItem := models.OrderItem{
-			ID:        uuid.New(),
-			OrderID:   order.ID,
-			ProductID: item.ProductID,
-			Quantity:  item.Quantity,
-			Price:     item.Price,
-		}
-		dbOrderItems = append(dbOrderItems, orderItem)
-	}
-
-	err = s.orderRepo.CreateOrderItems(ctx, dbOrderItems)
-	if err != nil {
-		return nil, utils.HandleServiceErrors(ctx, err, "service/ProcessCheckout")
-	}
-
-	// 6. Create payment record with pending status
-	payment := &models.Payment{
-		ID:            uuid.New(),
-		OrderID:       order.ID,
-		Amount:        totalAmount,
-		PaymentMethod: checkoutRequest.PaymentInfo.PaymentMethod,
-		Status:        "pending",
-		TransactionID: nil,
-	}
-
-	err = s.orderRepo.CreatePayment(ctx, payment)
-	if err != nil {
-		return nil, utils.HandleServiceErrors(ctx, err, "service/ProcessCheckout")
-	}
-
-	// 7. Create shipping record
-	shipping := &models.Shipping{
-		ID:           uuid.New(),
-		OrderID:      order.ID,
-		Method:       &checkoutRequest.ShippingInfo.Method,
-		TrackingCode: nil,
-		Cost:         &checkoutRequest.ShippingInfo.Cost,
-		Address:      checkoutRequest.ShippingInfo.Address,
-		City:         checkoutRequest.ShippingInfo.City,
-		Country:      checkoutRequest.ShippingInfo.Country,
-		ZipCode:      checkoutRequest.ShippingInfo.ZipCode,
-	}
-
-	err = s.orderRepo.CreateShipping(ctx, shipping)
-	if err != nil {
-		return nil, utils.HandleServiceErrors(ctx, err, "service/ProcessCheckout")
-	}
-
-	// 8. Create order summary for review
-	orderSummary := &models.OrderSummary{
-		OrderID:      orderID,
-		TotalAmount:  totalAmount,
-		ShippingCost: checkoutRequest.ShippingInfo.Cost,
-		Items:        orderItems,
-		ShippingInfo: checkoutRequest.ShippingInfo,
-		PaymentInfo:  checkoutRequest.PaymentInfo,
-	}
-
-	return orderSummary, nil
+	return groupSummary, nil
 }
 
-func (s *OrderService) GetOrderSummary(ctx context.Context, orderID uuid.UUID) (*models.OrderSummary, error) {
-	orderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, orderID)
+func (s *OrderService) GetOrderGroupSummary(ctx context.Context, groupID uuid.UUID) (*models.OrderGroupSummary, error) {
+	orders, err := s.orderRepo.GetOrdersByGroupID(ctx, groupID)
 	if err != nil {
-		return nil, utils.HandleServiceErrors(ctx, err, "service/GetOrderSummary")
+		return nil, utils.HandleServiceErrors(ctx, err, "service/GetOrderGroupSummary")
 	}
 
-	// Convert to order summary
-	var orderItems []models.OrderItemSummary
-	for _, item := range orderWithDetails.Items {
-		orderItems = append(orderItems, models.OrderItemSummary{
-			ProductID:   item.ProductID,
-			ProductName: "", // Would need to fetch from product repo
-			Quantity:    item.Quantity,
-			Price:       item.Price,
-			Subtotal:    float64(item.Quantity) * item.Price,
+	var groupTotal float64
+	var orderSummaries []models.OrderSummary
+
+	for _, order := range orders {
+		orderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, order.ID)
+		if err != nil {
+			return nil, utils.HandleServiceErrors(ctx, err, "service/GetOrderGroupSummary")
+		}
+
+		var orderItems []models.OrderItemSummary
+		for _, item := range orderWithDetails.Items {
+			// Product Name is empty because GetOrderWithDetails doesn't fetch products table, just order_items
+			orderItems = append(orderItems, models.OrderItemSummary{
+				ProductID:   item.ProductID,
+				ProductName: "", // Would need to fetch from product repo to get name
+				Quantity:    item.Quantity,
+				Price:       item.Price,
+				Subtotal:    float64(item.Quantity) * item.Price,
+			})
+		}
+
+		var shippingCost float64
+		if orderWithDetails.Shipping.Cost != nil {
+			shippingCost = *orderWithDetails.Shipping.Cost
+		}
+
+		shippingInfo := models.ShippingInfo{
+			Address: orderWithDetails.Shipping.Address,
+			City:    orderWithDetails.Shipping.City,
+			Country: orderWithDetails.Shipping.Country,
+			ZipCode: orderWithDetails.Shipping.ZipCode,
+		}
+		if orderWithDetails.Shipping.Method != nil {
+			shippingInfo.Method = *orderWithDetails.Shipping.Method
+		}
+		shippingInfo.Cost = shippingCost
+
+		paymentInfo := models.PaymentInfo{
+			PaymentMethod: orderWithDetails.Payment.PaymentMethod,
+		}
+
+		orderSummaries = append(orderSummaries, models.OrderSummary{
+			OrderID:      order.ID,
+			TotalAmount:  order.TotalAmount,
+			ShippingCost: shippingCost,
+			Items:        orderItems,
+			ShippingInfo: shippingInfo,
+			PaymentInfo:  paymentInfo,
 		})
+
+		groupTotal += order.TotalAmount
 	}
 
-	shippingInfo := models.ShippingInfo{
-		Address: orderWithDetails.Shipping.Address,
-		City:    orderWithDetails.Shipping.City,
-		Country: orderWithDetails.Shipping.Country,
-		ZipCode: orderWithDetails.Shipping.ZipCode,
-		Method:  *orderWithDetails.Shipping.Method,
-		Cost:    *orderWithDetails.Shipping.Cost,
-	}
-
-	paymentInfo := models.PaymentInfo{
-		PaymentMethod: orderWithDetails.Payment.PaymentMethod,
-	}
-
-	return &models.OrderSummary{
-		OrderID:      orderWithDetails.Order.ID,
-		TotalAmount:  orderWithDetails.Order.TotalAmount,
-		ShippingCost: *orderWithDetails.Shipping.Cost,
-		Items:        orderItems,
-		ShippingInfo: shippingInfo,
-		PaymentInfo:  paymentInfo,
+	return &models.OrderGroupSummary{
+		OrderGroupID: groupID,
+		TotalAmount:  groupTotal,
+		Orders:       orderSummaries,
 	}, nil
 }
 
 func (s *OrderService) GetOrderWithDetails(ctx context.Context, orderID uuid.UUID) (*models.OrderWithDetails, error) {
 	return s.orderRepo.GetOrderWithDetails(ctx, orderID)
+}
+
+func (s *OrderService) GetOrderGroupDetails(ctx context.Context, groupID uuid.UUID) ([]models.OrderWithDetails, error) {
+	orders, err := s.orderRepo.GetOrdersByGroupID(ctx, groupID)
+	if err != nil {
+		return nil, utils.HandleServiceErrors(ctx, err, "service/GetOrderGroupDetails")
+	}
+
+	var results []models.OrderWithDetails
+	for _, order := range orders {
+		details, err := s.orderRepo.GetOrderWithDetails(ctx, order.ID)
+		if err != nil {
+			return nil, utils.HandleServiceErrors(ctx, err, "service/GetOrderGroupDetails")
+		}
+		results = append(results, *details)
+	}
+	return results, nil
 }
 
 func (s *OrderService) GetUserOrders(ctx context.Context, userID uuid.UUID) ([]models.Order, error) {
@@ -217,79 +277,131 @@ func (s *OrderService) GetProducerOrders(ctx context.Context, producerID uuid.UU
 	return s.orderRepo.GetOrdersByProducerID(ctx, producerID)
 }
 
-// ConfirmOrder updates the order status and processes payment
+// ConfirmOrderGroup updates the order statuses and processes payment
 // This is called after the user confirms the order summary
-func (s *OrderService) ConfirmOrder(ctx context.Context, orderID uuid.UUID, userID uuid.UUID) (*models.OrderWithDetails, error) {
-	// 1. Get the existing order with details
-	orderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, orderID)
+func (s *OrderService) ConfirmOrderGroup(ctx context.Context, groupID uuid.UUID, userID uuid.UUID) ([]models.OrderWithDetails, error) {
+	// 1. Get all orders for this group
+	orders, err := s.orderRepo.GetOrdersByGroupID(ctx, groupID)
 	if err != nil {
-		return nil, utils.HandleServiceErrors(ctx, err, "service/ConfirmOrder")
+		return nil, utils.HandleServiceErrors(ctx, err, "service/ConfirmOrderGroup")
 	}
 
-	// 2. Verify the order belongs to the user
-	if orderWithDetails.Order.UserID != userID {
-		return nil, utils.HandleServiceErrors(ctx, errors.New("order does not belong to user"), "service/ConfirmOrder")
+	if len(orders) == 0 {
+		return nil, utils.HandleServiceErrors(ctx, errors.New("no orders found for this group"), "service/ConfirmOrderGroup")
 	}
 
-	// 3. Verify the order is still pending
-	if orderWithDetails.Order.Status != "pending" {
-		return nil, utils.HandleServiceErrors(ctx, fmt.Errorf("order is not in pending status: %s", orderWithDetails.Order.Status), "service/ConfirmOrder")
-	}
+	var confirmedOrders []models.OrderWithDetails
 
-	// 4. Update product stock
-	for _, item := range orderWithDetails.Items {
-		err = s.orderRepo.UpdateProductStock(ctx, item.ProductID, item.Quantity)
-		if err != nil {
-			return nil, utils.HandleServiceErrors(ctx, err, "service/ConfirmOrder")
+	// Check for idempotency: if already processing, return safely
+	alreadyProcessed := true
+	for _, order := range orders {
+		if order.Status != "processing" && order.Status != "completed" {
+			alreadyProcessed = false
+			break
 		}
 	}
 
-	// 5. Process payment
-	err = s.ProcessPayment(ctx, orderID)
-	if err != nil {
-		return nil, utils.HandleServiceErrors(ctx, err, "service/ConfirmOrder")
+	if alreadyProcessed {
+		for _, order := range orders {
+			updatedOrderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, order.ID)
+			if err != nil {
+				return nil, utils.HandleServiceErrors(ctx, err, "service/ConfirmOrderGroup")
+			}
+			confirmedOrders = append(confirmedOrders, *updatedOrderWithDetails)
+		}
+		return confirmedOrders, nil
 	}
 
-	// 6. Clear the cart after successful order confirmation
+	// 2. Process each order
+	for _, order := range orders {
+		orderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, order.ID)
+		if err != nil {
+			return nil, utils.HandleServiceErrors(ctx, err, "service/ConfirmOrderGroup")
+		}
+
+		// Verify the order belongs to the user
+		if orderWithDetails.Order.UserID != userID {
+			return nil, utils.HandleServiceErrors(ctx, errors.New("order does not belong to user"), "service/ConfirmOrderGroup")
+		}
+
+		// Verify the order is still pending OR processing (in case of retry a partial failure)
+		if orderWithDetails.Order.Status != "pending" && orderWithDetails.Order.Status != "processing" {
+			return nil, utils.HandleServiceErrors(ctx, fmt.Errorf("order is not in actionable status: %s", orderWithDetails.Order.Status), "service/ConfirmOrderGroup")
+		}
+
+		// Only deduct product stock if still pending
+		if orderWithDetails.Order.Status == "pending" {
+			for _, item := range orderWithDetails.Items {
+				err = s.orderRepo.UpdateProductStock(ctx, item.ProductID, item.Quantity)
+				if err != nil {
+					return nil, utils.HandleServiceErrors(ctx, err, "service/ConfirmOrderGroup")
+				}
+			}
+		}
+	}
+
+
+	// 3. Process grouped payment
+	err = s.ProcessGroupPayment(ctx, groupID)
+	if err != nil {
+		return nil, utils.HandleServiceErrors(ctx, err, "service/ConfirmOrderGroup")
+	}
+
+	// 4. Clear the cart after successful order confirmation
 	cart, err := s.cartRepo.GetCartByUserID(ctx, userID)
 	if err == nil {
 		s.cartRepo.ClearCart(ctx, &cart.ID)
 	}
 
-	// 7. Get the updated order details
-	updatedOrderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, orderID)
-	if err != nil {
-		return nil, utils.HandleServiceErrors(ctx, err, "service/ConfirmOrder")
+	// 5. Get the updated order details
+	for _, order := range orders {
+		updatedOrderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, order.ID)
+		if err != nil {
+			return nil, utils.HandleServiceErrors(ctx, err, "service/ConfirmOrderGroup")
+		}
+		confirmedOrders = append(confirmedOrders, *updatedOrderWithDetails)
 	}
 
-	return updatedOrderWithDetails, nil
+	return confirmedOrders, nil
 }
 
-// ProcessPayment simulates payment processing
-func (s *OrderService) ProcessPayment(ctx context.Context, orderID uuid.UUID) error {
+// ProcessGroupPayment simulates payment processing for the whole group
+func (s *OrderService) ProcessGroupPayment(ctx context.Context, groupID uuid.UUID) error {
 	// In a real implementation, this would integrate with a payment gateway
 	// For now, we'll simulate a successful payment
 
-	// Get the payment record for this order
-	orderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, orderID)
+	orders, err := s.orderRepo.GetOrdersByGroupID(ctx, groupID)
 	if err != nil {
-		return utils.HandleServiceErrors(ctx, err, "service/ProcessPayment")
-	}
-	paymentID := orderWithDetails.Payment.ID
-
-	// Generate a mock transaction ID
-	transactionID := fmt.Sprintf("TXN_%s_%d", orderID.String()[:8], time.Now().Unix())
-
-	// Update payment status using payment ID
-	err = s.orderRepo.UpdatePaymentStatus(ctx, paymentID, "paid", &transactionID)
-	if err != nil {
-		return utils.HandleServiceErrors(ctx, err, "service/ProcessPayment")
+		return utils.HandleServiceErrors(ctx, err, "service/ProcessGroupPayment")
 	}
 
-	// Update order status
-	err = s.orderRepo.UpdateOrderStatus(ctx, orderID, "processing", "paid")
-	if err != nil {
-		return utils.HandleServiceErrors(ctx, err, "service/ProcessPayment")
+	for _, order := range orders {
+		orderWithDetails, err := s.orderRepo.GetOrderWithDetails(ctx, order.ID)
+		if err != nil {
+			return utils.HandleServiceErrors(ctx, err, "service/ProcessGroupPayment")
+		}
+		
+		paymentID := orderWithDetails.Payment.ID
+
+		// Safely skip if already paid (in case this is a retry from a previous half-failure)
+		if orderWithDetails.Payment.Status == "paid" {
+			continue
+		}
+
+		// Generate a mocked transaction ID unique per payment avoiding UNIQ constraints
+		transactionID := fmt.Sprintf("TXN_%s_%d", paymentID.String()[:8], time.Now().UnixNano())
+
+		// Update payment status using payment ID
+		err = s.orderRepo.UpdatePaymentStatus(ctx, paymentID, "paid", &transactionID)
+		if err != nil {
+			return utils.HandleServiceErrors(ctx, err, "service/ProcessGroupPayment")
+		}
+
+		// Update order status
+		err = s.orderRepo.UpdateOrderStatus(ctx, order.ID, "processing", "paid")
+		if err != nil {
+			return utils.HandleServiceErrors(ctx, err, "service/ProcessGroupPayment")
+		}
 	}
 
 	return nil

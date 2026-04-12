@@ -40,7 +40,7 @@ export default function OrderConfirmationPage() {
   const params = useParams();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [orderDetails, setOrderDetails] = useState<OrderWithDetails | null>(
+  const [orderDetails, setOrderDetails] = useState<OrderWithDetails[] | null>(
     null
   );
   const [loading, setLoading] = useState(true);
@@ -52,8 +52,10 @@ export default function OrderConfirmationPage() {
   // Memoize unique product IDs to avoid unnecessary re-computations
   const uniqueProductIds = useMemo(() => {
     if (!orderDetails) return [];
+    
+    const allItems = orderDetails.flatMap(o => o.items);
     return Array.from(
-      new Set(orderDetails.items.map((item) => item.product_id))
+      new Set(allItems.map((item) => item.product_id))
     );
   }, [orderDetails]);
 
@@ -104,8 +106,8 @@ export default function OrderConfirmationPage() {
   const fetchOrderDetails = async () => {
     try {
       setLoading(true);
-      const details = await api.post<OrderWithDetails>('/orders/details', {
-        order_id: orderId,
+      const details = await api.post<OrderWithDetails[]>('/orders/group-details', {
+        order_group_id: orderId,
       });
       setOrderDetails(details);
     } catch (error) {
@@ -173,7 +175,7 @@ export default function OrderConfirmationPage() {
     );
   }
 
-  if (!orderDetails) {
+  if (!orderDetails || orderDetails.length === 0) {
     return (
       <div className="confirmation-error">
         <div className="error-icon">❌</div>
@@ -185,6 +187,11 @@ export default function OrderConfirmationPage() {
       </div>
     );
   }
+
+  const firstOrder = orderDetails[0];
+  const allItems = orderDetails.flatMap(o => o.items);
+  const totalAmount = orderDetails.reduce((sum, o) => sum + o.order.total_amount, 0);
+  const totalShipping = orderDetails.reduce((sum, o) => sum + o.shipping.cost, 0);
 
   return (
     <div className="confirmation-container">
@@ -203,25 +210,25 @@ export default function OrderConfirmationPage() {
             <h2 className="section-title">Order Information</h2>
             <div className="info-card">
               <div className="info-row">
-                <span className="info-label">Order ID:</span>
-                <span className="info-value">{orderDetails.order.id}</span>
+                <span className="info-label">Order Group ID:</span>
+                <span className="info-value">{orderId}</span>
               </div>
               <div className="info-row">
                 <span className="info-label">Order Date:</span>
                 <span className="info-value">
-                  {formatDate(orderDetails.order.created_at)}
+                  {formatDate(firstOrder.order.created_at)}
                 </span>
               </div>
               <div className="info-row">
                 <span className="info-label">Status:</span>
                 <span className="info-value status-badge">
-                  {orderDetails.order.status}
+                  {firstOrder.order.status}
                 </span>
               </div>
               <div className="info-row">
                 <span className="info-label">Payment Status:</span>
                 <span className="info-value status-badge">
-                  {orderDetails.order.payment_status}
+                  {firstOrder.order.payment_status}
                 </span>
               </div>
             </div>
@@ -230,7 +237,7 @@ export default function OrderConfirmationPage() {
           <div className="detail-section">
             <h2 className="section-title">Order Items</h2>
             <div className="order-items">
-              {orderDetails.items.map((item, index) => {
+              {allItems.map((item, index) => {
                 const product = productMap[item.product_id];
                 const price = product?.price || 0;
                 const itemSubtotal = price * item.quantity;
@@ -258,29 +265,29 @@ export default function OrderConfirmationPage() {
               <div className="info-row">
                 <span className="info-label">Address:</span>
                 <span className="info-value">
-                  {orderDetails.shipping.address}
+                  {firstOrder.shipping.address}
                 </span>
               </div>
               <div className="info-row">
                 <span className="info-label">City:</span>
-                <span className="info-value">{orderDetails.shipping.city}</span>
+                <span className="info-value">{firstOrder.shipping.city}</span>
               </div>
               <div className="info-row">
                 <span className="info-label">Country:</span>
                 <span className="info-value">
-                  {orderDetails.shipping.country}
+                  {firstOrder.shipping.country}
                 </span>
               </div>
               <div className="info-row">
                 <span className="info-label">ZIP Code:</span>
                 <span className="info-value">
-                  {orderDetails.shipping.zip_code}
+                  {firstOrder.shipping.zip_code}
                 </span>
               </div>
               <div className="info-row">
                 <span className="info-label">Method:</span>
                 <span className="info-value">
-                  {getShippingMethodLabel(orderDetails.shipping.method)}
+                  {getShippingMethodLabel(firstOrder.shipping.method)}
                 </span>
               </div>
             </div>
@@ -292,19 +299,19 @@ export default function OrderConfirmationPage() {
               <div className="info-row">
                 <span className="info-label">Payment Method:</span>
                 <span className="info-value">
-                  {getPaymentMethodLabel(orderDetails.payment.payment_method)}
+                  {getPaymentMethodLabel(firstOrder.payment.payment_method)}
                 </span>
               </div>
               <div className="info-row">
-                <span className="info-label">Amount Paid:</span>
+                <span className="info-label">Total Amount Paid:</span>
                 <span className="info-value">
-                  ${orderDetails.payment.amount.toFixed(2)}
+                  ${totalAmount.toFixed(2)}
                 </span>
               </div>
               <div className="info-row">
                 <span className="info-label">Payment Status:</span>
                 <span className="info-value status-badge">
-                  {orderDetails.payment.status}
+                  {firstOrder.payment.status}
                 </span>
               </div>
             </div>
@@ -318,20 +325,20 @@ export default function OrderConfirmationPage() {
                 <span className="total-value">
                   $
                   {(
-                    orderDetails.order.total_amount - orderDetails.shipping.cost
+                    totalAmount - totalShipping
                   ).toFixed(2)}
                 </span>
               </div>
               <div className="total-row">
-                <span className="total-label">Shipping:</span>
+                <span className="total-label">Shipping (Multiple Producers):</span>
                 <span className="total-value">
-                  ${orderDetails.shipping.cost.toFixed(2)}
+                  ${totalShipping.toFixed(2)}
                 </span>
               </div>
               <div className="total-row total-final">
                 <span className="total-label">Total:</span>
                 <span className="total-value">
-                  ${orderDetails.order.total_amount.toFixed(2)}
+                  ${totalAmount.toFixed(2)}
                 </span>
               </div>
             </div>

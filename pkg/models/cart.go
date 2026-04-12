@@ -25,6 +25,7 @@ type CartItemProductDetails struct {
 	ProductStock       int32     `json:"product_stock" db:"product_stock"`
 	ProductCategory    string    `json:"product_category_id" db:"product_category_id"`
 	ProductImageUrl    string    `json:"product_image_url,omitempty" db:"product_image_url"`
+	ProductUserID      uuid.UUID `json:"product_user_id" db:"product_user_id"`
 }
 
 type CartDeleteRequest struct {
