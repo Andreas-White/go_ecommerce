@@ -71,6 +71,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Define routes
+
 	//user basic routes
 	mux.Handle("/users/register", middleware.CSRFMiddleware(http.HandlerFunc(userHandler.Register)))
 	mux.Handle("/users/login", middleware.CSRFMiddleware(http.HandlerFunc(userHandler.Login)))
@@ -103,8 +104,9 @@ func main() {
 	// order routes
 	mux.Handle("/orders/checkout", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(orderHandler.ProcessCheckout))))
 	mux.Handle("/orders/confirm", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(orderHandler.ConfirmOrder))))
-	mux.Handle("/orders/summary", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetOrderSummary)))
+	mux.Handle("/orders/summary", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetOrderGroupSummary)))
 	mux.Handle("/orders/details", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetOrderDetails)))
+	mux.Handle("/orders/group-details", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetOrderGroupDetails)))
 	mux.Handle("/orders/user", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetUserOrders)))
 	mux.Handle("/orders/producer", authMiddleware.AuthenticateJWT(http.HandlerFunc(orderHandler.GetProducerOrders)))
 	mux.Handle("/orders/fulfill", authMiddleware.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(orderHandler.FulfillOrder))))
