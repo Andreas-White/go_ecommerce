@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 import ProductGrid from '../../components/products/ProductGrid';
 import '../../components/products/ProductGrid.css';
 import Alert from '@/components/ui/Alert';
+import Spinner from '@/components/ui/Spinner';
 
 interface Product {
   id: string;
@@ -130,7 +131,7 @@ export default function ProductsPage() {
   if (loading) {
     return (
       <div className="products-loading-container">
-        <div>Loading products...</div>
+        <Spinner />
       </div>
     );
   }

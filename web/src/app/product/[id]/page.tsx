@@ -9,6 +9,7 @@ import './page.css';
 import AddReviewForm from '../../../components/products/AddReviewForm';
 import { Button } from '@/components/ui';
 import Alert from '@/components/ui/Alert';
+import Spinner from '@/components/ui/Spinner';
 
 interface Product {
   id: string;
@@ -128,7 +129,7 @@ export default function ProductDetailsPage() {
   if (loading) {
     return (
       <div className="product-details-loading">
-        <div>Loading product details...</div>
+        <Spinner />
       </div>
     );
   }

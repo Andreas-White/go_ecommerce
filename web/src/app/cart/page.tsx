@@ -6,7 +6,7 @@ import Link from 'next/link';
 import './page.css';
 import { api } from '../../lib/api';
 import CartItem from '../../components/cart/CartItem';
-import { Alert, Button } from '@/components/ui';
+import { Alert, Button, Spinner } from '@/components/ui';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 
 export default function CartPage() {
@@ -129,7 +129,7 @@ export default function CartPage() {
   if (loading) {
     return (
       <div className="cart-loading-container">
-        <div>Loading cart...</div>
+        <Spinner />
       </div>
     );
   }

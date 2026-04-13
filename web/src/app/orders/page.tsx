@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
-import { Button } from '@/components/ui';
+import { Button, Spinner } from '@/components/ui';
 import OrderCard from '@/components/orders/OrderCard';
 import '@/components/orders/OrderCard.css';
 import './page.css';
@@ -86,8 +86,7 @@ export default function OrdersPage() {
   if (authLoading || loading) {
     return (
       <div className="orders-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading your orders...</p>
+        <Spinner />
       </div>
     );
   }

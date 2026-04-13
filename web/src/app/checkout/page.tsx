@@ -10,6 +10,7 @@ import PaymentForm from '../../components/checkout/PaymentForm';
 import OrderSummaryDisplay from '../../components/checkout/OrderSummaryDisplay';
 import './page.css';
 import Alert from '@/components/ui/Alert';
+import Spinner from '@/components/ui/Spinner';
 
 interface ShippingInfo {
   address: string;
@@ -164,7 +165,7 @@ export default function CheckoutPage() {
   if (authLoading || cartLoading) {
     return (
       <div className="checkout-loading">
-        <div>Loading checkout...</div>
+        <Spinner />
       </div>
     );
   }

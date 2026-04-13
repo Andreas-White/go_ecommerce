@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../lib/api';
 import './page.css';
-import { Button } from '@/components/ui';
+import { Button, Spinner } from '@/components/ui';
 
 interface OrderWithDetails {
   order: {
@@ -156,8 +156,7 @@ export default function OrderConfirmationPage() {
   if (authLoading || loading) {
     return (
       <div className="confirmation-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading order details...</p>
+        <Spinner />
       </div>
     );
   }

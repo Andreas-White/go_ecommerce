@@ -6,6 +6,7 @@ import { api } from '../../../lib/api';
 import Link from 'next/link';
 import './page.css';
 import Button from '@/components/ui/Button';
+import Spinner from '@/components/ui/Spinner';
 
 interface OrderWithDetails {
   order: {
@@ -163,8 +164,7 @@ export default function OrderDetailsPage() {
   if (authLoading || loading) {
     return (
       <div className="order-details-loading">
-        <div className="loading-spinner"></div>
-        <p>Loading order details...</p>
+        <Spinner />
       </div>
     );
   }

@@ -8,8 +8,8 @@ import CompanyProfile from '@/components/company/CompanyProfile';
 import CreateUpdateCompanyForm from '@/components/company/CreateUpdateCompanyForm';
 import ProducerProductList from '@/components/products/ProducerProductList';
 import CreateProductForm from '@/components/products/CreateProductForm';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import Alert from '@/components/ui/Alert';
+import Spinner from '@/components/ui/Spinner';
 import './page.css';
 import ProducerOrderList, {
   ProducerOrderLike,
@@ -156,8 +156,7 @@ export default function ProducerDashboard() {
     return (
       <div className="producer-dashboard">
         <div className="loading-container">
-          <LoadingSpinner />
-          <p>Loading producer dashboard...</p>
+          <Spinner />
         </div>
       </div>
     );
