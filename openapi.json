@@ -97,6 +97,17 @@
         },
         "required": ["cart_id", "shipping_info", "payment_info"]
       },
+      "OrderGroupSummary": {
+        "type": "object",
+        "properties": {
+          "order_group_id": { "type": "string", "format": "uuid" },
+          "total_amount": { "type": "number", "format": "float" },
+          "orders": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/OrderSummary" }
+          }
+        }
+      },
       "ShippingInfo": {
         "type": "object",
         "properties": {
@@ -342,7 +353,7 @@
           }
         },
         "responses": {
-          "200": { "description": "User updated", "content": { "application/json": { "schema": { "type": "object", "properties": { "message": { "type": "string" }, "user": { "$ref": "#/components/schemas/UserDTO" }, "token": { "type": "string" } } } } } },
+          "200": { "description": "Order group summary with orders per producer", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderGroupSummary" } } } },
           "401": { "description": "Unauthorized" }
         }
       }
@@ -667,12 +678,18 @@
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "type": "object", "properties": { "order_id": { "type": "string", "format": "uuid" } } }
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "order_group_id": { "type": "string", "format": "uuid" }
+                },
+                "required": ["order_group_id"]
+              }
             }
           }
         },
         "responses": {
-          "201": { "description": "Order confirmed", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderWithDetails" } } } },
+          "201": { "description": "All orders in group confirmed", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/OrderWithDetails" } } } },
           "401": { "description": "Unauthorized" }
         }
       }
@@ -709,6 +726,30 @@
         },
         "responses": {
           "200": { "description": "Order details", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OrderWithDetails" } } } },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/orders/group-details": {
+      "post": {
+        "summary": "Get all order details for an order group (multi-producer)",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "order_group_id": { "type": "string", "format": "uuid" }
+                },
+                "required": ["order_group_id"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "List of orders in the group", "content": { "application/json": { "schema": { "type": "array", "items": { "$ref": "#/components/schemas/OrderWithDetails" } } } },
           "401": { "description": "Unauthorized" }
         }
       }

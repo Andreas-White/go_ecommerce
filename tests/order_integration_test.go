@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"go_ecommerce/pkg/models"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,6 +13,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func floatEquals(a, b, epsilon float64) bool {
+	return math.Abs(a-b) < epsilon
+}
 
 func TestCheckoutFlow_Complete(t *testing.T) {
 	clearTables(t)
@@ -81,21 +86,21 @@ func TestCheckoutFlow_Complete(t *testing.T) {
 	testRouter.ServeHTTP(checkoutRR, checkoutReq)
 	require.Equal(t, http.StatusOK, checkoutRR.Code, "Failed to process checkout")
 
-	var orderSummary models.OrderSummary
-	err = json.Unmarshal(checkoutRR.Body.Bytes(), &orderSummary)
+	var orderGroupSummary models.OrderGroupSummary
+	err = json.Unmarshal(checkoutRR.Body.Bytes(), &orderGroupSummary)
 	require.NoError(t, err)
-	assert.NotEqual(t, uuid.Nil, orderSummary.OrderID)
-	assert.Equal(t, 65.97, orderSummary.TotalAmount) // (29.99 * 2) + 5.99 shipping
-	assert.Equal(t, 5.99, orderSummary.ShippingCost)
-	assert.Len(t, orderSummary.Items, 1)
-	assert.Equal(t, product.ID, orderSummary.Items[0].ProductID)
-	assert.Equal(t, 2, orderSummary.Items[0].Quantity)
+	require.Len(t, orderGroupSummary.Orders, 1, "Should have exactly 1 order in the group")
 
-	// 5. Customer confirms the order
+	orderSummary := orderGroupSummary.Orders[0]
+	assert.NotEqual(t, uuid.Nil, orderSummary.OrderID)
+	assert.True(t, floatEquals(orderSummary.TotalAmount, 64.98, 0.001), "Expected 64.98, got %v", orderSummary.TotalAmount)
+	assert.Equal(t, 5.0, orderSummary.ShippingCost)
+
+	// 5. Customer confirms the order group
 	confirmRequest := struct {
-		OrderID uuid.UUID `json:"order_id"`
+		OrderGroupID uuid.UUID `json:"order_group_id"`
 	}{
-		OrderID: orderSummary.OrderID,
+		OrderGroupID: orderGroupSummary.OrderGroupID,
 	}
 
 	confirmBody, _ := json.Marshal(confirmRequest)
@@ -107,13 +112,16 @@ func TestCheckoutFlow_Complete(t *testing.T) {
 	testRouter.ServeHTTP(confirmRR, confirmReq)
 	require.Equal(t, http.StatusCreated, confirmRR.Code, "Failed to confirm order")
 
-	var orderWithDetails models.OrderWithDetails
-	err = json.Unmarshal(confirmRR.Body.Bytes(), &orderWithDetails)
+	var confirmedOrders []models.OrderWithDetails
+	err = json.Unmarshal(confirmRR.Body.Bytes(), &confirmedOrders)
 	require.NoError(t, err)
+	require.Len(t, confirmedOrders, 1, "Should have exactly 1 confirmed order")
+
+	orderWithDetails := confirmedOrders[0]
 	assert.Equal(t, orderSummary.OrderID, orderWithDetails.Order.ID)
 	assert.Equal(t, "processing", orderWithDetails.Order.Status)
 	assert.Equal(t, "paid", orderWithDetails.Order.PaymentStatus)
-	assert.Equal(t, 65.97, orderWithDetails.Order.TotalAmount)
+	assert.True(t, floatEquals(orderWithDetails.Order.TotalAmount, 64.98, 0.001), "Expected 64.98, got %v", orderWithDetails.Order.TotalAmount)
 	assert.Len(t, orderWithDetails.Items, 1)
 	assert.Equal(t, "paid", orderWithDetails.Payment.Status)
 	assert.NotNil(t, orderWithDetails.Payment.TransactionID)
@@ -672,4 +680,343 @@ func TestOrderCancelAndDeleteEndpoints(t *testing.T) {
 	deleteRR2 := httptest.NewRecorder()
 	testRouter.ServeHTTP(deleteRR2, deleteReq2)
 	assert.Equal(t, http.StatusInternalServerError, deleteRR2.Code, "Should not be able to delete already deleted order")
+}
+
+func TestMultiProducerOrderWithOneDecline(t *testing.T) {
+	clearTables(t)
+
+	// 1. Register 3 producers with products
+	producer1Email := "producer1-multi@example.com"
+	producer1Password := "password123"
+	producer1Payload := createUserDTO(producer1Email, producer1Password, true)
+	registerTestUserAuth(t, producer1Payload)
+	_, producer1AuthData, _ := loginUserAndGetTokenAuth(t, producer1Email, producer1Password)
+	product1 := createTestProduct(t, producer1AuthData, models.Product{
+		Name:  "Product from Producer 1",
+		Price: 29.99,
+		Stock: 10,
+	})
+
+	producer2Email := "producer2-multi@example.com"
+	producer2Password := "password123"
+	producer2Payload := createUserDTO(producer2Email, producer2Password, true)
+	registerTestUserAuth(t, producer2Payload)
+	_, producer2AuthData, _ := loginUserAndGetTokenAuth(t, producer2Email, producer2Password)
+	product2 := createTestProduct(t, producer2AuthData, models.Product{
+		Name:  "Product from Producer 2",
+		Price: 19.99,
+		Stock: 10,
+	})
+
+	producer3Email := "producer3-multi@example.com"
+	producer3Password := "password123"
+	producer3Payload := createUserDTO(producer3Email, producer3Password, true)
+	registerTestUserAuth(t, producer3Payload)
+	_, producer3AuthData, _ := loginUserAndGetTokenAuth(t, producer3Email, producer3Password)
+	product3 := createTestProduct(t, producer3AuthData, models.Product{
+		Name:  "Product from Producer 3",
+		Price: 39.99,
+		Stock: 10,
+	})
+
+	// 2. Register customer
+	customerEmail := "customer-multi@example.com"
+	customerPassword := "password123"
+	customerPayload := createUserDTO(customerEmail, customerPassword, false)
+	registerTestUserAuth(t, customerPayload)
+	_, customerAuthData, _ := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
+
+	// 3. Customer adds all 3 products to cart
+	cartItemsToAdd := []models.CartItemDTO{
+		{ProductID: product1.ID, Quantity: 1, Price: product1.Price},
+		{ProductID: product2.ID, Quantity: 2, Price: product2.Price},
+		{ProductID: product3.ID, Quantity: 1, Price: product3.Price},
+	}
+	addBody, _ := json.Marshal(cartItemsToAdd)
+	addReq, _ := http.NewRequest("POST", "/cart/add", bytes.NewBuffer(addBody))
+	addReq.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(addReq, customerAuthData)
+	addRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(addRR, addReq)
+	require.Equal(t, http.StatusOK, addRR.Code)
+
+	var createdCart models.Cart
+	require.NoError(t, json.Unmarshal(addRR.Body.Bytes(), &createdCart))
+
+	// 4. Customer initiates checkout
+	checkoutRequest := models.CheckoutRequest{
+		CartID: createdCart.ID,
+		ShippingInfo: models.ShippingInfo{
+			Address: "123 Main St",
+			City:    "New York",
+			Country: "USA",
+			ZipCode: "10001",
+			Method:  "standard",
+			Cost:    5.99,
+		},
+		PaymentInfo: models.PaymentInfo{PaymentMethod: "credit_card"},
+	}
+	checkoutBody, _ := json.Marshal(checkoutRequest)
+	checkoutReq, _ := http.NewRequest("POST", "/orders/checkout", bytes.NewBuffer(checkoutBody))
+	checkoutReq.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(checkoutReq, customerAuthData)
+	checkoutRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(checkoutRR, checkoutReq)
+	require.Equal(t, http.StatusOK, checkoutRR.Code)
+
+	var orderGroupSummary models.OrderGroupSummary
+	require.NoError(t, json.Unmarshal(checkoutRR.Body.Bytes(), &orderGroupSummary))
+	require.Len(t, orderGroupSummary.Orders, 3, "Should have 3 orders from 3 producers")
+
+	// 5. Customer confirms the order group
+	confirmRequest := struct {
+		OrderGroupID uuid.UUID `json:"order_group_id"`
+	}{OrderGroupID: orderGroupSummary.OrderGroupID}
+	confirmBody, _ := json.Marshal(confirmRequest)
+	confirmReq, _ := http.NewRequest("POST", "/orders/confirm", bytes.NewBuffer(confirmBody))
+	confirmReq.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(confirmReq, customerAuthData)
+	confirmRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(confirmRR, confirmReq)
+	require.Equal(t, http.StatusCreated, confirmRR.Code)
+
+	var confirmedOrders []models.OrderWithDetails
+	require.NoError(t, json.Unmarshal(confirmRR.Body.Bytes(), &confirmedOrders))
+	require.Len(t, confirmedOrders, 3)
+	for _, order := range confirmedOrders {
+		assert.Equal(t, "processing", order.Order.Status)
+		assert.Equal(t, "paid", order.Order.PaymentStatus)
+	}
+
+	// 6. Producer 2 cancels their order (the middle-priced one)
+	// Find producer2's order by total amount (19.99*2 + 5.00 = 44.98)
+	producer2OrderID := uuid.Nil
+	for _, order := range confirmedOrders {
+		if floatEquals(order.Order.TotalAmount, 44.98, 0.01) {
+			producer2OrderID = order.Order.ID
+			break
+		}
+	}
+	require.NotEqual(t, uuid.Nil, producer2OrderID, "Could not find producer2's order")
+
+	cancelBody, _ := json.Marshal(struct {
+		OrderID uuid.UUID `json:"order_id"`
+	}{OrderID: producer2OrderID})
+	cancelReq, _ := http.NewRequest("POST", "/orders/cancel", bytes.NewBuffer(cancelBody))
+	cancelReq.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(cancelReq, producer2AuthData)
+	cancelRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(cancelRR, cancelReq)
+	require.Equal(t, http.StatusOK, cancelRR.Code)
+
+	// 7. Verify Producer 2's order is canceled and refunded
+	detailsBody, _ := json.Marshal(struct {
+		OrderID uuid.UUID `json:"order_id"`
+	}{OrderID: producer2OrderID})
+	detailsReq, _ := http.NewRequest("POST", "/orders/details", bytes.NewBuffer(detailsBody))
+	detailsReq.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(detailsReq, customerAuthData)
+	detailsRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(detailsRR, detailsReq)
+	require.Equal(t, http.StatusOK, detailsRR.Code)
+
+	var canceledOrder models.OrderWithDetails
+	require.NoError(t, json.Unmarshal(detailsRR.Body.Bytes(), &canceledOrder))
+	assert.Equal(t, "canceled", canceledOrder.Order.Status)
+	assert.Equal(t, "refunded", canceledOrder.Order.PaymentStatus)
+	assert.Equal(t, "refunded", canceledOrder.Payment.Status)
+
+	// 8. Verify Producer 1's and Producer 3's orders are still processing
+	// Find producer1 and producer3 orders by their total amounts
+	var producer1OrderID, producer3OrderID uuid.UUID
+	for _, order := range confirmedOrders {
+		if floatEquals(order.Order.TotalAmount, 34.99, 0.01) {
+			producer1OrderID = order.Order.ID
+		} else if floatEquals(order.Order.TotalAmount, 44.99, 0.01) {
+			producer3OrderID = order.Order.ID
+		}
+	}
+	require.NotEqual(t, uuid.Nil, producer1OrderID, "Could not find producer1's order")
+	require.NotEqual(t, uuid.Nil, producer3OrderID, "Could not find producer3's order")
+
+	detailsBody1, _ := json.Marshal(struct {
+		OrderID uuid.UUID `json:"order_id"`
+	}{OrderID: producer1OrderID})
+	detailsReq1, _ := http.NewRequest("POST", "/orders/details", bytes.NewBuffer(detailsBody1))
+	detailsReq1.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(detailsReq1, customerAuthData)
+	detailsRR1 := httptest.NewRecorder()
+	testRouter.ServeHTTP(detailsRR1, detailsReq1)
+	require.Equal(t, http.StatusOK, detailsRR1.Code)
+
+	var producer1Order models.OrderWithDetails
+	require.NoError(t, json.Unmarshal(detailsRR1.Body.Bytes(), &producer1Order))
+	assert.Equal(t, "processing", producer1Order.Order.Status)
+	assert.Equal(t, "paid", producer1Order.Order.PaymentStatus)
+
+	detailsBody3, _ := json.Marshal(struct {
+		OrderID uuid.UUID `json:"order_id"`
+	}{OrderID: producer3OrderID})
+	detailsReq3, _ := http.NewRequest("POST", "/orders/details", bytes.NewBuffer(detailsBody3))
+	detailsReq3.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(detailsReq3, customerAuthData)
+	detailsRR3 := httptest.NewRecorder()
+	testRouter.ServeHTTP(detailsRR3, detailsReq3)
+	require.Equal(t, http.StatusOK, detailsRR3.Code)
+
+	var producer3Order models.OrderWithDetails
+	require.NoError(t, json.Unmarshal(detailsRR3.Body.Bytes(), &producer3Order))
+	assert.Equal(t, "processing", producer3Order.Order.Status)
+	assert.Equal(t, "paid", producer3Order.Order.PaymentStatus)
+
+	// 9. Verify customer can still see all 3 orders
+	userOrdersReq, _ := http.NewRequest("GET", "/orders/user", nil)
+	addAuthHeaders(userOrdersReq, customerAuthData)
+	userOrdersRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(userOrdersRR, userOrdersReq)
+	require.Equal(t, http.StatusOK, userOrdersRR.Code)
+
+	var userOrders []models.Order
+	require.NoError(t, json.Unmarshal(userOrdersRR.Body.Bytes(), &userOrders))
+	assert.Len(t, userOrders, 3)
+}
+
+func TestMultiProducerOrderAllDeclined(t *testing.T) {
+	clearTables(t)
+
+	// 1. Register 3 producers with products
+	producer1Email := "producer1-decline@example.com"
+	producer1Password := "password123"
+	producer1Payload := createUserDTO(producer1Email, producer1Password, true)
+	registerTestUserAuth(t, producer1Payload)
+	_, producer1AuthData, _ := loginUserAndGetTokenAuth(t, producer1Email, producer1Password)
+	product1 := createTestProduct(t, producer1AuthData, models.Product{
+		Name:  "Declinable Product 1",
+		Price: 25.00,
+		Stock: 5,
+	})
+
+	producer2Email := "producer2-decline@example.com"
+	producer2Password := "password123"
+	producer2Payload := createUserDTO(producer2Email, producer2Password, true)
+	registerTestUserAuth(t, producer2Payload)
+	_, producer2AuthData, _ := loginUserAndGetTokenAuth(t, producer2Email, producer2Password)
+	product2 := createTestProduct(t, producer2AuthData, models.Product{
+		Name:  "Declinable Product 2",
+		Price: 35.00,
+		Stock: 5,
+	})
+
+	producer3Email := "producer3-decline@example.com"
+	producer3Password := "password123"
+	producer3Payload := createUserDTO(producer3Email, producer3Password, true)
+	registerTestUserAuth(t, producer3Payload)
+	_, producer3AuthData, _ := loginUserAndGetTokenAuth(t, producer3Email, producer3Password)
+	product3 := createTestProduct(t, producer3AuthData, models.Product{
+		Name:  "Declinable Product 3",
+		Price: 45.00,
+		Stock: 5,
+	})
+
+	// 2. Register customer
+	customerEmail := "customer-decline@example.com"
+	customerPassword := "password123"
+	customerPayload := createUserDTO(customerEmail, customerPassword, false)
+	registerTestUserAuth(t, customerPayload)
+	_, customerAuthData, _ := loginUserAndGetTokenAuth(t, customerEmail, customerPassword)
+
+	// 3. Customer adds all 3 products to cart
+	cartItemsToAdd := []models.CartItemDTO{
+		{ProductID: product1.ID, Quantity: 1, Price: product1.Price},
+		{ProductID: product2.ID, Quantity: 1, Price: product2.Price},
+		{ProductID: product3.ID, Quantity: 1, Price: product3.Price},
+	}
+	addBody, _ := json.Marshal(cartItemsToAdd)
+	addReq, _ := http.NewRequest("POST", "/cart/add", bytes.NewBuffer(addBody))
+	addReq.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(addReq, customerAuthData)
+	addRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(addRR, addReq)
+	require.Equal(t, http.StatusOK, addRR.Code)
+
+	var createdCart models.Cart
+	require.NoError(t, json.Unmarshal(addRR.Body.Bytes(), &createdCart))
+
+	// 4. Customer initiates checkout
+	checkoutRequest := models.CheckoutRequest{
+		CartID: createdCart.ID,
+		ShippingInfo: models.ShippingInfo{
+			Address: "456 Decline St",
+			City:    "Decline City",
+			Country: "Declineland",
+			ZipCode: "99999",
+			Method:  "express",
+			Cost:    15.00,
+		},
+		PaymentInfo: models.PaymentInfo{PaymentMethod: "credit_card"},
+	}
+	checkoutBody, _ := json.Marshal(checkoutRequest)
+	checkoutReq, _ := http.NewRequest("POST", "/orders/checkout", bytes.NewBuffer(checkoutBody))
+	checkoutReq.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(checkoutReq, customerAuthData)
+	checkoutRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(checkoutRR, checkoutReq)
+	require.Equal(t, http.StatusOK, checkoutRR.Code)
+
+	var orderGroupSummary models.OrderGroupSummary
+	require.NoError(t, json.Unmarshal(checkoutRR.Body.Bytes(), &orderGroupSummary))
+	require.Len(t, orderGroupSummary.Orders, 3)
+
+	// 5. Customer confirms the order group
+	confirmRequest := struct {
+		OrderGroupID uuid.UUID `json:"order_group_id"`
+	}{OrderGroupID: orderGroupSummary.OrderGroupID}
+	confirmBody, _ := json.Marshal(confirmRequest)
+	confirmReq, _ := http.NewRequest("POST", "/orders/confirm", bytes.NewBuffer(confirmBody))
+	confirmReq.Header.Set("Content-Type", "application/json")
+	addAuthHeaders(confirmReq, customerAuthData)
+	confirmRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(confirmRR, confirmReq)
+	require.Equal(t, http.StatusCreated, confirmRR.Code)
+
+	var confirmedOrders []models.OrderWithDetails
+	require.NoError(t, json.Unmarshal(confirmRR.Body.Bytes(), &confirmedOrders))
+	require.Len(t, confirmedOrders, 3)
+
+	// 6. All 3 producers cancel their orders
+	for i, producerAuthData := range []*TestAuthData{producer1AuthData, producer2AuthData, producer3AuthData} {
+		cancelBody, _ := json.Marshal(struct {
+			OrderID uuid.UUID `json:"order_id"`
+		}{OrderID: confirmedOrders[i].Order.ID})
+		cancelReq, _ := http.NewRequest("POST", "/orders/cancel", bytes.NewBuffer(cancelBody))
+		cancelReq.Header.Set("Content-Type", "application/json")
+		addAuthHeaders(cancelReq, producerAuthData)
+		cancelRR := httptest.NewRecorder()
+		testRouter.ServeHTTP(cancelRR, cancelReq)
+		require.Equal(t, http.StatusOK, cancelRR.Code)
+	}
+
+	// 7. Verify all orders are canceled and refunded
+	userOrdersReq, _ := http.NewRequest("GET", "/orders/user", nil)
+	addAuthHeaders(userOrdersReq, customerAuthData)
+	userOrdersRR := httptest.NewRecorder()
+	testRouter.ServeHTTP(userOrdersRR, userOrdersReq)
+	require.Equal(t, http.StatusOK, userOrdersRR.Code)
+
+	var userOrders []models.Order
+	require.NoError(t, json.Unmarshal(userOrdersRR.Body.Bytes(), &userOrders))
+	require.Len(t, userOrders, 3)
+
+	for _, order := range userOrders {
+		assert.Equal(t, "canceled", order.Status)
+		assert.Equal(t, "refunded", order.PaymentStatus)
+	}
+
+	// 8. Verify the total refunded amount is correct
+	var totalRefunded float64
+	for _, order := range userOrders {
+		totalRefunded += order.TotalAmount
+	}
+	expectedTotal := 25.00 + 5.0 + 35.00 + 5.0 + 45.00 + 5.0 // products + shipping per order
+	assert.True(t, floatEquals(totalRefunded, expectedTotal, 0.01), "Expected total refunded %v, got %v", expectedTotal, totalRefunded)
 }

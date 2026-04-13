@@ -67,12 +67,13 @@ func TestReviewFlow_Integration(t *testing.T) {
 	checkoutRR := httptest.NewRecorder()
 	testRouter.ServeHTTP(checkoutRR, checkoutReq)
 	require.Equal(t, http.StatusOK, checkoutRR.Code)
-	var orderSummary models.OrderSummary
-	require.NoError(t, json.Unmarshal(checkoutRR.Body.Bytes(), &orderSummary))
+	var orderGroupSummary models.OrderGroupSummary
+	require.NoError(t, json.Unmarshal(checkoutRR.Body.Bytes(), &orderGroupSummary))
+	require.Len(t, orderGroupSummary.Orders, 1)
 
 	confirmRequest := struct {
-		OrderID uuid.UUID `json:"order_id"`
-	}{OrderID: orderSummary.OrderID}
+		OrderGroupID uuid.UUID `json:"order_group_id"`
+	}{OrderGroupID: orderGroupSummary.OrderGroupID}
 	confirmBody, _ := json.Marshal(confirmRequest)
 	confirmReq, _ := http.NewRequest("POST", "/orders/confirm", bytes.NewBuffer(confirmBody))
 	confirmReq.Header.Set("Content-Type", "application/json")

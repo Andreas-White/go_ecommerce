@@ -156,7 +156,7 @@ func TestMain(m *testing.M) {
 	// Order routes
 	testRouter.Handle("/orders/checkout", testAuthenticator.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(testOrderHandler.ProcessCheckout))))
 	testRouter.Handle("/orders/confirm", testAuthenticator.AuthenticateJWT(middleware.CSRFMiddleware(http.HandlerFunc(testOrderHandler.ConfirmOrder))))
-	testRouter.Handle("/orders/summary", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetOrderSummary)))
+	testRouter.Handle("/orders/summary", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetOrderGroupSummary)))
 	testRouter.Handle("/orders/details", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetOrderDetails)))
 	testRouter.Handle("/orders/user", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetUserOrders)))
 	testRouter.Handle("/orders/producer", testAuthenticator.AuthenticateJWT(http.HandlerFunc(testOrderHandler.GetProducerOrders)))

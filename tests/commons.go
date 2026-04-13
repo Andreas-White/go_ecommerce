@@ -251,15 +251,16 @@ func completeTestPurchase(t *testing.T, customerAuthData *TestAuthData, product 
 	testRouter.ServeHTTP(checkoutRR, checkoutReq)
 	require.Equal(t, http.StatusOK, checkoutRR.Code, "Failed to process checkout")
 
-	var orderSummary models.OrderSummary
-	err = json.Unmarshal(checkoutRR.Body.Bytes(), &orderSummary)
+	var orderGroupSummary models.OrderGroupSummary
+	err = json.Unmarshal(checkoutRR.Body.Bytes(), &orderGroupSummary)
 	require.NoError(t, err)
+	require.Len(t, orderGroupSummary.Orders, 1, "Should have exactly 1 order in the group")
 
-	// Confirm order
+	// Confirm order group
 	confirmRequest := struct {
-		OrderID uuid.UUID `json:"order_id"`
+		OrderGroupID uuid.UUID `json:"order_group_id"`
 	}{
-		OrderID: orderSummary.OrderID,
+		OrderGroupID: orderGroupSummary.OrderGroupID,
 	}
 
 	confirmBody, _ := json.Marshal(confirmRequest)
@@ -271,9 +272,10 @@ func completeTestPurchase(t *testing.T, customerAuthData *TestAuthData, product 
 	testRouter.ServeHTTP(confirmRR, confirmReq)
 	require.Equal(t, http.StatusCreated, confirmRR.Code, "Failed to confirm order")
 
-	var orderWithDetails models.OrderWithDetails
-	err = json.Unmarshal(confirmRR.Body.Bytes(), &orderWithDetails)
+	var confirmedOrders []models.OrderWithDetails
+	err = json.Unmarshal(confirmRR.Body.Bytes(), &confirmedOrders)
 	require.NoError(t, err)
+	require.Len(t, confirmedOrders, 1, "Should have exactly 1 confirmed order")
 
-	return orderWithDetails
+	return confirmedOrders[0]
 }
