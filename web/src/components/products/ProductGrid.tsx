@@ -28,23 +28,23 @@ interface ProductGridProps {
   onAddToCart: (product: Product) => void;
 }
 
-const ProductGrid: React.FC<ProductGridProps> = ({
+export default React.memo(function ProductGrid({
   products,
   cartItems,
   onViewDetails,
   onAddToCart,
-}) => (
-  <div className="products-grid">
-    {products.map((product) => (
-      <ProductCard
-        key={product.id}
-        product={product}
-        onViewDetails={onViewDetails}
-        onAddToCart={onAddToCart}
-        cartItems={cartItems}
-      />
-    ))}
-  </div>
-);
-
-export default ProductGrid;
+}: ProductGridProps) {
+  return (
+    <div className="products-grid">
+      {products.map((product) => (
+        <ProductCard
+          key={product.id}
+          product={product}
+          onViewDetails={onViewDetails}
+          onAddToCart={onAddToCart}
+          cartItems={cartItems}
+        />
+      ))}
+    </div>
+  );
+});

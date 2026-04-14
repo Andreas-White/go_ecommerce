@@ -1,9 +1,10 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useCart } from '../../context/CartContext';
 import { api } from '../../lib/api';
 import ProductFilterSort from '../../components/products/ProductFilterSort';
 import SearchBar from '../../components/common/SearchBar';
+import { useDebounce } from '../../hooks/useDebounce';
 import './page.css';
 import { useRouter } from 'next/navigation';
 import ProductGrid from '../../components/products/ProductGrid';
@@ -29,6 +30,7 @@ export default function ProductsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 400);
   const [category, setCategory] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
@@ -38,109 +40,114 @@ export default function ProductsPage() {
     type: 'success' | 'error' | 'info';
     message: string;
   } | null>(null);
+
+  const fetchProducts = useCallback(
+    async (immediateSearchTerm?: string) => {
+      setLoading(true);
+      try {
+        let productsData: Product[] = [];
+        const searchToUse = immediateSearchTerm ?? debouncedSearchTerm;
+
+        if (category) {
+          productsData =
+            (await api.get<Product[]>(
+              `/products/category?category=${category}`
+            )) || [];
+        } else {
+          const params = new URLSearchParams();
+          if (searchToUse) params.append('search', searchToUse);
+          if (sortBy) params.append('sortBy', sortBy);
+          if (sortOrder) params.append('sortOrder', sortOrder);
+
+          productsData =
+            (await api.get<Product[]>(`/products?${params.toString()}`)) ||
+            [];
+        }
+        const inStockProducts = productsData.filter(
+          (product) => product.stock > 0
+        );
+        setProducts(inStockProducts);
+        setError(null);
+      } catch (error) {
+        setError('Failed to load products. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [category, debouncedSearchTerm, sortBy, sortOrder]
+  );
+
   useEffect(() => {
     fetchProducts();
-  }, [searchTerm, category, sortBy, sortOrder]);
+  }, [fetchProducts]);
 
-  const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      let productsData: Product[] = [];
-
-      if (category) {
-        // Use category-specific endpoint
-        productsData =
-          (await api.get<Product[]>(
-            `/products/category?category=${category}`
-          )) || [];
-      } else {
-        // Use general products endpoint with search and sort
-        const params = new URLSearchParams();
-        if (searchTerm) params.append('search', searchTerm);
-        if (sortBy) params.append('sortBy', sortBy);
-        if (sortOrder) params.append('sortOrder', sortOrder);
-
-        productsData =
-          (await api.get<Product[]>(`/products?${params.toString()}`)) || [];
-      }
-      const inStockProducts = productsData.filter(
-        (product) => product.stock > 0
+  const handleAddToCart = useCallback(
+    async (product: Product) => {
+      const existingCartItem = cartItems.find(
+        (item) => item.product_id === product.id
       );
-      setProducts(inStockProducts);
-      setError(null);
-    } catch (error) {
-      setError('Failed to load products. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleAddToCart = async (product: Product) => {
-    const existingCartItem = cartItems.find(
-      (item) => item.product_id === product.id
-    );
-
-    try {
-      if (existingCartItem) {
-        // If item is already in cart, update its quantity
-        if (existingCartItem.quantity < product.stock) {
-          await updateCartItems([
+      try {
+        if (existingCartItem) {
+          if (existingCartItem.quantity < product.stock) {
+            await updateCartItems([
+              {
+                product_id: product.id,
+                price: product.price,
+                quantity: existingCartItem.quantity + 1,
+              },
+            ]);
+            setCartAlert({
+              type: 'info',
+              message: `Increased ${product.name} quantity!`,
+            });
+          } else {
+            setCartAlert({
+              type: 'error',
+              message: `Cannot add more of ${product.name}. Stock limit reached.`,
+            });
+          }
+        } else {
+          await addToCart([
             {
               product_id: product.id,
               price: product.price,
-              quantity: existingCartItem.quantity + 1,
+              quantity: 1,
             },
           ]);
           setCartAlert({
             type: 'info',
-            message: `Increased ${product.name} quantity!`,
-          });
-        } else {
-          setCartAlert({
-            type: 'error',
-            message: `Cannot add more of ${product.name}. Stock limit reached.`,
+            message: `${product.name} added to cart!`,
           });
         }
-      } else {
-        // Otherwise, add the new item to the cart
-        await addToCart([
-          {
-            product_id: product.id,
-            price: product.price,
-            quantity: 1,
-          },
-        ]);
+      } catch (error) {
         setCartAlert({
-          type: 'info',
-          message: `${product.name} added to cart!`,
+          type: 'error',
+          message: 'Failed to update cart. Please try again.',
         });
       }
-    } catch (error) {
-      setCartAlert({
-        type: 'error',
-        message: 'Failed to update cart. Please try again.',
-      });
-    }
-  };
+    },
+    [cartItems, addToCart, updateCartItems]
+  );
 
-  const handleSearchSubmit = () => {
-    // Trigger search - this will be handled by the useEffect
-    fetchProducts();
-  };
+  const handleSearchSubmit = useCallback(
+    (immediateSearchTerm?: string) => {
+      fetchProducts(immediateSearchTerm ?? searchTerm);
+    },
+    [fetchProducts, searchTerm]
+  );
 
-  if (loading) {
-    return (
-      <div className="products-loading-container">
-        <Spinner />
-      </div>
-    );
-  }
+  const handleViewDetails = useCallback(
+    (productId: string) => {
+      router.push(`/product/${productId}`);
+    },
+    [router]
+  );
 
   return (
     <div className="products-container">
       <h1 className="products-title">Products</h1>
 
-      {/* Search Bar */}
       <div className="products-search-section">
         <SearchBar
           value={searchTerm}
@@ -149,14 +156,13 @@ export default function ProductsPage() {
         />
       </div>
 
-      {/* Filter and Sort Controls */}
       <ProductFilterSort
         category={category}
         sortBy={sortBy}
         sortOrder={sortOrder}
         onCategoryChange={setCategory}
         onSortByChange={setSortBy}
-        onSortOrderChange={setSortOrder}
+        onOrderChange={setSortOrder}
       />
 
       {cartAlert && (
@@ -167,24 +173,32 @@ export default function ProductsPage() {
 
       {error && <div className="products-error">{error}</div>}
 
-      {products.length === 0 ? (
-        <div className="products-empty">
-          <div className="products-empty-icon">📦</div>
-          <h2 className="products-empty-title">No products found</h2>
-          <p className="products-empty-text">
-            {searchTerm || category
-              ? 'Try adjusting your search terms or category filter.'
-              : 'No products are available at the moment.'}
-          </p>
-        </div>
-      ) : (
-        <ProductGrid
-          products={products}
-          cartItems={cartItems}
-          onViewDetails={(productId) => router.push(`/product/${productId}`)}
-          onAddToCart={handleAddToCart}
-        />
-      )}
+      <div className={loading ? 'products-container-overlay' : undefined}>
+        {loading && (
+          <div className="products-overlay">
+            <Spinner />
+          </div>
+        )}
+
+        {products.length === 0 ? (
+          <div className="products-empty">
+            <div className="products-empty-icon">📦</div>
+            <h2 className="products-empty-title">No products found</h2>
+            <p className="products-empty-text">
+              {searchTerm || category
+                ? 'Try adjusting your search terms or category filter.'
+                : 'No products are available at the moment.'}
+            </p>
+          </div>
+        ) : (
+          <ProductGrid
+            products={products}
+            cartItems={cartItems}
+            onViewDetails={handleViewDetails}
+            onAddToCart={handleAddToCart}
+          />
+        )}
+      </div>
     </div>
   );
 }

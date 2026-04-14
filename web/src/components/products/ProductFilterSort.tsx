@@ -27,16 +27,16 @@ const orderOptions = [
   { value: 'desc', label: 'Descending' },
 ];
 
-export default function ProductFilterSort({
+export default React.memo(function ProductFilterSort({
   category, sortBy, sortOrder,
-  onCategoryChange, onSortByChange, onSortOrderChange
+  onCategoryChange, onSortByChange, onOrderChange
 }: {
   category: string;
   sortBy: string;
   sortOrder: string;
   onCategoryChange: (v: string) => void;
   onSortByChange: (v: string) => void;
-  onSortOrderChange: (v: string) => void;
+  onOrderChange: (v: string) => void;
 }) {
   return (
     <div className="product-filter-sort">
@@ -46,9 +46,9 @@ export default function ProductFilterSort({
       <select value={sortBy} onChange={e => onSortByChange(e.target.value)} className="product-filter-select">
         {sortOptions.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
       </select>
-      <select value={sortOrder} onChange={e => onSortOrderChange(e.target.value)} className="product-filter-select">
+      <select value={sortOrder} onChange={e => onOrderChange(e.target.value)} className="product-filter-sort-select">
         {orderOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
   );
-} 
+}); 

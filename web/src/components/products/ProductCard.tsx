@@ -28,12 +28,12 @@ interface ProductCardProps {
   onAddToCart: (product: Product) => void;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({
+export default React.memo(function ProductCard({
   product,
   cartItems,
   onViewDetails,
   onAddToCart,
-}) => {
+}: ProductCardProps) {
   const cartItem = cartItems.find((item) => item.product_id === product.id);
   const quantityInCart = cartItem ? cartItem.quantity : 0;
   const isStockLimitReached = quantityInCart >= product.stock;
@@ -87,6 +87,4 @@ const ProductCard: React.FC<ProductCardProps> = ({
       </div>
     </div>
   );
-};
-
-export default ProductCard;
+});
