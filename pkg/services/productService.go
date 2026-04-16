@@ -12,7 +12,7 @@ type IProductService interface {
 	GetProductByIDForAuth(ctx context.Context, id string) (*models.Product, error)
 	GetProductsByCategory(ctx context.Context, category string) ([]models.ProductDTO, error)
 	GetProductsByUserID(ctx context.Context, userID string) ([]models.Product, error)
-	GetProducts(ctx context.Context, sortBy, sortOrder, searchTerm string) ([]models.ProductDTO, error)
+	GetProducts(ctx context.Context, sortBy, sortOrder, searchTerm string, limit int) ([]models.ProductDTO, error)
 	UpdateProduct(ctx context.Context, product *models.Product) error
 	DeleteProduct(ctx context.Context, id string) error
 }
@@ -57,11 +57,13 @@ func (s *ProductService) GetProductByIDForAuth(ctx context.Context, id string) (
 	return s.Repo.GetProductByID(ctx, id)
 }
 
-func (s *ProductService) GetProducts(ctx context.Context, sortBy, sortOrder, searchTerm string) ([]models.ProductDTO, error) {
+func (s *ProductService) GetProducts(ctx context.Context, sortBy, sortOrder, searchTerm string, limit int) ([]models.ProductDTO, error) {
 	var products []models.Product
 	var err error
 
-	if searchTerm != "" {
+	if limit > 0 && searchTerm != "" {
+		products, err = s.Repo.SearchProductsByName(ctx, searchTerm, limit)
+	} else if searchTerm != "" {
 		products, err = s.Repo.SearchProductsByNameAndDescription(ctx, searchTerm)
 	} else {
 		products, err = s.Repo.GetAllProducts(ctx, sortBy, sortOrder)

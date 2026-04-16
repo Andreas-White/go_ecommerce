@@ -1,12 +1,11 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useCart } from '../../context/CartContext';
 import { api } from '../../lib/api';
 import ProductFilterSort from '../../components/products/ProductFilterSort';
-import SearchBar from '../../components/common/SearchBar';
 import { useDebounce } from '../../hooks/useDebounce';
 import './page.css';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ProductGrid from '../../components/products/ProductGrid';
 import '../../components/products/ProductGrid.css';
 import Alert from '@/components/ui/Alert';
@@ -25,7 +24,7 @@ interface Product {
   };
 }
 
-export default function ProductsPage() {
+function ProductsPageContent() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,10 +35,16 @@ export default function ProductsPage() {
   const [sortOrder, setSortOrder] = useState('asc');
   const { cartItems, addToCart, updateCartItems } = useCart();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [cartAlert, setCartAlert] = useState<{
     type: 'success' | 'error' | 'info';
     message: string;
   } | null>(null);
+
+  useEffect(() => {
+    const initialSearch = searchParams.get('search') || '';
+    setSearchTerm(initialSearch);
+  }, [searchParams]);
 
   const fetchProducts = useCallback(
     async (immediateSearchTerm?: string) => {
@@ -130,13 +135,6 @@ export default function ProductsPage() {
     [cartItems, addToCart, updateCartItems]
   );
 
-  const handleSearchSubmit = useCallback(
-    (immediateSearchTerm?: string) => {
-      fetchProducts(immediateSearchTerm ?? searchTerm);
-    },
-    [fetchProducts, searchTerm]
-  );
-
   const handleViewDetails = useCallback(
     (productId: string) => {
       router.push(`/product/${productId}`);
@@ -146,16 +144,6 @@ export default function ProductsPage() {
 
   return (
     <div className="products-container">
-      <h1 className="products-title">Products</h1>
-
-      <div className="products-search-section">
-        <SearchBar
-          value={searchTerm}
-          onChange={setSearchTerm}
-          onSubmit={handleSearchSubmit}
-        />
-      </div>
-
       <ProductFilterSort
         category={category}
         sortBy={sortBy}
@@ -200,5 +188,13 @@ export default function ProductsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={<div className="products-container"><Spinner /></div>}>
+      <ProductsPageContent />
+    </Suspense>
   );
 }

@@ -7,6 +7,7 @@ import (
 	"go_ecommerce/pkg/services"
 	"go_ecommerce/pkg/utils"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 )
@@ -102,7 +103,14 @@ func (h *ProductHandler) GetProducts(w http.ResponseWriter, r *http.Request) {
 	sortOrder := queryParams.Get("sortOrder")
 	searchTerm := queryParams.Get("search")
 
-	products, err := h.Service.GetProducts(r.Context(), sortBy, sortOrder, searchTerm)
+	limit := 0
+	if queryParams.Get("limit") != "" {
+		if l, err := strconv.Atoi(queryParams.Get("limit")); err == nil {
+			limit = l
+		}
+	}
+
+	products, err := h.Service.GetProducts(r.Context(), sortBy, sortOrder, searchTerm, limit)
 	if err != nil {
 		utils.HandleAPIErrors(err, w, "handler/GetProducts", http.StatusInternalServerError, "Failed to get products")
 		return

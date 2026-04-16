@@ -6,11 +6,12 @@
 }
 
 .header-nav {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   padding: 0.2rem 2rem;
   background: var(--background-color);
+  gap: 1rem;
 }
 
 .header-left {
@@ -19,14 +20,19 @@
   gap: 1.5rem;
 }
 
-.header-logo {
-  position: relative;
+.header-center {
+  display: flex;
+  justify-content: center;
+  flex: 1;
+  max-width: 750px;
+  margin: 0 auto;
 }
 
 .header-right {
   display: flex;
   align-items: center;
   gap: 1rem;
+  justify-content: flex-end;
 }
 
 .header-cart {
@@ -76,17 +82,26 @@
 
 @media (max-width: 768px) {
   .header-nav {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto;
     padding: 0.2rem 1rem;
   }
-  
+
   .header-left {
     gap: 1rem;
   }
-  
+
+  .header-center {
+    grid-column: 1 / -1;
+    order: 3;
+    max-width: 100%;
+    margin-top: 0.5rem;
+  }
+
   .header-right {
     gap: 0.5rem;
   }
-  
+
   .producer-link {
     font-size: 0.9rem;
     padding: 6px 8px;

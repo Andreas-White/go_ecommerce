@@ -29,15 +29,6 @@
   min-height: 200px;
 }
 
-.products-title {
-  margin-bottom: 2rem;
-  color: var(--text-color);
-}
-
-.products-search-section {
-  margin-bottom: 2rem;
-}
-
 .products-error {
   background: #fee;
   color: #c33;

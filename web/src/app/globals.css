@@ -12,6 +12,14 @@
   --input-background: #edf2f7; /* Light grey for inputs */
   --link-color: #343434; /* Blue */
   --shadow-color: rgba(0, 0, 0, 0.1); /* Subtle shadow for light mode */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+  --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.2);
+  --transition-fast: 150ms;
+  --transition-base: 200ms;
+  --transition-slow: 300ms;
+  --transition-elastic: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 /*
@@ -30,6 +38,10 @@
     --input-background: #4a5568; /* Medium Dark Grey for inputs */
     --link-color: #e2e8f0; /* Light Grey */
     --shadow-color: rgba(0, 0, 0, 0.4); /* Stronger shadow for dark mode */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4);
+    --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -44,6 +56,10 @@ html.dark {
   --input-background: #4a5568;
   --link-color: #e2e8f0;
   --shadow-color: rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.5);
 }
 
 /* Reset default browser styles and apply global theme variables */
@@ -188,6 +204,17 @@ html.dark .logo-dark {
 
 html.dark .logo-light {
   display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Modal styles (global) */

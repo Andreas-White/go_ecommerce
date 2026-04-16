@@ -18,6 +18,7 @@ type IProductRepository interface {
 	GetProductsByCategory(ctx context.Context, category string) ([]models.Product, error)
 	GetProductsByUserID(ctx context.Context, userID string) ([]models.Product, error)
 	SearchProductsByNameAndDescription(ctx context.Context, searchTerm string) ([]models.Product, error)
+	SearchProductsByName(ctx context.Context, searchTerm string, limit int) ([]models.Product, error)
 	GetAllProducts(ctx context.Context, sortBy, sortOrder string) ([]models.Product, error)
 	UpdateProduct(ctx context.Context, product *models.Product) error
 	DeleteProduct(ctx context.Context, id string) error
@@ -118,6 +119,26 @@ func (r *ProductRepository) SearchProductsByNameAndDescription(ctx context.Conte
 	products, err := r.scanProducts(rows)
 	if err != nil {
 		return nil, utils.HandleRepositoryErrors(ctx, err, "repository/SearchProductsByNameAndDescription", searchTerm)
+	}
+
+	return products, nil
+}
+
+func (r *ProductRepository) SearchProductsByName(ctx context.Context, searchTerm string, limit int) ([]models.Product, error) {
+	query := `
+		SELECT id, name, description, price, stock, category, image_url, created_at, updated_at, user_id FROM products WHERE name ILIKE $1 LIMIT $2
+	`
+	searchValue := "%%" + searchTerm + "%%"
+
+	rows, err := r.DB.QueryContext(ctx, query, searchValue, limit)
+	if err != nil {
+		return nil, utils.HandleRepositoryErrors(ctx, err, "repository/SearchProductsByName", searchTerm)
+	}
+	defer rows.Close()
+
+	products, err := r.scanProducts(rows)
+	if err != nil {
+		return nil, utils.HandleRepositoryErrors(ctx, err, "repository/SearchProductsByName", searchTerm)
 	}
 
 	return products, nil

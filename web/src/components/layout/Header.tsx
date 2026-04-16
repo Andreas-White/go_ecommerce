@@ -1,21 +1,36 @@
 'use client';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import SearchBar from '../common/SearchBar';
 import './Header.css';
 import { Button } from '@/components/ui';
 
 export default function Header() {
   const { user, logout, loading } = useAuth();
   const { cartItems } = useCart();
+  const pathname = usePathname();
+  const router = useRouter();
+  const [headerSearchTerm, setHeaderSearchTerm] = useState('');
 
-  // Calculate total items in cart
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+
+  const showSearchBar =
+    pathname === '/' || pathname === '/products' || pathname.startsWith('/product/');
+
+  const handleSearchSubmit = (term: string) => {
+    if (term.trim()) {
+      router.push(`/products?search=${encodeURIComponent(term.trim())}`);
+    } else {
+      router.push('/products');
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
-    // Clear cart session for guest users
     if (typeof window !== 'undefined') {
       localStorage.removeItem('cart_session_id');
     }
@@ -46,8 +61,18 @@ export default function Header() {
               />
             </div>
           </Link>
-          <Link href="/products">Products</Link>
         </div>
+
+        {showSearchBar && (
+          <div className="header-center">
+            <SearchBar
+              value={headerSearchTerm}
+              onChange={setHeaderSearchTerm}
+              onSubmit={handleSearchSubmit}
+            />
+          </div>
+        )}
+
         <div className="header-right">
           <Link href="/cart" className="header-cart">
             <span className="header-cart-icon">🛒</span>
