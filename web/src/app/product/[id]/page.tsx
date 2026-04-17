@@ -213,7 +213,7 @@ export default function ProductDetailsPage() {
             </div>
 
             <div className="product-details-description">
-              <h3>Description</h3>
+              <h3> About this item </h3>
               <p>{product.description}</p>
             </div>
 
@@ -263,7 +263,7 @@ export default function ProductDetailsPage() {
         </div>
 
         <div className="product-details-reviews">
-          <h2>Customer Reviews</h2>
+          {reviews.length !== 0 && <h2>Customer Reviews</h2>}
 
           {reviews.length === 0 ? (
             <p className="product-details-no-reviews">

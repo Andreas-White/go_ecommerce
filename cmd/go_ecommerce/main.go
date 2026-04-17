@@ -49,8 +49,6 @@ func main() {
 
 	// product
 	productRepo := repositories.NewProductRepository(DB)
-	productService := services.NewProductService(productRepo, companyRepo)
-	productHandler := handlers.NewProductHandler(productService)
 
 	// cart
 	cartRepo := repositories.NewCartRepository(DB)
@@ -66,6 +64,9 @@ func main() {
 	reviewRepo := repositories.NewReviewRepository(DB)
 	reviewService := services.NewReviewService(reviewRepo, orderRepo, companyRepo, productRepo)
 	reviewHandler := handlers.NewReviewHandler(reviewService)
+
+	productService := services.NewProductService(productRepo, companyRepo, reviewRepo)
+	productHandler := handlers.NewProductHandler(productService)
 
 	// Create a new mux to apply CORS middleware
 	mux := http.NewServeMux()

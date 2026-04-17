@@ -28,4 +28,6 @@ type ProductDTO struct {
 	Category    string     `json:"category_id"`
 	ImageUrl    string     `json:"image_url,omitempty"`
 	Company     CompanyDTO `json:"company"`
+	Rating      float64    `json:"rating,omitempty"`
+	ReviewCount int        `json:"review_count,omitempty"`
 }

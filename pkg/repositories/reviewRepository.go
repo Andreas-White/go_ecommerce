@@ -17,6 +17,7 @@ type IReviewRepository interface {
 	GetReviewByID(ctx context.Context, reviewID uuid.UUID) (*models.Review, error)
 	UpdateReview(ctx context.Context, reviewID, userID uuid.UUID, rating int, comment *string) error
 	DeleteReview(ctx context.Context, reviewID, userID uuid.UUID) error
+	GetProductReviewStats(ctx context.Context, productID uuid.UUID) (float64, int, error)
 }
 
 type ReviewRepository struct {
@@ -118,4 +119,18 @@ func (r *ReviewRepository) DeleteReview(ctx context.Context, reviewID, userID uu
 		return utils.HandleRepositoryErrors(ctx, sql.ErrNoRows, "repository/DeleteReview", reviewID.String())
 	}
 	return nil
+}
+
+func (r *ReviewRepository) GetProductReviewStats(ctx context.Context, productID uuid.UUID) (float64, int, error) {
+	query := `
+		SELECT COALESCE(AVG(rating), 0) as average_rating, COUNT(id) as review_count
+		FROM reviews WHERE product_id = $1
+	`
+	var avgRating float64
+	var reviewCount int
+	err := r.DB.QueryRowContext(ctx, query, productID).Scan(&avgRating, &reviewCount)
+	if err != nil {
+		return 0, 0, utils.HandleRepositoryErrors(ctx, err, "repository/GetProductReviewStats", productID.String())
+	}
+	return avgRating, reviewCount, nil
 }

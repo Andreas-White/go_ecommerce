@@ -82,9 +82,12 @@ func TestMain(m *testing.M) {
 	testCompanyService := services.NewCompanyService(testCompanyRepo)
 	testCompanyHandler := handlers.NewCompanyHandler(testCompanyService)
 
+	// Initialize Review components (needed for ProductService)
+	testReviewRepo := repositories.NewReviewRepository(testDB)
+
 	// Initialize Product components
 	productRepo := repositories.NewProductRepository(testDB)
-	productService := services.NewProductService(productRepo, testCompanyRepo)
+	productService := services.NewProductService(productRepo, testCompanyRepo, testReviewRepo)
 	testProductHandler = handlers.NewProductHandler(productService)
 
 	// Initialize Cart components
@@ -97,9 +100,7 @@ func TestMain(m *testing.M) {
 	orderService := services.NewOrderService(orderRepo, cartRepo, productRepo)
 	testOrderHandler := handlers.NewOrderHandler(orderService)
 
-	// Initialize Review components
-	// Review service
-	testReviewRepo := repositories.NewReviewRepository(testDB)
+	// Initialize Review service
 	testReviewService := services.NewReviewService(testReviewRepo, orderRepo, testCompanyRepo, productRepo)
 	testReviewHandler := handlers.NewReviewHandler(testReviewService)
 

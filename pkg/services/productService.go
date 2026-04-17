@@ -20,12 +20,14 @@ type IProductService interface {
 type ProductService struct {
 	Repo        repositories.IProductRepository
 	CompanyRepo repositories.ICompanyRepository
+	ReviewRepo  repositories.IReviewRepository
 }
 
-func NewProductService(repo repositories.IProductRepository, companyRepo repositories.ICompanyRepository) IProductService {
+func NewProductService(repo repositories.IProductRepository, companyRepo repositories.ICompanyRepository, reviewRepo repositories.IReviewRepository) IProductService {
 	return &ProductService{
 		Repo:        repo,
 		CompanyRepo: companyRepo,
+		ReviewRepo:  reviewRepo,
 	}
 }
 
@@ -86,11 +88,10 @@ func (s *ProductService) DeleteProduct(ctx context.Context, id string) error {
 
 // toProductDTO converts a Product to ProductDTO with company information
 func (s *ProductService) toProductDTO(ctx context.Context, product *models.Product) (*models.ProductDTO, error) {
-	// Try to get company information for the product owner
 	company, err := s.CompanyRepo.GetCompanyByUserID(ctx, product.UserID)
 	if err != nil {
-		// If no company exists, create an empty company DTO
 		companyDTO := models.CompanyDTO{}
+		rating, reviewCount, _ := s.ReviewRepo.GetProductReviewStats(ctx, product.ID)
 		return &models.ProductDTO{
 			ID:          product.ID,
 			Name:        product.Name,
@@ -100,10 +101,11 @@ func (s *ProductService) toProductDTO(ctx context.Context, product *models.Produ
 			Category:    product.Category,
 			ImageUrl:    product.ImageUrl,
 			Company:     companyDTO,
+			Rating:      rating,
+			ReviewCount: reviewCount,
 		}, nil
 	}
 
-	// Convert Company to CompanyDTO
 	companyDTO := models.CompanyDTO{
 		ID:            company.ID,
 		Name:          company.Name,
@@ -117,6 +119,8 @@ func (s *ProductService) toProductDTO(ctx context.Context, product *models.Produ
 		UpdatedAt:     company.UpdatedAt,
 	}
 
+	rating, reviewCount, _ := s.ReviewRepo.GetProductReviewStats(ctx, product.ID)
+
 	return &models.ProductDTO{
 		ID:          product.ID,
 		Name:        product.Name,
@@ -126,6 +130,8 @@ func (s *ProductService) toProductDTO(ctx context.Context, product *models.Produ
 		Category:    product.Category,
 		ImageUrl:    product.ImageUrl,
 		Company:     companyDTO,
+		Rating:      rating,
+		ReviewCount: reviewCount,
 	}, nil
 }
 
