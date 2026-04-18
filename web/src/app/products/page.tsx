@@ -54,9 +54,14 @@ function ProductsPageContent() {
         const searchToUse = immediateSearchTerm ?? debouncedSearchTerm;
 
         if (category) {
+          const params = new URLSearchParams();
+          params.append('category', category);
+          if (sortBy) params.append('sortBy', sortBy);
+          if (sortOrder) params.append('sortOrder', sortOrder);
+
           productsData =
             (await api.get<Product[]>(
-              `/products/category?category=${category}`
+              `/products/category?${params.toString()}`
             )) || [];
         } else {
           const params = new URLSearchParams();

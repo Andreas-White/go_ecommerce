@@ -26,11 +26,11 @@
 
 .search-bar-input-wrapper .search-bar-input {
   flex: 1;
-  background: transparent;
-  border: none;
+  background: #FFFFFF;
+  border: 1px solid #E0E0E0;
   padding: 12px 20px;
   font-size: 16px;
-  color: var(--text-color);
+  color: #343434;
   border-radius: 40px;
   transition:
     width 300ms ease,
@@ -39,7 +39,8 @@
 }
 
 .search-bar-input-wrapper .search-bar-input::placeholder {
-  opacity: 0;
+  color: #4F4F4F;
+  opacity: 1;
   transition: opacity 300ms ease-out 100ms;
 }
 

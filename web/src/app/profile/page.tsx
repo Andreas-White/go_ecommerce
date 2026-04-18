@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
@@ -31,13 +31,11 @@ export default function ProfilePage() {
 
   return (
     <div className="profile-container">
-      <h1 className="profile-title">
-        Profile
-      </h1>
+      <h1 className="profile-title">Profile</h1>
 
       <div className="profile-section">
         <h2 className="profile-section-title">Account Information</h2>
-        
+
         <div className="profile-info-card">
           <div className="profile-info-row">
             <strong className="profile-info-label">Name:</strong>
@@ -45,18 +43,16 @@ export default function ProfilePage() {
               {user.first_name} {user.last_name}
             </span>
           </div>
-          
+
           <div className="profile-info-row">
             <strong className="profile-info-label">Email:</strong>
-            <span className="profile-info-value">
-              {user.email}
-            </span>
+            <span className="profile-info-value">{user.email}</span>
           </div>
-          
+
           <div className="profile-info-row">
             <strong className="profile-info-label">Account Type:</strong>
             <span className="profile-info-value">
-              {user.is_producer ? 'Producer (Seller)' : 'Customer (Buyer)'}
+              {user.is_producer ? 'Producer' : 'Customer'}
             </span>
           </div>
         </div>
@@ -64,29 +60,29 @@ export default function ProfilePage() {
 
       <div className="profile-section">
         <h2 className="profile-section-title">Account Settings</h2>
-        
+
         <div className="profile-settings">
-          <Button variant="primary" href='/change-password'>
+          <Button variant="primary" href="/change-password">
             Change Password
           </Button>
 
           {user.is_producer && (
-            <Button variant="primary" href='/my-products'>
+            <Button variant="primary" href="/my-products">
               Manage My Products
             </Button>
           )}
 
-          <Button variant="secondary" href='/orders'>
+          <Button variant="secondary" href="/orders">
             View My Orders
           </Button>
         </div>
       </div>
 
       <div className="profile-back-link">
-        <Button variant="tertiary" href='/'>
+        <Button variant="tertiary" href="/">
           Back to Home
         </Button>
       </div>
     </div>
   );
-} 
+}

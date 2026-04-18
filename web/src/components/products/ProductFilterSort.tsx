@@ -40,13 +40,25 @@ export default React.memo(function ProductFilterSort({
 }) {
   return (
     <div className="product-filter-sort">
-      <select value={category} onChange={e => onCategoryChange(e.target.value)} className="product-filter-select">
+      <select 
+        value={category} 
+        onChange={e => onCategoryChange(e.target.value)} 
+        className={`product-filter-select ${category ? 'has-value' : ''}`}
+      >
         {categories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
       </select>
-      <select value={sortBy} onChange={e => onSortByChange(e.target.value)} className="product-filter-select">
+      <select 
+        value={sortBy} 
+        onChange={e => onSortByChange(e.target.value)}
+        className="product-filter-select has-value"
+      >
         {sortOptions.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
       </select>
-      <select value={sortOrder} onChange={e => onOrderChange(e.target.value)} className="product-filter-sort-select">
+      <select 
+        value={sortOrder} 
+        onChange={e => onOrderChange(e.target.value)}
+        className="product-filter-select has-value"
+      >
         {orderOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>

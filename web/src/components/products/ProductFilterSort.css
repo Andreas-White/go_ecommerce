@@ -1,14 +1,80 @@
 .product-filter-sort {
   display: flex;
-  gap: 16px;
+  gap: var(--grid-gap-md);
   margin: 1.5rem 0;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .product-filter-select {
-  padding: 8px;
-  border-radius: 4px;
+  appearance: none;
+  padding: 10px 36px 10px 14px;
+  border-radius: 8px;
   border: 1px solid var(--border-color);
-  background: var(--input-background);
+  background-color: var(--input-background);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23343434' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
   color: var(--text-color);
-} 
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  min-width: 140px;
+}
+
+.product-filter-select:hover {
+  border-color: var(--primary-color);
+}
+
+.product-filter-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(42, 111, 223, 0.15);
+}
+
+.product-filter-select.has-value {
+  border-color: var(--primary-color);
+  background-color: var(--card-background);
+}
+
+.product-filter-select option {
+  background-color: var(--card-background);
+  color: var(--text-color);
+  padding: 8px;
+}
+
+@media (max-width: 768px) {
+  .product-filter-sort {
+    gap: var(--grid-gap-sm);
+  }
+
+  .product-filter-select {
+    flex: 1;
+    min-width: 100px;
+    font-size: 0.9rem;
+    padding: 8px 30px 8px 10px;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.product-filter-sort select {
+  animation: fade-in var(--transition-slow) ease-out;
+}
+
+.product-filter-sort select:nth-child(2) {
+  animation-delay: 50ms;
+}
+
+.product-filter-sort select:nth-child(3) {
+  animation-delay: 100ms;
+}
