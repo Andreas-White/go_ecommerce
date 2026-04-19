@@ -7,7 +7,7 @@
   border-radius: 8px;
   border: none;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s, border 0.2s, opacity 0.2s;
+  transition: background 0.15s ease, color 0.15s ease, border 0.15s ease, opacity 0.2s ease, transform 0.1s ease;
   outline: none;
   text-decoration: none;
   position: relative;
@@ -73,21 +73,37 @@
   padding: 1rem 2.25rem;
 }
 
+/* Active Press State */
+.button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
 /* Disabled State */
 .button:disabled,
 .button[aria-disabled="true"] {
   opacity: 0.6;
   pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+/* Loading State */
+.button.loading {
+  opacity: 0.8;
+  pointer-events: none;
+}
+
+.button.loading > * {
+  opacity: 0;
+}
+
+.button.loading .spinner {
+  position: absolute;
+  opacity: 1;
 }
 
 /* Spinner */
 .spinner {
-  display: inline-block;
-  margin-right: 0.5em;
-  vertical-align: middle;
-}
-
-/* Loading state: add space for spinner */
-.loading {
-  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }

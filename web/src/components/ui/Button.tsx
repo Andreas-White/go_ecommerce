@@ -53,7 +53,7 @@ export default function Button({
           }
         }}
       >
-        {isLoading ? <Spinner /> : children}
+        {isLoading ? <Spinner size="sm" /> : children}
       </Link>
     );
   }
@@ -66,7 +66,7 @@ export default function Button({
       aria-disabled={disabled || isLoading}
       {...props}
     >
-      {isLoading ? <Spinner /> : children}
+      {isLoading ? <Spinner size="sm" /> : children}
     </button>
   );
-} 
+}

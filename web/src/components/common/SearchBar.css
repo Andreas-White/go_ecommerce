@@ -5,57 +5,59 @@
   width: 100%;
   min-width: 500px;
   max-width: 750px;
-  padding: 8px;
-  background: var(--background-color);
+  padding: 6px 8px;
+  background: var(--input-background);
   border-radius: 50px;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-sm);
   transition:
     box-shadow 200ms ease,
-    transform 200ms ease;
+    transform 200ms ease,
+    background-color 200ms ease,
+    border-color 200ms ease;
 }
 
 .search-bar-form:focus-within {
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
   transform: scale(1.01);
+  border-color: var(--primary-color);
 }
 
 .search-bar-input-wrapper {
   position: relative;
   flex: 1;
+  display: flex;
 }
 
 .search-bar-input-wrapper .search-bar-input {
   flex: 1;
-  background: #FFFFFF;
-  border: 1px solid #E0E0E0;
-  padding: 12px 20px;
   font-size: 16px;
-  color: #343434;
+  color: var(--text-color);
   border-radius: 40px;
+  outline: none;
+  margin-left: 10px;
   transition:
     width 300ms ease,
     opacity 300ms ease-out;
-  outline: none;
 }
 
 .search-bar-input-wrapper .search-bar-input::placeholder {
-  color: #4F4F4F;
-  opacity: 1;
+  color: var(--text-color);
+  opacity: 0.5;
   transition: opacity 300ms ease-out 100ms;
 }
 
 .search-bar-input-wrapper .search-bar-input:focus::placeholder,
 .search-bar-input-wrapper .search-bar-input:not(:placeholder-shown)::placeholder {
-  opacity: 0.6;
+  opacity: 0.4;
 }
 
 .search-bar-button {
   background: var(--primary-color);
   border: none;
   cursor: pointer;
-  color: var(--background-color);
+  color: white;
   font-size: 22px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-radius: 50% !important;
   transition:
     transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1),
@@ -65,7 +67,7 @@
 
 .search-bar-button:hover {
   transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(42, 111, 223, 0.4);
 }
 
 .search-bar-button:active {
@@ -74,33 +76,31 @@
 
 .search-bar-clear-button {
   position: absolute;
-  right: 12px;
+  right: 8px;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--border-color);
-  font-size: 16px;
+  color: var(--text-color);
+  opacity: 0.5;
+  font-size: 18px;
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 50%;
   transition:
     background-color 150ms ease,
     color 150ms ease,
-    transform 150ms ease;
+    transform 150ms ease,
+    opacity 150ms ease;
   z-index: 10;
-  opacity: 0;
-  pointer-events: none;
 }
 
 .search-bar-clear-button.visible {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(-50%) scale(1);
+  opacity: 0.8;
 }
 
 .search-bar-clear-button:hover {
-  background-color: var(--secondary-color);
+  background-color: var(--border-color);
   color: var(--text-color);
   transform: translateY(-50%) scale(1.1);
 }
@@ -114,7 +114,7 @@
   top: 100%;
   left: 0;
   right: 0;
-  background: var(--background-color);
+  background: var(--card-background);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: var(--shadow-lg);
@@ -164,4 +164,21 @@
   text-align: center;
   color: var(--text-color);
   opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+  .search-bar-form {
+    min-width: unset;
+    padding: 4px 6px;
+  }
+
+  .search-bar-input-wrapper .search-bar-input {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+
+  .search-bar-button {
+    padding: 6px 10px;
+    font-size: 18px;
+  }
 }

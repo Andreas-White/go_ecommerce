@@ -1,13 +1,28 @@
 import React from 'react';
 import './Input.css';
 
-type InputProps = React.InputHTMLAttributes<HTMLInputElement>;
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  required?: boolean;
+}
 
-export default function Input(props: InputProps) {
+export default function Input({ label, required, className, id, ...props }: InputProps) {
+  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+  
   return (
-    <input
-      {...props}
-      className={`ui-input ${props.className || ''}`}
-    />
+    <div className={`ui-input-wrapper ${className || ''}`}>
+      {label && (
+        <label htmlFor={inputId} className="ui-input-label">
+          {label}
+          {required && <span className="ui-input-required" title="Required">*</span>}
+        </label>
+      )}
+      <input
+        {...props}
+        id={inputId}
+        className="ui-input"
+        required={required}
+      />
+    </div>
   );
-} 
+}
