@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import SearchBar from '../common/SearchBar';
@@ -15,11 +15,16 @@ export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const [headerSearchTerm, setHeaderSearchTerm] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [cartPulsing, setCartPulsing] = useState(false);
+  const prevCartCount = useRef(0);
 
   const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
 
   const showSearchBar =
-    pathname === '/' || pathname === '/products' || pathname.startsWith('/product/');
+    pathname === '/' ||
+    pathname === '/products' ||
+    pathname.startsWith('/product/');
 
   const handleSearchSubmit = (term: string) => {
     if (term.trim()) {
@@ -34,16 +39,39 @@ export default function Header() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('cart_session_id');
     }
+    setMobileMenuOpen(false);
   };
+
+  const isActive = (path: string) => pathname === path;
+
+  useEffect(() => {
+    if (cartCount > prevCartCount.current) {
+      setCartPulsing(true);
+      const timer = setTimeout(() => setCartPulsing(false), 300);
+      return () => clearTimeout(timer);
+    }
+    prevCartCount.current = cartCount;
+  }, [cartCount]);
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
 
   return (
     <header className="header">
       <nav className="header-nav">
         <div className="header-left">
-          <Link href="/">
+          <button
+            className={`hamburger-btn ${mobileMenuOpen ? 'open' : ''}`}
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-label="Toggle menu"
+          >
+            <span className="bar"></span>
+            <span className="bar"></span>
+            <span className="bar"></span>
+          </button>
+          <Link href="/" onClick={closeMobileMenu}>
             <div className="header-logo">
               <Image
-                src="/Logo.png"
+                src="/Logo2.png"
                 alt="SnapCart Logo"
                 width={240}
                 height={80}
@@ -52,7 +80,7 @@ export default function Header() {
                 priority
               />
               <Image
-                src="/Logo2.png"
+                src="/Logo.png"
                 alt="SnapCart Logo"
                 width={240}
                 height={80}
@@ -74,20 +102,37 @@ export default function Header() {
         )}
 
         <div className="header-right">
-          <Link href="/cart" className="header-cart">
+          <Link
+            href="/cart"
+            className={`header-cart ${isActive('/cart') ? 'active' : ''}`}
+          >
             <span className="header-cart-icon">🛒</span>
             {cartCount > 0 && (
-              <span className="header-cart-badge">{cartCount}</span>
+              <span
+                className={`header-cart-badge ${cartPulsing ? 'pulsing' : ''}`}
+              >
+                {cartCount}
+              </span>
             )}
           </Link>
           {loading ? (
             <span className="header-loading">Loading...</span>
           ) : user ? (
             <>
-              <Link href="/profile">{user.first_name}</Link>
+              <Link
+                href="/profile"
+                className={isActive('/profile') ? 'active' : ''}
+              >
+                {user.first_name}
+              </Link>
               {user.is_producer && (
-                <Link href="/producer/dashboard" className="producer-link">
-                  Producer Dashboard
+                <Link
+                  href="/producer/dashboard"
+                  className={`producer-link ${
+                    isActive('/producer/dashboard') ? 'active' : ''
+                  }`}
+                >
+                  Dashboard
                 </Link>
               )}
               <Button
@@ -100,12 +145,102 @@ export default function Header() {
             </>
           ) : (
             <>
-              <Link href="/login">Login</Link>
-              <Link href="/register">Register</Link>
+              <Link
+                href="/login"
+                className={isActive('/login') ? 'active' : ''}
+              >
+                Login
+              </Link>
+              <Link
+                href="/register"
+                className={isActive('/register') ? 'active' : ''}
+              >
+                Register
+              </Link>
             </>
           )}
         </div>
       </nav>
+
+      {/* Mobile Menu */}
+      <div
+        className={`mobile-menu-overlay ${mobileMenuOpen ? 'open' : ''}`}
+        onClick={closeMobileMenu}
+      />
+      <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
+        {showSearchBar && (
+          <SearchBar
+            value={headerSearchTerm}
+            onChange={setHeaderSearchTerm}
+            onSubmit={(term) => {
+              handleSearchSubmit(term);
+              closeMobileMenu();
+            }}
+          />
+        )}
+        {loading ? (
+          <span className="header-loading">Loading...</span>
+        ) : user ? (
+          <>
+            <Link
+              href="/cart"
+              className={isActive('/cart') ? 'active' : ''}
+              onClick={closeMobileMenu}
+            >
+              🛒 Cart {cartCount > 0 && `(${cartCount})`}
+            </Link>
+            <Link
+              href="/profile"
+              className={isActive('/profile') ? 'active' : ''}
+              onClick={closeMobileMenu}
+            >
+              {user.first_name}
+            </Link>
+            {user.is_producer && (
+              <Link
+                href="/producer/dashboard"
+                className={`producer-link ${
+                  isActive('/producer/dashboard') ? 'active' : ''
+                }`}
+                onClick={closeMobileMenu}
+              >
+                Producer Dashboard
+              </Link>
+            )}
+            <Button
+              variant="primary"
+              className="header-logout-btn"
+              onClick={handleLogout}
+            >
+              Logout
+            </Button>
+          </>
+        ) : (
+          <>
+            <Link
+              href="/cart"
+              className={isActive('/cart') ? 'active' : ''}
+              onClick={closeMobileMenu}
+            >
+              🛒 Cart {cartCount > 0 && `(${cartCount})`}
+            </Link>
+            <Link
+              href="/login"
+              className={isActive('/login') ? 'active' : ''}
+              onClick={closeMobileMenu}
+            >
+              Login
+            </Link>
+            <Link
+              href="/register"
+              className={isActive('/register') ? 'active' : ''}
+              onClick={closeMobileMenu}
+            >
+              Register
+            </Link>
+          </>
+        )}
+      </div>
     </header>
   );
 }

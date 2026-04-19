@@ -208,6 +208,7 @@
   border-radius: 8px;
   font-weight: 500;
   transition: all var(--transition-fast);
+  margin-left: auto;
 }
 
 .product-add-btn:hover {
