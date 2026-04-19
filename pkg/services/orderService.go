@@ -25,6 +25,7 @@ type IOrderService interface {
 	GetSalesReport(ctx context.Context, producerID uuid.UUID, request models.SalesReportRequest) (*models.SalesReportResponse, error)
 	CancelOrder(ctx context.Context, orderID uuid.UUID) error
 	SoftDeleteOrder(ctx context.Context, orderID uuid.UUID) error
+	ProducerHasProductInOrder(ctx context.Context, producerID, orderID uuid.UUID) (bool, error)
 }
 
 type OrderService struct {
@@ -277,6 +278,10 @@ func (s *OrderService) GetProducerOrders(ctx context.Context, producerID uuid.UU
 	return s.orderRepo.GetOrdersByProducerID(ctx, producerID)
 }
 
+func (s *OrderService) ProducerHasProductInOrder(ctx context.Context, producerID, orderID uuid.UUID) (bool, error) {
+	return s.orderRepo.ProducerHasProductInOrder(ctx, producerID, orderID)
+}
+
 // ConfirmOrderGroup updates the order statuses and processes payment
 // This is called after the user confirms the order summary
 func (s *OrderService) ConfirmOrderGroup(ctx context.Context, groupID uuid.UUID, userID uuid.UUID) ([]models.OrderWithDetails, error) {
@@ -340,7 +345,6 @@ func (s *OrderService) ConfirmOrderGroup(ctx context.Context, groupID uuid.UUID,
 		}
 	}
 
-
 	// 3. Process grouped payment
 	err = s.ProcessGroupPayment(ctx, groupID)
 	if err != nil {
@@ -380,7 +384,7 @@ func (s *OrderService) ProcessGroupPayment(ctx context.Context, groupID uuid.UUI
 		if err != nil {
 			return utils.HandleServiceErrors(ctx, err, "service/ProcessGroupPayment")
 		}
-		
+
 		paymentID := orderWithDetails.Payment.ID
 
 		// Safely skip if already paid (in case this is a retry from a previous half-failure)

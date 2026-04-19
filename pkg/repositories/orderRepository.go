@@ -28,6 +28,7 @@ type IOrderRepository interface {
 	UpdateShippingTracking(ctx context.Context, orderID uuid.UUID, trackingCode string, shippedAt *time.Time) error
 	GetSalesReport(ctx context.Context, producerID uuid.UUID, startDate, endDate *time.Time, category *string) (*models.SalesReportResponse, error)
 	SoftDeleteOrder(ctx context.Context, orderID uuid.UUID) error
+	ProducerHasProductInOrder(ctx context.Context, producerID, orderID uuid.UUID) (bool, error)
 }
 
 type OrderRepository struct {
@@ -361,6 +362,22 @@ func (r *OrderRepository) GetOrdersByProducerID(ctx context.Context, producerID 
 	}
 
 	return orders, nil
+}
+
+func (r *OrderRepository) ProducerHasProductInOrder(ctx context.Context, producerID, orderID uuid.UUID) (bool, error) {
+	query := `
+		SELECT EXISTS(
+			SELECT 1 FROM order_items oi
+			JOIN products p ON oi.product_id = p.id
+			WHERE oi.order_id = $1 AND p.user_id = $2
+		)
+	`
+	var exists bool
+	err := r.DB.QueryRowContext(ctx, query, orderID, producerID).Scan(&exists)
+	if err != nil {
+		return false, utils.HandleRepositoryErrors(ctx, err, "repository/ProducerHasProductInOrder", orderID.String())
+	}
+	return exists, nil
 }
 
 func (r *OrderRepository) UpdateShippingTracking(ctx context.Context, orderID uuid.UUID, trackingCode string, shippedAt *time.Time) error {

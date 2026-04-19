@@ -205,8 +205,11 @@ func (h *OrderHandler) GetOrderDetails(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Verify the order belongs to the authenticated user
-	if orderWithDetails.Order.UserID != user.ID {
+	hasAccess := orderWithDetails.Order.UserID == user.ID
+	if !hasAccess && user.IsProducer {
+		hasAccess, _ = h.orderService.ProducerHasProductInOrder(ctx, user.ID, request.OrderID)
+	}
+	if !hasAccess {
 		utils.HandleAPIErrors(nil, w, "handler/GetOrderDetails", http.StatusForbidden, "Access denied")
 		return
 	}
