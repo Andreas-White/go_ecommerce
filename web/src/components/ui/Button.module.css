@@ -74,30 +74,28 @@
 }
 
 /* Active Press State */
-.button:active:not(:disabled) {
+.button:active:not(:disabled):not([aria-busy="true"]) {
   transform: scale(0.97);
 }
 
-/* Disabled State */
-.button:disabled,
-.button[aria-disabled="true"] {
+/* Disabled State - but NOT when loading (aria-busy indicates loading) */
+.button[aria-disabled="true"]:not([aria-busy="true"]) {
   opacity: 0.6;
   pointer-events: none;
   transition: opacity 0.2s ease;
 }
 
 /* Loading State */
-.button.loading {
+.button[aria-busy="true"] {
   opacity: 0.8;
   pointer-events: none;
 }
 
-.button.loading > * {
+.button[aria-busy="true"] > * {
   opacity: 0;
 }
 
-.button.loading .spinner {
-  position: absolute;
+.button[aria-busy="true"] .spinner {
   opacity: 1;
 }
 

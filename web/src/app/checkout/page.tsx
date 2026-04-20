@@ -11,6 +11,7 @@ import OrderSummaryDisplay from '../../components/checkout/OrderSummaryDisplay';
 import './page.css';
 import Alert from '@/components/ui/Alert';
 import Spinner from '@/components/ui/Spinner';
+import { useTopProgress } from '@/context/TopProgressContext';
 
 interface ShippingInfo {
   address: string;
@@ -50,6 +51,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { cartItems, loading: cartLoading, clearCart } = useCart();
   const { user, loading: authLoading } = useAuth();
+  const { start: startProgress, complete: completeProgress } = useTopProgress();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [shippingInfo, setShippingInfo] = useState<ShippingInfo>({
@@ -91,10 +93,9 @@ export default function CheckoutPage() {
     setPaymentInfo(payment);
     setCurrentStep(3);
 
-    // Process checkout to get order summary
     setLoading(true);
+    startProgress();
     try {
-      // Get cart items to extract cart ID
       const cartItemsWithDetails = await api.post<Array<{ cart_id: string }>>(
         '/cart/get'
       );
@@ -113,7 +114,7 @@ export default function CheckoutPage() {
         },
         undefined,
         true
-      ); // requireCSRF: true
+      );
       setOrderSummary(summary);
       setCheckoutAlert({
         type: 'success',
@@ -127,6 +128,7 @@ export default function CheckoutPage() {
       setCurrentStep(2);
     } finally {
       setLoading(false);
+      completeProgress();
     }
   };
 
@@ -134,6 +136,7 @@ export default function CheckoutPage() {
     if (!orderSummary) return;
 
     setLoading(true);
+    startProgress();
     try {
       await api.post(
         '/orders/confirm',
@@ -142,11 +145,10 @@ export default function CheckoutPage() {
         },
         undefined,
         true
-      ); // requireCSRF: true
+      );
 
       await clearCart();
 
-      // Redirect to order confirmation page
       router.push(`/order-confirmation/${orderSummary.order_group_id}`);
     } catch (error) {
       setCheckoutAlert({
@@ -155,6 +157,7 @@ export default function CheckoutPage() {
       });
     } finally {
       setLoading(false);
+      completeProgress();
     }
   };
 

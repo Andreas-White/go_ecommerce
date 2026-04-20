@@ -4,7 +4,9 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../lib/api';
 import './page.css';
-import { Button, Spinner } from '@/components/ui';
+import { Button } from '@/components/ui';
+import { useTopProgress } from '@/context/TopProgressContext';
+import OrderDetailsSkeleton from '@/components/ui/OrderDetailsSkeleton';
 
 interface OrderWithDetails {
   order: {
@@ -40,6 +42,7 @@ export default function OrderConfirmationPage() {
   const params = useParams();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { start: startProgress, complete: completeProgress } = useTopProgress();
   const [orderDetails, setOrderDetails] = useState<OrderWithDetails[] | null>(
     null
   );
@@ -104,6 +107,7 @@ export default function OrderConfirmationPage() {
   }, [orderId, user, authLoading, router]);
 
   const fetchOrderDetails = async () => {
+    startProgress();
     try {
       setLoading(true);
       const details = await api.post<OrderWithDetails[]>('/orders/group-details', {
@@ -114,6 +118,7 @@ export default function OrderConfirmationPage() {
       setError('Failed to load order details. Please try again.');
     } finally {
       setLoading(false);
+      completeProgress();
     }
   };
 
@@ -156,7 +161,7 @@ export default function OrderConfirmationPage() {
   if (authLoading || loading) {
     return (
       <div className="confirmation-loading">
-        <Spinner />
+        <OrderDetailsSkeleton />
       </div>
     );
   }

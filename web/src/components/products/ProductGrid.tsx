@@ -1,5 +1,6 @@
 import React from 'react';
 import ProductCard from './ProductCard';
+import ProductCardSkeleton from './ProductCardSkeleton';
 
 interface Product {
   id: string;
@@ -26,16 +27,30 @@ interface ProductGridProps {
   cartItems: CartItem[];
   onViewDetails: (productId: string) => void;
   onAddToCart: (product: Product) => void;
+  isLoading?: boolean;
 }
+
+const SKELETON_COUNT = 8;
 
 export default React.memo(function ProductGrid({
   products,
   cartItems,
   onViewDetails,
   onAddToCart,
+  isLoading = false,
 }: ProductGridProps) {
+  if (isLoading) {
+    return (
+      <div className="products-grid">
+        {Array.from({ length: SKELETON_COUNT }).map((_, index) => (
+          <ProductCardSkeleton key={index} />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="products-grid">
+    <div className="products-grid fade-in">
       {products.map((product) => (
         <ProductCard
           key={product.id}

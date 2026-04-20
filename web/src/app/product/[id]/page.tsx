@@ -9,7 +9,8 @@ import './page.css';
 import AddReviewForm from '../../../components/products/AddReviewForm';
 import { Button } from '@/components/ui';
 import Alert from '@/components/ui/Alert';
-import Spinner from '@/components/ui/Spinner';
+import ProductDetailSkeleton from '@/components/products/ProductDetailSkeleton';
+import { useTopProgress } from '@/context/TopProgressContext';
 
 interface Product {
   id: string;
@@ -56,6 +57,7 @@ export default function ProductDetailsPage() {
   } | null>(null);
   const { addToCart } = useCart();
   const { user } = useAuth();
+  const { start: startProgress, complete: completeProgress } = useTopProgress();
 
   useEffect(() => {
     if (productId) {
@@ -65,6 +67,7 @@ export default function ProductDetailsPage() {
   }, [productId]);
 
   const fetchProductDetails = async () => {
+    startProgress();
     try {
       const productData = await api.get<Product>(`/product?id=${productId}`);
       setProduct(productData);
@@ -72,6 +75,7 @@ export default function ProductDetailsPage() {
       setError('Failed to load product details.');
     } finally {
       setLoading(false);
+      completeProgress();
     }
   };
 
@@ -82,9 +86,7 @@ export default function ProductDetailsPage() {
       );
       setReviews(reviewsData || []);
     } catch (error) {
-      setError('Failed to fetch reviews.');
-    } finally {
-      setLoading(false);
+      // Silently fail for reviews
     }
   };
 
@@ -127,11 +129,7 @@ export default function ProductDetailsPage() {
   };
 
   if (loading) {
-    return (
-      <div className="product-details-loading">
-        <Spinner />
-      </div>
-    );
+    return <ProductDetailSkeleton />;
   }
 
   if (error || !product) {

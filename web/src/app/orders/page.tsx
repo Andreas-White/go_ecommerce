@@ -3,10 +3,12 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../lib/api';
-import { Button, Spinner } from '@/components/ui';
+import { Button } from '@/components/ui';
 import OrderCard from '@/components/orders/OrderCard';
 import '@/components/orders/OrderCard.css';
 import './page.css';
+import { useTopProgress } from '@/context/TopProgressContext';
+import ListItemSkeleton from '@/components/ui/ListItemSkeleton';
 
 interface Order {
   id: string;
@@ -19,10 +21,10 @@ interface Order {
 export default function OrdersPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { start: startProgress, complete: completeProgress } = useTopProgress();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // Remove deleteLoading and deleteError state
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -36,6 +38,7 @@ export default function OrdersPage() {
   }, [user, authLoading, router]);
 
   const fetchOrders = async () => {
+    startProgress();
     try {
       setLoading(true);
       const userOrders = await api.get<Order[]>('/orders/user');
@@ -44,6 +47,7 @@ export default function OrdersPage() {
       setError('Failed to load order history. Please try again.');
     } finally {
       setLoading(false);
+      completeProgress();
     }
   };
 
@@ -86,7 +90,7 @@ export default function OrdersPage() {
   if (authLoading || loading) {
     return (
       <div className="orders-loading">
-        <Spinner />
+        <ListItemSkeleton />
       </div>
     );
   }

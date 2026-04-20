@@ -1,0 +1,147 @@
+.order-details-skeleton {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.skeleton-header {
+  margin-bottom: 2rem;
+}
+
+.skeleton-back {
+  height: 36px;
+  width: 100px;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.skeleton-title {
+  height: 36px;
+  width: 250px;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+}
+
+.skeleton-subtitle {
+  height: 20px;
+  width: 150px;
+  border-radius: 4px;
+}
+
+.skeleton-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.skeleton-section {
+  background: var(--card-background);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow-md);
+}
+
+.skeleton-section-title {
+  height: 24px;
+  width: 180px;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+}
+
+.skeleton-info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.skeleton-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.skeleton-info-row:last-child {
+  border-bottom: none;
+}
+
+.skeleton-label {
+  height: 16px;
+  width: 120px;
+  border-radius: 4px;
+}
+
+.skeleton-value {
+  height: 16px;
+  width: 200px;
+  border-radius: 4px;
+}
+
+.skeleton-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.skeleton-item-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.skeleton-item-row:last-child {
+  border-bottom: none;
+}
+
+.skeleton-item-image {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.skeleton-item-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.skeleton-item-name {
+  height: 18px;
+  width: 60%;
+  border-radius: 4px;
+}
+
+.skeleton-item-details {
+  height: 14px;
+  width: 40%;
+  border-radius: 4px;
+}
+
+.skeleton-item-price {
+  height: 18px;
+  width: 80px;
+  border-radius: 4px;
+}
+
+.skeleton-total-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.skeleton-total-row {
+  height: 20px;
+  width: 100%;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .order-details-skeleton .skeleton {
+    animation: none;
+  }
+}

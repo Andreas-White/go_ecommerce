@@ -6,8 +6,10 @@ import Link from 'next/link';
 import './page.css';
 import { api } from '../../lib/api';
 import CartItem from '../../components/cart/CartItem';
-import { Alert, Button, Spinner } from '@/components/ui';
+import { Alert, Button } from '@/components/ui';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import CartSkeleton from '@/components/cart/CartSkeleton';
+import { useTopProgress } from '@/context/TopProgressContext';
 
 export default function CartPage() {
   const { cartItems, loading, removeFromCart, updateCartItems, clearCart } =
@@ -22,6 +24,15 @@ export default function CartPage() {
     message: string;
   } | null>(null);
   const [isClearCartModalOpen, setIsClearCartModalOpen] = useState(false);
+  const { start: startProgress, complete: completeProgress } = useTopProgress();
+
+  useEffect(() => {
+    if (loading) {
+      startProgress();
+    } else {
+      completeProgress();
+    }
+  }, [loading, startProgress, completeProgress]);
 
   // Memoize unique product IDs to avoid unnecessary re-computations
   const uniqueProductIds = useMemo(() => {
@@ -127,11 +138,7 @@ export default function CartPage() {
   }, [cartItems]);
 
   if (loading) {
-    return (
-      <div className="cart-loading-container">
-        <Spinner />
-      </div>
-    );
+    return <CartSkeleton />;
   }
 
   return (

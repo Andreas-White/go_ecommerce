@@ -31,7 +31,6 @@ export default function Button({
     styles.button,
     styles[variant],
     styles[size],
-    isLoading ? styles.loading : '',
     className
   ].filter(Boolean).join(' ');
 
@@ -42,6 +41,7 @@ export default function Button({
         className={classes}
         role="button"
         aria-disabled={disabled || isLoading}
+        aria-busy={isLoading || undefined}
         tabIndex={disabled || isLoading ? -1 : 0}
         onClick={(e) => {
           if (disabled || isLoading) {
@@ -62,8 +62,9 @@ export default function Button({
     <button
       type={props.type || 'button'}
       className={classes}
-      disabled={disabled || isLoading}
+      disabled={disabled}
       aria-disabled={disabled || isLoading}
+      aria-busy={isLoading || undefined}
       {...props}
     >
       {isLoading ? <Spinner size="sm" /> : children}

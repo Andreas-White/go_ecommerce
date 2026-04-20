@@ -9,7 +9,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import ProductGrid from '../../components/products/ProductGrid';
 import '../../components/products/ProductGrid.css';
 import Alert from '@/components/ui/Alert';
-import Spinner from '@/components/ui/Spinner';
+import { useTopProgress } from '@/context/TopProgressContext';
+import ProductCardSkeleton from '@/components/products/ProductCardSkeleton';
 
 interface Product {
   id: string;
@@ -40,6 +41,7 @@ function ProductsPageContent() {
     type: 'success' | 'error' | 'info';
     message: string;
   } | null>(null);
+  const { start: startProgress, complete: completeProgress } = useTopProgress();
 
   useEffect(() => {
     const initialSearch = searchParams.get('search') || '';
@@ -49,6 +51,7 @@ function ProductsPageContent() {
   const fetchProducts = useCallback(
     async (immediateSearchTerm?: string) => {
       setLoading(true);
+      startProgress();
       try {
         let productsData: Product[] = [];
         const searchToUse = immediateSearchTerm ?? debouncedSearchTerm;
@@ -82,9 +85,10 @@ function ProductsPageContent() {
         setError('Failed to load products. Please try again.');
       } finally {
         setLoading(false);
+        completeProgress();
       }
     },
-    [category, debouncedSearchTerm, sortBy, sortOrder]
+    [category, debouncedSearchTerm, sortBy, sortOrder, startProgress, completeProgress]
   );
 
   useEffect(() => {
@@ -166,39 +170,40 @@ function ProductsPageContent() {
 
       {error && <div className="products-error">{error}</div>}
 
-      <div className={loading ? 'products-container-overlay' : undefined}>
-        {loading && (
-          <div className="products-overlay">
-            <Spinner />
-          </div>
-        )}
+      {!loading && products.length === 0 && (
+        <div className="products-empty">
+          <div className="products-empty-icon">📦</div>
+          <h2 className="products-empty-title">No products found</h2>
+          <p className="products-empty-text">
+            {searchTerm || category
+              ? 'Try adjusting your search terms or category filter.'
+              : 'No products are available at the moment.'}
+          </p>
+        </div>
+      )}
 
-        {products.length === 0 ? (
-          <div className="products-empty">
-            <div className="products-empty-icon">📦</div>
-            <h2 className="products-empty-title">No products found</h2>
-            <p className="products-empty-text">
-              {searchTerm || category
-                ? 'Try adjusting your search terms or category filter.'
-                : 'No products are available at the moment.'}
-            </p>
-          </div>
-        ) : (
-          <ProductGrid
-            products={products}
-            cartItems={cartItems}
-            onViewDetails={handleViewDetails}
-            onAddToCart={handleAddToCart}
-          />
-        )}
-      </div>
+      <ProductGrid
+        products={products}
+        cartItems={cartItems}
+        onViewDetails={handleViewDetails}
+        onAddToCart={handleAddToCart}
+        isLoading={loading}
+      />
     </div>
   );
 }
 
 export default function ProductsPage() {
   return (
-    <Suspense fallback={<div className="products-container"><Spinner /></div>}>
+    <Suspense fallback={
+      <div className="products-container">
+        <div className="products-grid">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <ProductCardSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    }>
       <ProductsPageContent />
     </Suspense>
   );

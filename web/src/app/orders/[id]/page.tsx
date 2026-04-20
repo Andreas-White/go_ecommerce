@@ -6,7 +6,8 @@ import { api } from '../../../lib/api';
 import Link from 'next/link';
 import './page.css';
 import Button from '@/components/ui/Button';
-import Spinner from '@/components/ui/Spinner';
+import { useTopProgress } from '@/context/TopProgressContext';
+import OrderDetailsSkeleton from '@/components/ui/OrderDetailsSkeleton';
 
 interface OrderWithDetails {
   order: {
@@ -47,6 +48,7 @@ export default function OrderDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
+  const { start: startProgress, complete: completeProgress } = useTopProgress();
   const [orderDetails, setOrderDetails] = useState<OrderWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -101,6 +103,7 @@ export default function OrderDetailsPage() {
   }, [orderId, user, authLoading, router]);
 
   const fetchOrderDetails = async () => {
+    startProgress();
     try {
       setLoading(true);
       const details = await api.post<OrderWithDetails>('/orders/details', { order_id: orderId });
@@ -109,6 +112,7 @@ export default function OrderDetailsPage() {
       setError('Failed to load order details. Please try again.');
     } finally {
       setLoading(false);
+      completeProgress();
     }
   };
 
@@ -164,7 +168,7 @@ export default function OrderDetailsPage() {
   if (authLoading || loading) {
     return (
       <div className="order-details-loading">
-        <Spinner />
+        <OrderDetailsSkeleton />
       </div>
     );
   }

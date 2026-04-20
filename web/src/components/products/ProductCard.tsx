@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui';
 import './ProductCard.css';
 
@@ -38,6 +38,7 @@ export default React.memo(function ProductCard({
   onViewDetails,
   onAddToCart,
 }: ProductCardProps) {
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
   const cartItem = cartItems.find((item) => item.product_id === product.id);
   const quantityInCart = cartItem ? cartItem.quantity : 0;
   const isStockLimitReached = quantityInCart >= product.stock;
@@ -46,6 +47,15 @@ export default React.memo(function ProductCard({
   const discountPercentage = isOnSale
     ? Math.round(((product.original_price! - product.price) / product.original_price!) * 100)
     : 0;
+
+  const handleAddToCart = async () => {
+    setIsAddingToCart(true);
+    try {
+      await onAddToCart(product);
+    } finally {
+      setIsAddingToCart(false);
+    }
+  };
 
   return (
     <div className="product-card">
@@ -107,8 +117,9 @@ export default React.memo(function ProductCard({
         </Button>
         <Button
           variant="primary"
-          onClick={() => onAddToCart(product)}
+          onClick={handleAddToCart}
           disabled={product.stock <= 0 || isStockLimitReached}
+          isLoading={isAddingToCart}
           className={`product-add-btn ${
             product.stock > 0
               ? 'product-add-btn-available'

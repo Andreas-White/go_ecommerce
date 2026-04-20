@@ -1,0 +1,48 @@
+.list-item-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.list-item-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--card-background);
+  border-radius: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.list-item-skeleton-image {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.list-item-skeleton-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.list-item-skeleton-title {
+  height: 18px;
+  width: 60%;
+  border-radius: 4px;
+}
+
+.list-item-skeleton-subtitle {
+  height: 14px;
+  width: 40%;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list-item-skeleton .skeleton {
+    animation: none;
+  }
+}
