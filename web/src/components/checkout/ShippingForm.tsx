@@ -43,6 +43,7 @@ export default function ShippingForm({
 }: ShippingFormProps) {
   const [formData, setFormData] = useState<ShippingInfo>(shippingInfo);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [shakeErrorFields, setShakeErrorFields] = useState(false);
 
   const handleInputChange = (
     field: keyof ShippingInfo,
@@ -60,7 +61,6 @@ export default function ShippingForm({
       setFormData((prev) => ({ ...prev, [field]: value }));
     }
 
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
@@ -91,6 +91,9 @@ export default function ShippingForm({
 
     if (validateForm()) {
       onSubmit(formData);
+    } else {
+      setShakeErrorFields(true);
+      setTimeout(() => setShakeErrorFields(false), 400);
     }
   };
 
@@ -118,7 +121,7 @@ export default function ShippingForm({
               id="address"
               value={formData.address}
               onChange={(e) => handleInputChange('address', e.target.value)}
-              className={`form-input ${errors.address ? 'error' : ''}`}
+              className={`form-input ${errors.address ? 'error' : ''} ${shakeErrorFields && errors.address ? 'shake' : ''}`}
               placeholder="Enter your street address"
             />
             {errors.address && (
@@ -136,7 +139,7 @@ export default function ShippingForm({
                 id="city"
                 value={formData.city}
                 onChange={(e) => handleInputChange('city', e.target.value)}
-                className={`form-input ${errors.city ? 'error' : ''}`}
+                className={`form-input ${errors.city ? 'error' : ''} ${shakeErrorFields && errors.city ? 'shake' : ''}`}
                 placeholder="Enter city"
               />
               {errors.city && (
@@ -153,7 +156,7 @@ export default function ShippingForm({
                 id="zip_code"
                 value={formData.zip_code}
                 onChange={(e) => handleInputChange('zip_code', e.target.value)}
-                className={`form-input ${errors.zip_code ? 'error' : ''}`}
+                className={`form-input ${errors.zip_code ? 'error' : ''} ${shakeErrorFields && errors.zip_code ? 'shake' : ''}`}
                 placeholder="Enter ZIP code"
               />
               {errors.zip_code && (
@@ -171,7 +174,7 @@ export default function ShippingForm({
               id="country"
               value={formData.country}
               onChange={(e) => handleInputChange('country', e.target.value)}
-              className={`form-input ${errors.country ? 'error' : ''}`}
+              className={`form-input ${errors.country ? 'error' : ''} ${shakeErrorFields && errors.country ? 'shake' : ''}`}
               placeholder="Enter country"
             />
             {errors.country && (

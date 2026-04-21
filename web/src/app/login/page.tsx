@@ -14,6 +14,7 @@ function LoginForm() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [shakeErrorFields, setShakeErrorFields] = useState(false);
   const [loginAlert, setLoginAlert] = useState<{
     type: 'success' | 'error' | 'info';
     message: string;
@@ -56,7 +57,11 @@ function LoginForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      setShakeErrorFields(true);
+      setTimeout(() => setShakeErrorFields(false), 400);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -112,7 +117,7 @@ function LoginForm() {
             name="email"
             value={formData.email}
             onChange={handleChange}
-            className={`login-input${errors.email ? ' login-input-error' : ''}`}
+            className={`login-input${errors.email ? ' login-input-error' : ''}${shakeErrorFields && errors.email ? ' shake' : ''}`}
           />
           {errors.email && (
             <div className="login-error-text">{errors.email}</div>
@@ -126,9 +131,7 @@ function LoginForm() {
             name="password"
             value={formData.password}
             onChange={handleChange}
-            className={`login-input${
-              errors.password ? ' login-input-error' : ''
-            }`}
+            className={`login-input${errors.password ? ' login-input-error' : ''}${shakeErrorFields && errors.password ? ' shake' : ''}`}
           />
           {errors.password && (
             <div className="login-error-text">{errors.password}</div>

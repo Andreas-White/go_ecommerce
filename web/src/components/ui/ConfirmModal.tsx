@@ -25,7 +25,7 @@ const modalContent = ({
   confirmClassName = '',
 }: Omit<ConfirmModalProps, 'open'>) => (
   <div className="modal-overlay" tabIndex={-1}>
-    <div className="modal-dialog" role="dialog" aria-modal="true">
+    <div className="modal-dialog scale-in" role="dialog" aria-modal="true">
       <h3>{title}</h3>
       <p>{message}</p>
       <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>

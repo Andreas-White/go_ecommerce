@@ -19,6 +19,7 @@ export default function RegisterPage() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [shakeErrorFields, setShakeErrorFields] = useState(false);
   const { register, user, loading: authLoading } = useAuth();
   const [registerAlert, setRegisterAlert] = useState<{
     type: 'success' | 'error' | 'info';
@@ -66,7 +67,11 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) return;
+    if (!validateForm()) {
+      setShakeErrorFields(true);
+      setTimeout(() => setShakeErrorFields(false), 400);
+      return;
+    }
 
     setLoading(true);
     try {
@@ -135,7 +140,7 @@ export default function RegisterPage() {
             onChange={handleChange}
             className={`register-input${
               errors.first_name ? ' register-input-error' : ''
-            }`}
+            }${shakeErrorFields && errors.first_name ? ' shake' : ''}`}
           />
           {errors.first_name && (
             <div className="register-error-text">{errors.first_name}</div>
@@ -151,7 +156,7 @@ export default function RegisterPage() {
             onChange={handleChange}
             className={`register-input${
               errors.last_name ? ' register-input-error' : ''
-            }`}
+            }${shakeErrorFields && errors.last_name ? ' shake' : ''}`}
           />
           {errors.last_name && (
             <div className="register-error-text">{errors.last_name}</div>
@@ -167,7 +172,7 @@ export default function RegisterPage() {
             onChange={handleChange}
             className={`register-input${
               errors.email ? ' register-input-error' : ''
-            }`}
+            }${shakeErrorFields && errors.email ? ' shake' : ''}`}
           />
           {errors.email && (
             <div className="register-error-text">{errors.email}</div>
@@ -183,7 +188,7 @@ export default function RegisterPage() {
             onChange={handleChange}
             className={`register-input${
               errors.password ? ' register-input-error' : ''
-            }`}
+            }${shakeErrorFields && errors.password ? ' shake' : ''}`}
           />
           {errors.password && (
             <div className="register-error-text">{errors.password}</div>
@@ -199,7 +204,7 @@ export default function RegisterPage() {
             onChange={handleChange}
             className={`register-input${
               errors.confirmPassword ? ' register-input-error' : ''
-            }`}
+            }${shakeErrorFields && errors.confirmPassword ? ' shake' : ''}`}
           />
           {errors.confirmPassword && (
             <div className="register-error-text">{errors.confirmPassword}</div>
