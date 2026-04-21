@@ -14,13 +14,13 @@
 }
 
 .primary {
-  background: var(--primary-color);
+  background: linear-gradient(to bottom, var(--primary-color), var(--primary-hover, #1a4fa3));
   color: #fff;
 }
 
 .primary:hover:not(:disabled),
 .primary:focus-visible:not(:disabled) {
-  background: var(--primary-hover, #1a4fa3);
+  filter: brightness(1.05);
 }
 
 .secondary {

@@ -4,13 +4,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg, #fff);
-  color: var(--color-text, #222);
+  background: var(--card-background);
+  color: var(--text-color);
   padding: 2rem;
   border-radius: 12px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-md);
   margin: 3rem auto;
   max-width: 500px;
+  transition: background-color var(--transition-base) ease, color var(--transition-base) ease;
 }
 .error-title {
   font-size: 2.5rem;
@@ -27,20 +28,20 @@
   margin-top: 2rem;
 }
 .error-link, .error-btn {
-  color: var(--color-primary, #0070f3);
+  color: var(--primary-color);
   text-decoration: none;
   font-weight: 500;
   border: none;
   background: none;
   cursor: pointer;
-  border-bottom: 1px solid var(--color-primary, #0070f3);
+  border-bottom: 1px solid var(--primary-color);
   font-size: 1rem;
   padding: 0.25rem 0.5rem;
-  transition: color 0.2s, border-color 0.2s;
+  transition: color var(--transition-base) ease, border-color var(--transition-base) ease;
 }
 .error-link:hover, .error-btn:hover {
-  color: #0051a3;
-  border-color: #0051a3;
+  color: var(--primary-hover, #1a4fa3);
+  border-color: var(--primary-hover, #1a4fa3);
 }
 @media (prefers-color-scheme: dark) {
   .error-container {
@@ -52,8 +53,8 @@
     color: #4eaaff;
     border-color: #4eaaff;
   }
-  .error-link:hover, .error-btn:hover {
-    color: #1e90ff;
-    border-color: #1e90ff;
-  }
+.error-link:hover, .error-btn:hover {
+  color: var(--primary-hover, #1a4fa3);
+  border-color: var(--primary-hover, #1a4fa3);
+}
 } 

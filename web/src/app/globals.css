@@ -9,6 +9,8 @@
   /* Dark Grey */
   --primary-color: #2a6fdf;
   /* Blue */
+  --primary-hover: #1a4fa3;
+  /* Darker blue for hover states */
   --secondary-color: #e2e8f0;
   /* Light Grey */
   --border-color: #cbd5e0;
@@ -22,9 +24,9 @@
   --shadow-color: rgba(0, 0, 0, 0.1);
   /* Subtle shadow for light mode */
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
-  --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.2), 0 6px 12px rgba(0, 0, 0, 0.1);
   --transition-fast: 150ms;
   --transition-base: 200ms;
   --transition-slow: 300ms;
@@ -55,6 +57,8 @@
     /* Light Grey */
     --primary-color: #63b3ed;
     /* Lighter Blue */
+    --primary-hover: #4a9fdd;
+    /* Slightly darker for hover states */
     --secondary-color: #4a5568;
     /* Medium Dark Grey */
     --border-color: #2d3748;
@@ -68,9 +72,9 @@
     --shadow-color: rgba(0, 0, 0, 0.4);
     /* Stronger shadow for dark mode */
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3);
-    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4);
-    --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.25);
+    --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.5), 0 6px 12px rgba(0, 0, 0, 0.35);
   }
 }
 
@@ -79,6 +83,7 @@ html.dark {
   --background-color: #1a202c;
   --text-color: #e2e8f0;
   --primary-color: #63b3ed;
+  --primary-hover: #4a9fdd;
   --secondary-color: #4a5568;
   --border-color: #2d3748;
   --card-background: #2d3748;
@@ -86,9 +91,9 @@ html.dark {
   --link-color: #e2e8f0;
   --shadow-color: rgba(0, 0, 0, 0.4);
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4);
-  --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4), 0 4px 8px rgba(0, 0, 0, 0.25);
+  --shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.5), 0 6px 12px rgba(0, 0, 0, 0.35);
 }
 
 /* Reset default browser styles and apply global theme variables */

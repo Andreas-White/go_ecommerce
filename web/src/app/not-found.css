@@ -4,13 +4,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: var(--color-bg, #fff);
-  color: var(--color-text, #222);
+  background: var(--card-background);
+  color: var(--text-color);
   padding: 2rem;
   border-radius: 12px;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-md);
   margin: 3rem auto;
   max-width: 500px;
+  transition: background-color var(--transition-base) ease, color var(--transition-base) ease;
 }
 .not-found-title {
   font-size: 2.5rem;
@@ -26,28 +27,13 @@
   gap: 1.5rem;
 }
 .not-found-link {
-  color: var(--color-primary, #0070f3);
+  color: var(--primary-color);
   text-decoration: none;
   font-weight: 500;
-  border-bottom: 1px solid var(--color-primary, #0070f3);
-  transition: color 0.2s, border-color 0.2s;
+  border-bottom: 1px solid var(--primary-color);
+  transition: color var(--transition-base) ease, border-color var(--transition-base) ease;
 }
 .not-found-link:hover {
-  color: #0051a3;
-  border-color: #0051a3;
-}
-@media (prefers-color-scheme: dark) {
-  .not-found-container {
-    background: var(--color-bg-dark, #181c20);
-    color: var(--color-text-dark, #fff);
-    box-shadow: 0 2px 16px rgba(0,0,0,0.2);
-  }
-  .not-found-link {
-    color: #4eaaff;
-    border-color: #4eaaff;
-  }
-  .not-found-link:hover {
-    color: #1e90ff;
-    border-color: #1e90ff;
-  }
+  color: var(--primary-hover, #1a4fa3);
+  border-color: var(--primary-hover, #1a4fa3);
 } 
