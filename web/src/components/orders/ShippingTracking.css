@@ -189,20 +189,6 @@
   flex: 1;
 }
 
-.copy-button {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
-.copy-button:hover {
-  background-color: var(--border-color);
-}
-
 /* Timeline */
 .timeline {
   display: flex;

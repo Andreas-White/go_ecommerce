@@ -20,14 +20,6 @@
   color: var(--text-color);
 }
 
-.register-message-error {
-  background: #fee;
-  color: #c33;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
-
 .register-form-group {
   margin-bottom: 1rem;
 }

@@ -59,39 +59,7 @@
   gap: 1rem;
 }
 
-.profile-btn {
-  display: block;
-  padding: 12px 16px;
-  text-decoration: none;
-  border-radius: 4px;
-  text-align: center;
-  transition: all 0.3s ease;
-}
-
-.profile-btn-primary {
-  background: var(--primary-color);
-  color: white;
-}
-
-.profile-btn-primary:hover {
-  opacity: 0.9;
-}
-
-.profile-btn-secondary {
-  background: var(--secondary-color);
-  color: var(--text-color);
-  border: 1px solid var(--border-color);
-}
-
-.profile-btn-secondary:hover {
-  background-color: var(--border-color);
-}
-
 .profile-back-link {
   text-align: center;
   margin-top: 2rem;
-}
-
-.profile-link {
-  color: var(--primary-color);
 } 

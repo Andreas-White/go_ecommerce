@@ -1,20 +1,3 @@
-.btn-delete {
-  background: #dc2626;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.btn-delete:hover {
-  background: #b91c1c;
-  transform: translateY(-1px);
-}
-
 .delete-product-confirmation {
   position: fixed;
   top: 0;

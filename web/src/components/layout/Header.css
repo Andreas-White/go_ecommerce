@@ -318,11 +318,4 @@ html.dark .logo-light {
     display: flex;
   }
 
-  .header-center.mobile-visible {
-    display: flex;
-    grid-column: 1 / -1;
-    order: 3;
-    max-width: 100%;
-    margin-top: 0.5rem;
   }
-}

@@ -27,7 +27,7 @@
   gap: 1.5rem;
   margin-top: 2rem;
 }
-.error-link, .error-btn {
+.error-btn {
   color: var(--primary-color);
   text-decoration: none;
   font-weight: 500;
@@ -39,7 +39,7 @@
   padding: 0.25rem 0.5rem;
   transition: color var(--transition-base) ease, border-color var(--transition-base) ease;
 }
-.error-link:hover, .error-btn:hover {
+.error-btn:hover {
   color: var(--primary-hover, #1a4fa3);
   border-color: var(--primary-hover, #1a4fa3);
 }

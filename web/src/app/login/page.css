@@ -20,22 +20,6 @@
   color: var(--text-color);
 }
 
-.login-message-success {
-  background: #efe;
-  color: #363;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
-
-.login-message-error {
-  background: #fee;
-  color: #c33;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
-
 .login-form-group {
   margin-bottom: 1rem;
 }
@@ -78,8 +62,4 @@
 .login-link-forgot {
   text-align: center;
   margin-top: 1rem;
-}
-
-.login-link-small {
-  font-size: 14px;
 } 

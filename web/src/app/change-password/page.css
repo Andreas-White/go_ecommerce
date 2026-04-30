@@ -20,22 +20,6 @@
   color: var(--text-color);
 }
 
-.change-password-message-success {
-  background: #efe;
-  color: #363;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
-
-.change-password-message-error {
-  background: #fee;
-  color: #c33;
-  padding: 12px;
-  border-radius: 4px;
-  margin-bottom: 1rem;
-}
-
 .change-password-form-group {
   margin-bottom: 1rem;
 }
@@ -76,13 +60,4 @@
   display: flex;
   justify-content: center;
   margin-top: 1rem;
-}
-
-.change-password-link {
-  color: var(--primary-color);
-  text-decoration: none;
-}
-
-.change-password-link:hover {
-  text-decoration: underline;
 } 
