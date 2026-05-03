@@ -1,0 +1,65 @@
+.statusBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.statusPending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.statusProcessing {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.statusShipped {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.statusDelivered {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.statusCancelled {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.statusDefault {
+  background-color: var(--border-color);
+  color: var(--text-color);
+}
+
+.paymentPending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.paymentPaid {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.paymentFailed {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.paymentRefunded {
+  background-color: #f3e8ff;
+  color: #7c3aed;
+}
+
+.paymentDefault {
+  background-color: var(--border-color);
+  color: var(--text-color);
+}

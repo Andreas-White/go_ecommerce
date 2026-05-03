@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../../lib/api';
+import { StatusBadge } from '@/components/ui';
 import './OrderWithDetailsDisplay.css';
 
 interface OrderWithDetails {
@@ -56,27 +57,6 @@ const getShippingMethodLabel = (method: string): string => {
     case 'express': return 'Express Shipping';
     case 'overnight': return 'Overnight Shipping';
     default: return method;
-  }
-};
-
-const getStatusBadgeClass = (status: string): string => {
-  switch (status.toLowerCase()) {
-    case 'pending': return 'status-pending';
-    case 'processing': return 'status-processing';
-    case 'shipped': return 'status-shipped';
-    case 'delivered': return 'status-delivered';
-    case 'cancelled': return 'status-cancelled';
-    default: return 'status-default';
-  }
-};
-
-const getPaymentStatusBadgeClass = (status: string): string => {
-  switch (status.toLowerCase()) {
-    case 'pending': return 'payment-pending';
-    case 'paid': return 'payment-paid';
-    case 'failed': return 'payment-failed';
-    case 'refunded': return 'payment-refunded';
-    default: return 'payment-default';
   }
 };
 
@@ -151,15 +131,11 @@ export default function OrderWithDetailsDisplay({ orderDetails }: OrderWithDetai
             </div>
             <div className="info-row">
               <span className="info-label">Status:</span>
-              <span className={`status-badge ${getStatusBadgeClass(orderDetails.order.status)}`}>
-                {orderDetails.order.status}
-              </span>
+              <StatusBadge type="order" status={orderDetails.order.status} />
             </div>
             <div className="info-row">
               <span className="info-label">Payment Status:</span>
-              <span className={`status-badge ${getPaymentStatusBadgeClass(orderDetails.order.payment_status)}`}>
-                {orderDetails.order.payment_status}
-              </span>
+              <StatusBadge type="payment" status={orderDetails.order.payment_status} />
             </div>
           </div>
         </div>
@@ -249,9 +225,7 @@ export default function OrderWithDetailsDisplay({ orderDetails }: OrderWithDetai
             </div>
             <div className="info-row">
               <span className="info-label">Payment Status:</span>
-              <span className={`status-badge ${getPaymentStatusBadgeClass(orderDetails.payment.status)}`}>
-                {orderDetails.payment.status}
-              </span>
+              <StatusBadge type="payment" status={orderDetails.payment.status} />
             </div>
             {orderDetails.payment.transaction_id && (
               <div className="info-row">

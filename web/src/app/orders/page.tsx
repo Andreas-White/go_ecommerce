@@ -55,28 +55,6 @@ export default function OrdersPage() {
     setOrders((prev) => prev.filter((o) => o.id !== orderId));
   };
 
-  const getStatusBadgeClass = (status: string): string => {
-    switch (status.toLowerCase()) {
-      case 'pending': return 'status-pending';
-      case 'processing': return 'status-processing';
-      case 'shipped': return 'status-shipped';
-      case 'delivered': return 'status-delivered';
-      case 'canceled': return 'status-cancelled';
-      case 'canceled_by_user': return 'status-cancelled';
-      default: return 'status-default';
-    }
-  };
-
-  const getPaymentStatusBadgeClass = (status: string): string => {
-    switch (status.toLowerCase()) {
-      case 'pending': return 'payment-pending';
-      case 'paid': return 'payment-paid';
-      case 'unpaid': return 'payment-failed';
-      case 'refunded': return 'payment-refunded';
-      default: return 'payment-default';
-    }
-  };
-
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -135,8 +113,6 @@ export default function OrdersPage() {
                 order={order}
                 onViewDetails={(orderId) => router.push(`/orders/${orderId}`)}
                 onDelete={handleDeleteOrder}
-                getStatusBadgeClass={getStatusBadgeClass}
-                getPaymentStatusBadgeClass={getPaymentStatusBadgeClass}
                 formatDate={formatDate}
               />
             ))}

@@ -1,6 +1,6 @@
 import React from 'react';
 import './ShippingTracking.css';
-import { Button } from '@/components/ui';
+import { Button, StatusBadge } from '@/components/ui';
 
 interface ShippingInfo {
   status: string;
@@ -24,17 +24,6 @@ const getShippingMethodLabel = (method: string): string => {
     case 'express': return 'Express Shipping';
     case 'overnight': return 'Overnight Shipping';
     default: return method;
-  }
-};
-
-const getStatusBadgeClass = (status: string): string => {
-  switch (status.toLowerCase()) {
-    case 'pending': return 'status-pending';
-    case 'processing': return 'status-processing';
-    case 'shipped': return 'status-shipped';
-    case 'delivered': return 'status-delivered';
-    case 'cancelled': return 'status-cancelled';
-    default: return 'status-default';
   }
 };
 
@@ -77,8 +66,8 @@ export default function ShippingTracking({ shipping }: ShippingTrackingProps) {
       <div className="tracking-header">
         <h2 className="tracking-title">Shipping & Tracking</h2>
         <div className="tracking-status">
-          <span className={`status-badge ${getStatusBadgeClass(shipping.status)}`}>
-            {getStatusIcon(shipping.status)} {shipping.status}
+          <span>
+            {getStatusIcon(shipping.status)} <StatusBadge type="order" status={shipping.status} />
           </span>
         </div>
       </div>

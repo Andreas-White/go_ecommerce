@@ -1,6 +1,6 @@
 import React from 'react';
 import DeleteOrderButton from './DeleteOrderButton';
-import { Button } from '@/components/ui';
+import { Button, StatusBadge } from '@/components/ui';
 
 interface Order {
   id: string;
@@ -14,8 +14,6 @@ interface OrderCardProps {
   order: Order;
   onViewDetails: (orderId: string) => void;
   onDelete: (orderId: string) => void;
-  getStatusBadgeClass: (status: string) => string;
-  getPaymentStatusBadgeClass: (status: string) => string;
   formatDate: (dateString: string) => string;
 }
 
@@ -23,8 +21,6 @@ const OrderCard: React.FC<OrderCardProps> = ({
   order,
   onViewDetails,
   onDelete,
-  getStatusBadgeClass,
-  getPaymentStatusBadgeClass,
   formatDate,
 }) => (
   <div className="order-card">
@@ -40,15 +36,11 @@ const OrderCard: React.FC<OrderCardProps> = ({
     <div className="order-status">
       <div className="status-section">
         <span className="status-label">Order Status:</span>
-        <span className={`status-badge ${getStatusBadgeClass(order.status)}`}>
-          {order.status}
-        </span>
+        <StatusBadge type="order" status={order.status} />
       </div>
       <div className="status-section">
         <span className="status-label">Payment Status:</span>
-        <span className={`status-badge ${getPaymentStatusBadgeClass(order.payment_status)}`}>
-          {order.payment_status}
-        </span>
+        <StatusBadge type="payment" status={order.payment_status} />
       </div>
     </div>
     <div className="order-actions">
@@ -66,4 +58,4 @@ const OrderCard: React.FC<OrderCardProps> = ({
   </div>
 );
 
-export default OrderCard; 
+export default OrderCard;

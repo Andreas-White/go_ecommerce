@@ -106,69 +106,6 @@
   text-align: right;
 }
 
-.status-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 20px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-
-.status-pending {
-  background-color: #fef3c7;
-  color: #92400e;
-}
-
-.status-processing {
-  background-color: #dbeafe;
-  color: #1e40af;
-}
-
-.status-shipped {
-  background-color: #d1fae5;
-  color: #065f46;
-}
-
-.status-delivered {
-  background-color: #dcfce7;
-  color: #166534;
-}
-
-.status-cancelled {
-  background-color: #fee2e2;
-  color: #991b1b;
-}
-
-.status-default {
-  background-color: var(--border-color);
-  color: var(--text-color);
-}
-
-.payment-pending {
-  background-color: #fef3c7;
-  color: #92400e;
-}
-
-.payment-paid {
-  background-color: #dcfce7;
-  color: #166534;
-}
-
-.payment-failed {
-  background-color: #fee2e2;
-  color: #991b1b;
-}
-
-.payment-refunded {
-  background-color: #f3e8ff;
-  color: #7c3aed;
-}
-
-.payment-default {
-  background-color: var(--border-color);
-  color: var(--text-color);
-}
-
 .total-breakdown {
   display: flex;
   flex-direction: column;
