@@ -184,9 +184,7 @@ function ProductsPageContent() {
 
       <ProductGrid
         products={products}
-        cartItems={cartItems}
         onViewDetails={handleViewDetails}
-        onAddToCart={handleAddToCart}
         isLoading={loading}
       />
     </div>

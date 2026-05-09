@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useCallback } from 'react';
+import { useCart } from '@/context/CartContext';
 import ProductCard from './ProductCard';
 import ProductCardSkeleton from './ProductCardSkeleton';
 
@@ -15,18 +16,9 @@ interface Product {
   };
 }
 
-interface CartItem {
-  id?: string;
-  product_id: string;
-  quantity: number;
-  price?: number;
-}
-
 interface ProductGridProps {
   products: Product[];
-  cartItems: CartItem[];
   onViewDetails: (productId: string) => void;
-  onAddToCart: (product: Product) => void;
   isLoading?: boolean;
 }
 
@@ -34,11 +26,15 @@ const SKELETON_COUNT = 8;
 
 export default React.memo(function ProductGrid({
   products,
-  cartItems,
   onViewDetails,
-  onAddToCart,
   isLoading = false,
 }: ProductGridProps) {
+  const { cartItems } = useCart();
+
+  const handleViewDetails = useCallback((productId: string) => {
+    onViewDetails(productId);
+  }, [onViewDetails]);
+
   if (isLoading) {
     return (
       <div className="products-grid">
@@ -51,15 +47,18 @@ export default React.memo(function ProductGrid({
 
   return (
     <div className="products-grid fade-in">
-      {products.map((product) => (
-        <ProductCard
-          key={product.id}
-          product={product}
-          onViewDetails={onViewDetails}
-          onAddToCart={onAddToCart}
-          cartItems={cartItems}
-        />
-      ))}
+      {products.map((product) => {
+        const cartItem = cartItems.find(item => item.product_id === product.id);
+        const cartQuantity = cartItem ? cartItem.quantity : 0;
+        return (
+          <ProductCard
+            key={product.id}
+            product={product}
+            onViewDetails={handleViewDetails}
+            cartQuantity={cartQuantity}
+          />
+        );
+      })}
     </div>
   );
 });

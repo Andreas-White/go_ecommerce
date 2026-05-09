@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Button } from '@/components/ui';
+import { useCart } from '@/context/CartContext';
 import './ProductCard.css';
 
 interface Product {
@@ -18,44 +19,34 @@ interface Product {
   };
 }
 
-interface CartItem {
-  id?: string;
-  product_id: string;
-  quantity: number;
-  price?: number;
-}
-
 interface ProductCardProps {
   product: Product;
-  cartItems: CartItem[];
+  cartQuantity: number;
   onViewDetails: (productId: string) => void;
-  onAddToCart: (product: Product) => void;
 }
 
 export default React.memo(function ProductCard({
   product,
-  cartItems,
+  cartQuantity,
   onViewDetails,
-  onAddToCart,
 }: ProductCardProps) {
+  const { addToCart } = useCart();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
-  const cartItem = cartItems.find((item) => item.product_id === product.id);
-  const quantityInCart = cartItem ? cartItem.quantity : 0;
-  const isStockLimitReached = quantityInCart >= product.stock;
+  const isStockLimitReached = cartQuantity >= product.stock;
 
   const isOnSale = product.original_price && product.original_price > product.price;
   const discountPercentage = isOnSale
     ? Math.round(((product.original_price! - product.price) / product.original_price!) * 100)
     : 0;
 
-  const handleAddToCart = async () => {
+  const handleAddToCart = useCallback(async () => {
     setIsAddingToCart(true);
     try {
-      await onAddToCart(product);
+      await addToCart([{ product_id: product.id, quantity: 1, price: product.price }]);
     } finally {
       setIsAddingToCart(false);
     }
-  };
+  }, [addToCart, product.id, product.price]);
 
   return (
     <div className="product-card">

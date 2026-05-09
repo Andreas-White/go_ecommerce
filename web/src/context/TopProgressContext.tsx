@@ -1,5 +1,5 @@
 'use client';
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo, ReactNode } from 'react';
 
 interface TopProgressContextType {
   start: () => void;
@@ -51,8 +51,10 @@ export function TopProgressProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const value = useMemo(() => ({ start, complete }), [start, complete]);
+
   return (
-    <TopProgressContext.Provider value={{ start, complete }}>
+    <TopProgressContext.Provider value={value}>
       {children}
       {visible && (
         <div

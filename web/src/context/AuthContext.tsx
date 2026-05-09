@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { api } from '../lib/api';
 
 interface User {
@@ -26,16 +26,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const checkAuth = async () => {
+  const checkAuth = useCallback(async () => {
     try {
-      // Try to fetch user data - if successful, user is authenticated
       const userData = await api.get<User>('/users/get-by-id');
       setUser(userData);
     } catch (error) {
-      // User is not authenticated
       setUser(null);
     }
-  };
+  }, []);
 
   useEffect(() => {
     checkAuth().finally(() => {
@@ -43,21 +41,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     setLoading(true);
     try {
-      // Login - CSRF token will be fetched automatically
       await api.post<{ message: string; csrf_token: string }>(
         '/users/login', 
         { email, password },
         {},
-        true // require CSRF
+        true
       );
-      
-      // User is now authenticated via cookies, fetch user data
       await checkAuth();
     } catch (error) {
-      // If it's a CSRF error, clear the token and retry once
       if (error instanceof Error && error.message.includes('CSRF')) {
         api.clearCSRFToken();
         try {
@@ -65,48 +59,41 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             '/users/login', 
             { email, password },
             {},
-            true // require CSRF
+            true
           );
           await checkAuth();
         } catch (retryError) {
-          throw retryError; // Re-throw the retry error
+          throw retryError;
         }
       } else {
-        throw error; // Re-throw non-CSRF errors
+        throw error;
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [checkAuth]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
-      // Call logout endpoint to clear cookies - CSRF token will be fetched automatically
       await api.post('/auth/logout', {}, {}, true);
     } catch (error) {
-      // Even if logout fails, clear local state
     } finally {
       setUser(null);
-      // Clear CSRF token using the API client's function
       api.clearCSRFToken();
     }
-  };
+  }, []);
 
-  const register = async (data: Record<string, any>) => {
+  const register = useCallback(async (data: Record<string, any>) => {
     setLoading(true);
     try {
-      // Register - CSRF token will be fetched automatically
       await api.post<{ message: string; csrf_token: string }>(
         '/users/register', 
         data,
         {},
-        true // require CSRF
+        true
       );
-      
-      // User is automatically logged in after registration
       await checkAuth();
     } catch (error) {
-      // If it's a CSRF error, clear the token and retry once
       if (error instanceof Error && error.message.includes('CSRF')) {
         api.clearCSRFToken();
         try {
@@ -114,36 +101,45 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             '/users/register', 
             data,
             {},
-            true // require CSRF
+            true
           );
           await checkAuth();
         } catch (retryError) {
-          throw retryError; // Re-throw the retry error
+          throw retryError;
         }
       } else {
-        throw error; // Re-throw non-CSRF errors
+        throw error;
       }
     } finally {
       setLoading(false);
     }
-  };
+  }, [checkAuth]);
 
-  const changePassword = async (data: { current_password: string; new_password: string }) => {
+  const changePassword = useCallback(async (data: { current_password: string; new_password: string }) => {
     try {
-      // Change password - CSRF token will be fetched automatically
       await api.post<{ message: string }>(
         '/auth/change-password',
         data,
         {},
-        true // require CSRF
+        true
       );
     } catch (error) {
-      throw error; // Re-throw to let the component handle it
+      throw error;
     }
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    user,
+    loading,
+    login,
+    logout,
+    register,
+    changePassword,
+    checkAuth
+  }), [user, loading, login, logout, register, changePassword, checkAuth]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, register, changePassword, checkAuth }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

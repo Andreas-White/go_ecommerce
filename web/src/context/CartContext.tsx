@@ -1,5 +1,5 @@
 "use client";
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { api } from '../lib/api';
 import { useAuth } from './AuthContext';
 
@@ -45,7 +45,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     return '';
   };
 
-  const getCart = async () => {
+  const getCart = useCallback(async () => {
     if (authLoading) {
       return;
     }
@@ -59,11 +59,11 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authLoading]);
 
-  const refreshCart = async () => {
+  const refreshCart = useCallback(async () => {
     await getCart();
-  };
+  }, [getCart]);
 
   // Initialize cart when user changes or on mount
   useEffect(() => {
@@ -86,33 +86,31 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [user, authLoading]);
 
-  const addToCart = async (items: CartItem[]) => {
+  const addToCart = useCallback(async (items: CartItem[]) => {
     if (authLoading) {
       return;
     }
 
-    // Optimistic update
-    const newItems = [...cartItems];
-    items.forEach(newItem => {
-      const existingIndex = newItems.findIndex(item => item.product_id === newItem.product_id);
-      if (existingIndex >= 0) {
-        newItems[existingIndex].quantity += newItem.quantity;
-      } else {
-        newItems.push(newItem);
-      }
+    setCartItems(prev => {
+      const newItems = [...prev];
+      items.forEach(newItem => {
+        const existingIndex = newItems.findIndex(item => item.product_id === newItem.product_id);
+        if (existingIndex >= 0) {
+          newItems[existingIndex].quantity += newItem.quantity;
+        } else {
+          newItems.push(newItem);
+        }
+      });
+      return newItems;
     });
-    setCartItems(newItems);
 
     try {
-      // CSRF token will be fetched automatically
       await api.post('/cart/add', items, {}, true);
-      // Don't refresh cart - we already updated optimistically
     } catch (error) {
-      // Revert optimistic update on error
-      setCartItems(cartItems);
+      setCartItems(prev => [...prev]);
       throw error;
     }
-  };
+  }, [authLoading]);
 
   const removeFromCart = async (items: CartItem[]) => {
     if (authLoading) {
@@ -136,63 +134,61 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateCartItems = async (items: CartItem[]) => {
+  const updateCartItems = useCallback(async (items: CartItem[]) => {
     if (authLoading) {
       return;
     }
 
-    // Optimistic update
-    const newItems = [...cartItems];
-    items.forEach(updateItem => {
-      const existingIndex = newItems.findIndex(item => item.product_id === updateItem.product_id);
-      if (existingIndex >= 0) {
-        newItems[existingIndex].quantity = updateItem.quantity;
-      }
+    const prevItems = [...cartItems];
+    setCartItems(prev => {
+      const newItems = [...prev];
+      items.forEach(updateItem => {
+        const existingIndex = newItems.findIndex(item => item.product_id === updateItem.product_id);
+        if (existingIndex >= 0) {
+          newItems[existingIndex].quantity = updateItem.quantity;
+        }
+      });
+      return newItems;
     });
-    setCartItems(newItems);
 
     try {
-      // CSRF token will be fetched automatically
       await api.post('/cart/update', items, {}, true);
-      // Don't refresh cart - we already updated optimistically
     } catch (error) {
-      // Revert optimistic update on error
-      setCartItems(cartItems);
+      setCartItems(prevItems);
       throw error;
     }
-  };
+  }, [authLoading, cartItems]);
 
-  const clearCart = async () => {
+  const clearCart = useCallback(async () => {
     if (authLoading) {
       return;
     }
 
-    // Optimistic update
+    const prevItems = [...cartItems];
     setCartItems([]);
 
     try {
-      // CSRF token will be fetched automatically
       await api.post('/cart/clear', {}, {}, true);
-      // Don't refresh cart - we already updated optimistically
     } catch (error) {
-      // Revert optimistic update on error
-      setCartItems(cartItems);
+      setCartItems(prevItems);
       throw error;
     }
-  };
+  }, [authLoading, cartItems]);
+
+  const value = useMemo(() => ({
+    cartItems,
+    cartId,
+    loading,
+    addToCart,
+    removeFromCart,
+    updateCartItems,
+    clearCart,
+    getCart,
+    refreshCart
+  }), [cartItems, cartId, loading, addToCart, removeFromCart, updateCartItems, clearCart, getCart, refreshCart]);
 
   return (
-    <CartContext.Provider value={{
-      cartItems,
-      cartId,
-      loading,
-      addToCart,
-      removeFromCart,
-      updateCartItems,
-      clearCart,
-      getCart,
-      refreshCart
-    }}>
+    <CartContext.Provider value={value}>
       {children}
     </CartContext.Provider>
   );
