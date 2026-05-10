@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { api } from '../../lib/api';
+import React from 'react';
 import { StatusBadge } from '@/components/ui';
 import './OrderWithDetailsDisplay.css';
 
-interface OrderWithDetails {
+export interface OrderWithDetails {
   order: {
     id: string;
     total_amount: number;
@@ -38,8 +37,17 @@ interface OrderWithDetails {
   };
 }
 
+export interface ProductMap {
+  [productId: string]: {
+    price?: number;
+    name?: string;
+    image_url?: string;
+  };
+}
+
 interface OrderWithDetailsDisplayProps {
   orderDetails: OrderWithDetails;
+  productMap?: ProductMap;
 }
 
 const getPaymentMethodLabel = (method: string): string => {
@@ -70,54 +78,19 @@ const formatDate = (dateString: string): string => {
   });
 };
 
-export default function OrderWithDetailsDisplay({ orderDetails }: OrderWithDetailsDisplayProps) {
-  const [productMap, setProductMap] = useState<{ [productId: string]: any }>({});
-
-  // Memoize unique product IDs to avoid unnecessary re-computations
-  const uniqueProductIds = useMemo(() => {
-    return Array.from(new Set(orderDetails.items.map(item => item.product_id)));
-  }, [orderDetails.items]);
-
-  // Fetch products only when the set of unique product IDs changes
-  useEffect(() => {
-    const fetchProducts = async () => {
-      if (uniqueProductIds.length === 0) {
-        setProductMap({});
-        return;
-      }
-
-      const newMap: { [productId: string]: any } = {};
-      await Promise.all(uniqueProductIds.map(async (id) => {
-        // Only fetch if we don't already have this product
-        if (!productMap[id]) {
-          try {
-            const product = await api.get(`/product?id=${id}`);
-            newMap[id] = product;
-          } catch (e) {
-            // ignore error, leave undefined
-          }
-        } else {
-          // Keep existing product data
-          newMap[id] = productMap[id];
-        }
-      }));
-      setProductMap(newMap);
-    };
-    
-    fetchProducts();
-  }, [uniqueProductIds]); // Only depend on unique product IDs
-
-  // Calculate subtotal using product prices from fetched data
+export default function OrderWithDetailsDisplay({ 
+  orderDetails, 
+  productMap = {} 
+}: OrderWithDetailsDisplayProps) {
   const subtotal = orderDetails.items.reduce((sum, item) => {
     const product = productMap[item.product_id];
-    const price = product?.price || 0;
+    const price = product?.price || item.price || 0;
     return sum + (price * item.quantity);
   }, 0);
 
   return (
     <div className="order-details-display">
       <div className="details-grid">
-        {/* Order Information */}
         <div className="detail-section">
           <h2 className="section-title">Order Information</h2>
           <div className="info-card">
@@ -140,13 +113,12 @@ export default function OrderWithDetailsDisplay({ orderDetails }: OrderWithDetai
           </div>
         </div>
 
-        {/* Order Items */}
         <div className="detail-section">
           <h2 className="section-title">Order Items</h2>
           <div className="order-items">
             {orderDetails.items.map((item, index) => {
               const product = productMap[item.product_id];
-              const price = product?.price || 0;
+              const price = product?.price || item.price || 0;
               const itemSubtotal = price * item.quantity;
               
               return (
@@ -166,7 +138,6 @@ export default function OrderWithDetailsDisplay({ orderDetails }: OrderWithDetai
           </div>
         </div>
 
-        {/* Shipping Information */}
         <div className="detail-section">
           <h2 className="section-title">Shipping Information</h2>
           <div className="info-card">
@@ -211,7 +182,6 @@ export default function OrderWithDetailsDisplay({ orderDetails }: OrderWithDetai
           </div>
         </div>
 
-        {/* Payment Information */}
         <div className="detail-section">
           <h2 className="section-title">Payment Information</h2>
           <div className="info-card">
@@ -236,7 +206,6 @@ export default function OrderWithDetailsDisplay({ orderDetails }: OrderWithDetai
           </div>
         </div>
 
-        {/* Order Total */}
         <div className="detail-section">
           <h2 className="section-title">Order Total</h2>
           <div className="total-breakdown">
@@ -257,4 +226,4 @@ export default function OrderWithDetailsDisplay({ orderDetails }: OrderWithDetai
       </div>
     </div>
   );
-} 
+}

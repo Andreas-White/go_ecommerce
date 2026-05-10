@@ -1,5 +1,4 @@
-import React, { useCallback } from 'react';
-import { useCart } from '@/context/CartContext';
+import React, { useMemo } from 'react';
 import ProductCard from './ProductCard';
 import ProductCardSkeleton from './ProductCardSkeleton';
 
@@ -16,10 +15,16 @@ interface Product {
   };
 }
 
+interface CartItem {
+  product_id: string;
+  quantity: number;
+}
+
 interface ProductGridProps {
   products: Product[];
   onViewDetails: (productId: string) => void;
   isLoading?: boolean;
+  cartItems?: CartItem[];
 }
 
 const SKELETON_COUNT = 8;
@@ -28,12 +33,13 @@ export default React.memo(function ProductGrid({
   products,
   onViewDetails,
   isLoading = false,
+  cartItems = [],
 }: ProductGridProps) {
-  const { cartItems } = useCart();
-
-  const handleViewDetails = useCallback((productId: string) => {
-    onViewDetails(productId);
-  }, [onViewDetails]);
+  const productCartMap = useMemo(() => {
+    const map = new Map<string, number>();
+    cartItems.forEach(item => map.set(item.product_id, item.quantity));
+    return map;
+  }, [cartItems]);
 
   if (isLoading) {
     return (
@@ -48,13 +54,12 @@ export default React.memo(function ProductGrid({
   return (
     <div className="products-grid fade-in">
       {products.map((product) => {
-        const cartItem = cartItems.find(item => item.product_id === product.id);
-        const cartQuantity = cartItem ? cartItem.quantity : 0;
+        const cartQuantity = productCartMap.get(product.id) || 0;
         return (
           <ProductCard
             key={product.id}
             product={product}
-            onViewDetails={handleViewDetails}
+            onViewDetails={onViewDetails}
             cartQuantity={cartQuantity}
           />
         );
