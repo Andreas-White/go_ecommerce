@@ -5,6 +5,7 @@ import Input from '../ui/Input';
 import './SearchBar.css';
 import { Button } from '@/components/ui';
 import { api } from '@/lib/api';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface ProductSuggestion {
   id: string;
@@ -31,8 +32,8 @@ export default function SearchBar({
   const [isLoading, setIsLoading] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const fetchIdRef = useRef<number>(0);
+  const debouncedValue = useDebounce(value, 300);
 
   const safeSuggestions = suggestions || [];
 
@@ -62,26 +63,14 @@ export default function SearchBar({
   }, []);
 
   useEffect(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-
-    if (value.trim().length > 0) {
-      debounceRef.current = setTimeout(() => {
-        fetchSuggestions(value.trim());
-      }, 300);
+    if (debouncedValue.trim().length > 0) {
+      fetchSuggestions(debouncedValue.trim());
     } else {
       setSuggestions([]);
       setShowDropdown(false);
       setHighlightedIndex(-1);
     }
-
-    return () => {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-      }
-    };
-  }, [value, fetchSuggestions]);
+  }, [debouncedValue, fetchSuggestions]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

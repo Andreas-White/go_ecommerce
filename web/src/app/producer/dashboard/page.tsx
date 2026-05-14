@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/context/AuthContext';
 import { api } from '@/lib/api';
 import CompanyProfile from '@/components/company/CompanyProfile';
-import CreateUpdateCompanyForm from '@/components/company/CreateUpdateCompanyForm';
 import ProducerProductList from '@/components/products/ProducerProductList';
-import CreateProductForm from '@/components/products/CreateProductForm';
 import Alert from '@/components/ui/Alert';
 import Spinner from '@/components/ui/Spinner';
 import './page.css';
@@ -15,6 +14,16 @@ import ProducerOrderList, {
   ProducerOrderLike,
 } from '@/components/orders/ProducerOrderList';
 import { Button } from '@/components/ui';
+
+const CreateProductForm = dynamic(
+  () => import('@/components/products/CreateProductForm'),
+  { loading: () => <div>Loading form...</div>, ssr: false }
+);
+
+const CreateUpdateCompanyForm = dynamic(
+  () => import('@/components/company/CreateUpdateCompanyForm'),
+  { loading: () => <div>Loading form...</div>, ssr: false }
+);
 
 interface Company {
   id: string;

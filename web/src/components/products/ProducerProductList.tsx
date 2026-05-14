@@ -2,10 +2,18 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import EditProductButton from './EditProductButton';
+import dynamic from 'next/dynamic';
 import DeleteProductButton from './DeleteProductButton';
 import './ProducerProductList.css';
 import { Button } from '@/components/ui';
+
+const EditProductButton = dynamic(
+  () => import('./EditProductButton'),
+  { 
+    loading: () => <div className="edit-loading">Loading form...</div>,
+    ssr: false 
+  }
+);
 
 interface Company {
   id: string;

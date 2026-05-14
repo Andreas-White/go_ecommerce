@@ -2,9 +2,14 @@
 
 import './CompanyProfile.css';
 import { useState } from 'react';
-import CreateUpdateCompanyForm from './CreateUpdateCompanyForm';
+import dynamic from 'next/dynamic';
 import DeleteCompanyButton from './DeleteCompanyButton';
 import { Button } from '@/components/ui';
+
+const CreateUpdateCompanyForm = dynamic(
+  () => import('./CreateUpdateCompanyForm'),
+  { loading: () => <div>Loading form...</div>, ssr: false }
+);
 
 interface Company {
   id: string;
