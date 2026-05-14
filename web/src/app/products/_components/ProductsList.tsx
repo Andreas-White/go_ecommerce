@@ -76,8 +76,7 @@ function ProductsListContent({ initialProducts }: ProductsListProps) {
           if (sortOrder) params.append('sortOrder', sortOrder);
 
           productsData =
-            (await api.get<Product[]>(`/products?${params.toString()}`)) ||
-            [];
+            (await api.get<Product[]>(`/products?${params.toString()}`)) || [];
         }
         const inStockProducts = productsData.filter(
           (product) => product.stock > 0
@@ -91,61 +90,19 @@ function ProductsListContent({ initialProducts }: ProductsListProps) {
         completeProgress();
       }
     },
-    [category, debouncedSearchTerm, sortBy, sortOrder, startProgress, completeProgress]
+    [
+      category,
+      debouncedSearchTerm,
+      sortBy,
+      sortOrder,
+      startProgress,
+      completeProgress,
+    ]
   );
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
-
-  const handleAddToCart = useCallback(
-    async (product: Product) => {
-      const existingCartItem = cartItems.find(
-        (item) => item.product_id === product.id
-      );
-
-      try {
-        if (existingCartItem) {
-          if (existingCartItem.quantity < product.stock) {
-            await updateCartItems([
-              {
-                product_id: product.id,
-                price: product.price,
-                quantity: existingCartItem.quantity + 1,
-              },
-            ]);
-            setCartAlert({
-              type: 'info',
-              message: `Increased ${product.name} quantity!`,
-            });
-          } else {
-            setCartAlert({
-              type: 'error',
-              message: `Cannot add more of ${product.name}. Stock limit reached.`,
-            });
-          }
-        } else {
-          await addToCart([
-            {
-              product_id: product.id,
-              price: product.price,
-              quantity: 1,
-            },
-          ]);
-          setCartAlert({
-            type: 'info',
-            message: `${product.name} added to cart!`,
-          });
-        }
-      } catch (error) {
-        setCartAlert({
-          type: 'error',
-          message: 'Failed to update cart. Please try again.',
-        });
-      }
-    },
-    [cartItems, addToCart, updateCartItems]
-  );
 
   const handleViewDetails = useCallback(
     (productId: string) => {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { api } from '@/lib/api';
 import Alert from '@/components/ui/Alert';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -267,9 +268,12 @@ export default function EditProductButton({
                 }}
               >
                 {imagePreview ? (
-                  <img
+                  <Image
                     src={imagePreview}
                     alt="Preview"
+                    width={200}
+                    height={120}
+                    unoptimized
                     style={{
                       maxWidth: '100%',
                       maxHeight: 120,

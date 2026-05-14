@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import './CartItem.css';
 import { Button } from '@/components/ui';
 
@@ -44,11 +45,15 @@ export default function CartItem({
     <div className={`cart-item`}>
       <div className="cart-item-info">
         {product?.image_url && (
-          <img
-            src={product.image_url}
-            alt={item.product_name || `Product ${item.product_id}`}
-            className="cart-item-image"
-          />
+          <div className="cart-item-image-wrapper">
+            <Image
+              src={product.image_url}
+              alt={item.product_name || `Product ${item.product_id}`}
+              fill
+              sizes="120px"
+              className="cart-item-image"
+            />
+          </div>
         )}
         <h3 className="cart-item-name">
           {item.product_name || `Product ${item.product_id}`}

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
+import Image from 'next/image';
 import { useCart } from '../../../context/CartContext';
 import { useAuth } from '../../../context/AuthContext';
 import { api } from '../../../lib/api';
@@ -162,11 +163,15 @@ export default function ProductDetailsPage() {
         <div className="product-details-main">
           <div className="product-details-image-section">
             {product.image_url ? (
-              <img
-                src={product.image_url}
-                alt={product.name}
-                className="product-details-image"
-              />
+              <div className="product-details-image-wrapper">
+                <Image
+                  src={product.image_url}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="product-details-image"
+                />
+              </div>
             ) : (
               <div className="product-details-image-placeholder">
                 <span>No Image Available</span>

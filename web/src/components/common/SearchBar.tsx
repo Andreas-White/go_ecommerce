@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import Input from '../ui/Input';
 import './SearchBar.css';
 import { Button } from '@/components/ui';
@@ -198,11 +199,15 @@ export default function SearchBar({
                   onMouseEnter={() => setHighlightedIndex(index)}
                 >
                   {suggestion.image_url && (
-                    <img
-                      src={suggestion.image_url}
-                      alt=""
-                      className="search-bar-suggestion-image"
-                    />
+                    <div className="search-bar-suggestion-image-wrapper">
+                      <Image
+                        src={suggestion.image_url}
+                        alt=""
+                        fill
+                        sizes="40px"
+                        className="search-bar-suggestion-image"
+                      />
+                    </div>
                   )}
                   <span className="search-bar-suggestion-name">
                     {suggestion.name}

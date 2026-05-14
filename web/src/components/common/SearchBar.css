@@ -139,12 +139,18 @@
   background-color: var(--secondary-color);
 }
 
-.search-bar-suggestion-image {
+.search-bar-suggestion-image-wrapper {
+  position: relative;
   width: 40px;
   height: 40px;
-  object-fit: cover;
+  flex-shrink: 0;
   border-radius: 4px;
+  overflow: hidden;
   background: var(--input-background);
+}
+
+.search-bar-suggestion-image {
+  object-fit: cover;
 }
 
 .search-bar-suggestion-name {

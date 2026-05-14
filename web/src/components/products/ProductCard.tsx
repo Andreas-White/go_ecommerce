@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import Image from 'next/image';
 import { Button } from '@/components/ui';
 import { useCart } from '@/context/CartContext';
 import './ProductCard.css';
@@ -55,11 +56,12 @@ export default React.memo(function ProductCard({
       )}
       <div className="product-card-image-wrapper" onClick={() => onViewDetails(product.id)}>
         {product.image_url ? (
-          <img
+          <Image
             src={product.image_url}
             alt={product.name}
+            fill
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             className="product-card-image"
-            loading="lazy"
           />
         ) : (
           <div className="product-image-placeholder">

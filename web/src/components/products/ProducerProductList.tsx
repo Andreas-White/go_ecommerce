@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import EditProductButton from './EditProductButton';
 import DeleteProductButton from './DeleteProductButton';
 import './ProducerProductList.css';
@@ -78,7 +79,12 @@ export default function ProducerProductList({
           <div key={product.id} className="product-card">
             <div className="product-image">
               {product.image_url ? (
-                <img src={product.image_url} alt={product.name} />
+                <Image
+                  src={product.image_url}
+                  alt={product.name}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                />
               ) : (
                 <div className="no-image">No Image</div>
               )}
