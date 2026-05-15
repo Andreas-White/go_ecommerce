@@ -11,6 +11,11 @@
     align-items: center;
 }
 
+.cart-item-details {
+    display: flex;
+    flex-direction: column;
+}
+
 .cart-item-image-wrapper {
     position: relative;
     width: 120px;

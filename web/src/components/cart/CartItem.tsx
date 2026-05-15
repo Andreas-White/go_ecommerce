@@ -48,17 +48,19 @@ export default function CartItem({
           <div className="cart-item-image-wrapper">
             <Image
               src={product.image_url}
-              alt={item.product_name || `Product ${item.product_id}`}
+              alt={product?.name || `Product ${item.product_id}`}
               fill
               sizes="120px"
               className="cart-item-image"
             />
           </div>
         )}
-        <h3 className="cart-item-name">
-          {item.product_name || `Product ${item.product_id}`}
-        </h3>
-        <p className="cart-item-price">${price.toFixed(2)} each</p>
+        <div className="cart-item-details">
+          <h3 className="cart-item-name">
+            {product?.name || `Product ${item.product_id}`}
+          </h3>
+          <p className="cart-item-price">${price.toFixed(2)} each</p>
+        </div>
       </div>
       <div className="cart-item-quantity">
         <Button

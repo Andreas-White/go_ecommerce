@@ -104,7 +104,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [authLoading]);
 
-  const removeFromCart = async (items: CartItem[]) => {
+  const removeFromCart = useCallback(async (items: CartItem[]) => {
     if (authLoading) {
       return;
     }
@@ -124,7 +124,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       setCartItems(cartItems);
       throw error;
     }
-  };
+  }, [authLoading, cartItems]);
 
   const updateCartItems = useCallback(async (items: CartItem[]) => {
     if (authLoading) {

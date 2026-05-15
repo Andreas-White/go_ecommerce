@@ -129,10 +129,8 @@ export default function CartPage() {
     }
   }, [clearCart]);
 
-  const calculateTotal = useCallback(() => {
-    console.log('cartItems: ', cartItems);
+  const totalAmount = useMemo(() => {
     return cartItems.reduce((total, item) => {
-      console.log('item: ', item);
       const price = item?.price || 0;
       return total + price * item.quantity;
     }, 0);
@@ -203,7 +201,7 @@ export default function CartPage() {
                 <div className="cart-summary-row">
                   <span className="cart-summary-label">Subtotal:</span>
                   <span className="cart-summary-value">
-                    ${calculateTotal().toFixed(2)}
+                    ${totalAmount.toFixed(2)}
                   </span>
                 </div>
                 <div className="cart-summary-row">
@@ -216,7 +214,7 @@ export default function CartPage() {
                 <div className="cart-summary-row cart-summary-total">
                   <span className="cart-summary-label">Total:</span>
                   <span className="cart-summary-value">
-                    ${calculateTotal().toFixed(2)}
+                    ${totalAmount.toFixed(2)}
                   </span>
                 </div>
               </div>
