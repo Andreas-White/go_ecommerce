@@ -369,7 +369,7 @@
       }
     },
     "/auth/change-password": {
-      "post": {
+      "put": {
         "summary": "Change user password",
         "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
         "requestBody": {
@@ -620,7 +620,7 @@
       }
     },
     "/cart/get": {
-      "post": {
+      "get": {
         "summary": "Get cart items (supports both authenticated and guest users)",
         "requestBody": {
           "required": true,
@@ -695,7 +695,7 @@
       }
     },
     "/orders/summary": {
-      "post": {
+      "get": {
         "summary": "Get order summary",
         "security": [{ "cookieAuth": [] }],
         "requestBody": {
@@ -713,7 +713,7 @@
       }
     },
     "/orders/details": {
-      "post": {
+      "get": {
         "summary": "Get order details",
         "security": [{ "cookieAuth": [] }],
         "requestBody": {
@@ -731,7 +731,7 @@
       }
     },
     "/orders/group-details": {
-      "post": {
+      "get": {
         "summary": "Get all order details for an order group (multi-producer)",
         "security": [{ "cookieAuth": [] }],
         "requestBody": {
@@ -869,7 +869,7 @@
       }
     },
     "/orders/cancel": {
-      "post": {
+      "put": {
         "summary": "Cancel an order (producer only)",
         "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
         "requestBody": {
@@ -903,7 +903,7 @@
       }
     },
     "/orders/delete": {
-      "post": {
+      "delete": {
         "summary": "Soft-delete an order (customer only)",
         "security": [{ "cookieAuth": [] }, { "csrfToken": [] }],
         "requestBody": {
