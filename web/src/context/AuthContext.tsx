@@ -70,6 +70,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       await api.post('/auth/logout', {}, {}, true);
     } catch (error) {
+      // explicitly ignored - logout should not fail
     } finally {
       setUser(null);
       api.clearCSRFToken();
@@ -109,16 +110,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [checkAuth]);
 
   const changePassword = useCallback(async (data: { current_password: string; new_password: string }) => {
-    try {
-      await api.post<{ message: string }>(
-        '/auth/change-password',
-        data,
-        {},
-        true
-      );
-    } catch (error) {
-      throw error;
-    }
+    await api.post<{ message: string }>(
+      '/auth/change-password',
+      data,
+      {},
+      true
+    );
   }, []);
 
   const value = useMemo(() => ({

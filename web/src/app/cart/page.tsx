@@ -57,7 +57,7 @@ export default function CartPage() {
               const product = await api.get<Product>(`/product?id=${id}`);
               newMap[id] = product;
             } catch (e) {
-              // ignore error, leave undefined
+              // explicitly ignored - product will remain undefined
             }
           } else {
             // Keep existing product data

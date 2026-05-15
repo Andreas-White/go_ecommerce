@@ -63,7 +63,7 @@ async function getCSRFTokenFromServer(endpoint: string): Promise<string> {
     }
     throw new Error('CSRF token not found in cookies after fetch');
   } catch (error) {
-    throw new Error('Failed to get CSRF token from server');
+    throw new Error('Failed to get CSRF token from server', { cause: error });
   }
 }
 
