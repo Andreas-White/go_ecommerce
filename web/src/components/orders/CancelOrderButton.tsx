@@ -30,8 +30,8 @@ export default function CancelOrderButton({
       await api.post('/orders/cancel', { order_id: orderId }, {}, true);
       onCanceled(orderId);
       setShowModal(false);
-    } catch (err: any) {
-      setError(err.message || 'Failed to cancel order');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to cancel order');
     } finally {
       setLoading(false);
     }

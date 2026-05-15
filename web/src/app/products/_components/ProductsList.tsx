@@ -9,20 +9,10 @@ import ProductGrid from '../../../components/products/ProductGrid';
 import '../../../components/products/ProductGrid.css';
 import Alert from '@/components/ui/Alert';
 import { useTopProgress } from '@/context/TopProgressContext';
+import { Product } from '@/types';
 import '../page.css';
 
-export interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  stock: number;
-  category_id: string;
-  image_url?: string;
-  company?: {
-    name: string;
-  };
-}
+export type { Product };
 
 interface ProductsListProps {
   initialProducts: Product[];

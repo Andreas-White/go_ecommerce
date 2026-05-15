@@ -70,7 +70,7 @@ async function getCSRFTokenFromServer(endpoint: string): Promise<string> {
 async function request<T>(
   method: string,
   path: string,
-  body?: any,
+  body?: unknown,
   customHeaders?: Record<string, string>,
   requireCSRF: boolean = false
 ): Promise<T> {
@@ -143,12 +143,12 @@ async function request<T>(
 
 export const api = {
   get: <T>(path: string, headers?: Record<string, string>) => request<T>('GET', path, undefined, headers),
-  post: <T>(path: string, body?: any, headers?: Record<string, string>, requireCSRF: boolean = false) => 
+  post: <T>(path: string, body?: unknown, headers?: Record<string, string>, requireCSRF: boolean = false) => 
     request<T>('POST', path, body, headers, requireCSRF),
-  put: <T>(path: string, body?: any, headers?: Record<string, string>, requireCSRF: boolean = false) => 
+  put: <T>(path: string, body?: unknown, headers?: Record<string, string>, requireCSRF: boolean = false) => 
     request<T>('PUT', path, body, headers, requireCSRF),
-  delete: <T>(path: string, body?: any, headers?: Record<string, string>, requireCSRF: boolean = false) => 
+  delete: <T>(path: string, body?: unknown, headers?: Record<string, string>, requireCSRF: boolean = false) => 
     request<T>('DELETE', path, body, headers, requireCSRF),
   getCSRFToken: getCSRFTokenFromServer,
-  clearCSRFToken, // Export for manual clearing if needed
+  clearCSRFToken,
 }; 

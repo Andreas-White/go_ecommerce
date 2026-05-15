@@ -7,6 +7,7 @@ import './page.css';
 import { Button } from '@/components/ui';
 import { useTopProgress } from '@/context/TopProgressContext';
 import OrderDetailsSkeleton from '@/components/ui/OrderDetailsSkeleton';
+import { Product } from '@/types';
 
 interface OrderWithDetails {
   order: {
@@ -48,7 +49,7 @@ export default function OrderConfirmationPage() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [productMap, setProductMap] = useState<{ [productId: string]: any }>(
+  const [productMap, setProductMap] = useState<{ [productId: string]: Product }>(
     {}
   );
 
@@ -70,13 +71,13 @@ export default function OrderConfirmationPage() {
         return;
       }
 
-      const newMap: { [productId: string]: any } = {};
+      const newMap: { [productId: string]: Product } = {};
       await Promise.all(
         uniqueProductIds.map(async (id) => {
           // Only fetch if we don't already have this product
           if (!productMap[id]) {
             try {
-              const product = await api.get(`/product?id=${id}`);
+              const product = await api.get<Product>(`/product?id=${id}`);
               newMap[id] = product;
             } catch (e) {
               // ignore error, leave undefined

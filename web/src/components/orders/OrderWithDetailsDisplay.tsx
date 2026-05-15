@@ -1,49 +1,9 @@
 import React from 'react';
 import { StatusBadge } from '@/components/ui';
+import { OrderWithDetails, ProductMap } from '@/types';
 import './OrderWithDetailsDisplay.css';
 
-export interface OrderWithDetails {
-  order: {
-    id: string;
-    total_amount: number;
-    status: string;
-    payment_status: string;
-    created_at: string;
-  };
-  items: Array<{
-    product_id: string;
-    product_name: string;
-    quantity: number;
-    price: number;
-    subtotal: number;
-  }>;
-  payment: {
-    payment_method: string;
-    amount: number;
-    status: string;
-    transaction_id?: string;
-  };
-  shipping: {
-    address: string;
-    city: string;
-    country: string;
-    zip_code: string;
-    method: string;
-    cost: number;
-    status: string;
-    tracking_code?: string;
-    shipped_at?: string;
-    delivered_at?: string;
-  };
-}
-
-export interface ProductMap {
-  [productId: string]: {
-    price?: number;
-    name?: string;
-    image_url?: string;
-  };
-}
+export type { OrderWithDetails, ProductMap };
 
 interface OrderWithDetailsDisplayProps {
   orderDetails: OrderWithDetails;

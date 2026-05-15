@@ -34,8 +34,8 @@ export default function FulfillOrderButton({
         true
       );
       onFulfilled();
-    } catch (err: any) {
-      setError(err.message || 'Failed to fulfill order');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fulfill order');
     } finally {
       setLoading(false);
     }

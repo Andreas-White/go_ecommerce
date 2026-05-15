@@ -2,15 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { api } from '../lib/api';
 import { useAuth } from './AuthContext';
-
-interface CartItem {
-  id?: string;
-  product_id: string;
-  quantity: number;
-  price?: number;
-  product_name?: string;
-  image_url?: string;
-}
+import { CartItem } from '../types';
 
 interface CartContextType {
   cartItems: CartItem[];

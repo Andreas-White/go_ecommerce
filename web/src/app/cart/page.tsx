@@ -10,13 +10,14 @@ import { Alert, Button } from '@/components/ui';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import CartSkeleton from '@/components/cart/CartSkeleton';
 import { useTopProgress } from '@/context/TopProgressContext';
+import { Product } from '@/types';
 
 export default function CartPage() {
   const { cartItems, loading, removeFromCart, updateCartItems, clearCart } =
     useCart();
   const { user } = useAuth();
   const [updating, setUpdating] = useState(false);
-  const [productMap, setProductMap] = useState<{ [productId: string]: any }>(
+  const [productMap, setProductMap] = useState<{ [productId: string]: Product }>(
     {}
   );
   const [cartAlert, setCartAlert] = useState<{
@@ -47,13 +48,13 @@ export default function CartPage() {
         return;
       }
 
-      const newMap: { [productId: string]: any } = {};
+      const newMap: { [productId: string]: Product } = {};
       await Promise.all(
         uniqueProductIds.map(async (id) => {
           // Only fetch if we don't already have this product
           if (!productMap[id]) {
             try {
-              const product = await api.get(`/product?id=${id}`);
+              const product = await api.get<Product>(`/product?id=${id}`);
               newMap[id] = product;
             } catch (e) {
               // ignore error, leave undefined

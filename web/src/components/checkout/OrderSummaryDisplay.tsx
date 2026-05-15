@@ -2,40 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { api } from '../../lib/api';
 import './OrderSummaryDisplay.css';
 import { Button } from '@/components/ui';
-
-interface ShippingInfo {
-  address: string;
-  city: string;
-  country: string;
-  zip_code: string;
-  method: string;
-  cost: number;
-}
-
-interface PaymentInfo {
-  payment_method: string;
-}
-
-interface OrderSummary {
-  order_id: string;
-  total_amount: number;
-  shipping_cost: number;
-  items: Array<{
-    product_id: string;
-    product_name: string;
-    quantity: number;
-    price: number;
-    subtotal: number;
-  }>;
-  shipping_info: ShippingInfo;
-  payment_info: PaymentInfo;
-}
-
-interface OrderGroupSummary {
-  order_group_id: string;
-  total_amount: number;
-  orders: OrderSummary[];
-}
+import { OrderGroupSummary, Product } from '@/types';
 
 interface OrderSummaryDisplayProps {
   orderSummary: OrderGroupSummary | null;
@@ -68,7 +35,7 @@ export default function OrderSummaryDisplay({
   onConfirm, 
   onBack 
 }: OrderSummaryDisplayProps) {
-  const [productMap, setProductMap] = useState<{ [productId: string]: any }>({});
+  const [productMap, setProductMap] = useState<{ [productId: string]: Product }>({});
 
   // Memoize unique product IDs to avoid unnecessary re-computations
   const uniqueProductIds = useMemo(() => {
@@ -85,12 +52,12 @@ export default function OrderSummaryDisplay({
         return;
       }
 
-      const newMap: { [productId: string]: any } = {};
+      const newMap: { [productId: string]: Product } = {};
       await Promise.all(uniqueProductIds.map(async (id) => {
         // Only fetch if we don't already have this product
         if (!productMap[id]) {
           try {
-            const product = await api.get(`/product?id=${id}`);
+            const product = await api.get<Product>(`/product?id=${id}`);
             newMap[id] = product;
           } catch (e) {
             // ignore error, leave undefined

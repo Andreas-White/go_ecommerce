@@ -9,14 +9,9 @@ import '@/components/orders/OrderCard.css';
 import '../page.css';
 import { useTopProgress } from '@/context/TopProgressContext';
 import ListItemSkeleton from '@/components/ui/ListItemSkeleton';
+import { Order } from '@/types';
 
-export interface Order {
-  id: string;
-  total_amount: number;
-  status: string;
-  payment_status: string;
-  created_at: string;
-}
+export type { Order };
 
 interface OrdersListProps {
   initialOrders: Order[];

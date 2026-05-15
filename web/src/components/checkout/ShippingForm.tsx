@@ -1,15 +1,7 @@
 import React, { useState } from 'react';
 import './ShippingForm.css';
 import { Button } from '@/components/ui';
-
-interface ShippingInfo {
-  address: string;
-  city: string;
-  country: string;
-  zip_code: string;
-  method: string;
-  cost: number;
-}
+import { ShippingInfo } from '@/types';
 
 interface ShippingFormProps {
   shippingInfo: ShippingInfo;

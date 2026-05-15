@@ -1,14 +1,7 @@
 import React from 'react';
 import DeleteOrderButton from './DeleteOrderButton';
 import { Button, StatusBadge } from '@/components/ui';
-
-interface Order {
-  id: string;
-  total_amount: number;
-  status: string;
-  payment_status: string;
-  created_at: string;
-}
+import { Order } from '@/types';
 
 interface OrderCardProps {
   order: Order;

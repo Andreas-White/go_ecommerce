@@ -1,21 +1,14 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { api } from '../lib/api';
-
-interface User {
-  first_name: string;
-  last_name: string;
-  email: string;
-  is_producer: boolean;
-  // Add other fields as needed
-}
+import { User, RegisterData } from '../types';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (data: Record<string, any>) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
   changePassword: (data: { current_password: string; new_password: string }) => Promise<void>;
   checkAuth: () => Promise<void>;
 }
@@ -83,7 +76,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const register = useCallback(async (data: Record<string, any>) => {
+  const register = useCallback(async (data: RegisterData) => {
     setLoading(true);
     try {
       await api.post<{ message: string; csrf_token: string }>(

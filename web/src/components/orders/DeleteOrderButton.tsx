@@ -26,8 +26,8 @@ export default function DeleteOrderButton({
       await api.post('/orders/delete', { order_id: orderId }, {}, true);
       onDeleted(orderId);
       setShowModal(false);
-    } catch (err: any) {
-      setError(err.message || 'Failed to delete order');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete order');
     } finally {
       setLoading(false);
     }

@@ -1,24 +1,7 @@
 import React, { useMemo } from 'react';
 import ProductCard from './ProductCard';
 import ProductCardSkeleton from './ProductCardSkeleton';
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  stock: number;
-  category_id: string;
-  image_url?: string;
-  company?: {
-    name: string;
-  };
-}
-
-interface CartItem {
-  product_id: string;
-  quantity: number;
-}
+import { Product, CartItem } from '@/types';
 
 interface ProductGridProps {
   products: Product[];

@@ -1,11 +1,7 @@
 import React, { useState } from 'react';
 import './PaymentForm.css';
-import { Button } from '@/components/ui';
-import { Alert } from '@/components/ui';
-
-interface PaymentInfo {
-  payment_method: string;
-}
+import { Button, Alert } from '@/components/ui';
+import { PaymentInfo } from '@/types';
 
 interface PaymentFormProps {
   paymentInfo: PaymentInfo;

@@ -38,8 +38,8 @@ export default function AddReviewForm({ productId, onReviewSubmitted }: AddRevie
       setRating(0);
       setComment('');
       onReviewSubmitted();
-    } catch (err: any) {
-      setError(err?.message || 'Failed to submit review.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit review.');
     } finally {
       setSubmitting(false);
     }

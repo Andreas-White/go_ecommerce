@@ -12,40 +12,7 @@ import './page.css';
 import Alert from '@/components/ui/Alert';
 import Spinner from '@/components/ui/Spinner';
 import { useTopProgress } from '@/context/TopProgressContext';
-
-interface ShippingInfo {
-  address: string;
-  city: string;
-  country: string;
-  zip_code: string;
-  method: string;
-  cost: number;
-}
-
-interface PaymentInfo {
-  payment_method: string;
-}
-
-interface OrderGroupSummary {
-  order_group_id: string;
-  total_amount: number;
-  orders: OrderSummary[];
-}
-
-interface OrderSummary {
-  order_id: string;
-  total_amount: number;
-  shipping_cost: number;
-  items: Array<{
-    product_id: string;
-    product_name: string;
-    quantity: number;
-    price: number;
-    subtotal: number;
-  }>;
-  shipping_info: ShippingInfo;
-  payment_info: PaymentInfo;
-}
+import { ShippingInfo, PaymentInfo, OrderGroupSummary } from '@/types';
 
 export default function CheckoutPage() {
   const router = useRouter();
