@@ -7,19 +7,20 @@ import (
 )
 
 type User struct {
-	ID         uuid.UUID  `json:"id" db:"id"`
-	FirstName  string     `json:"first_name" db:"first_name"`
-	LastName   string     `json:"last_name" db:"last_name"`
-	MiddleName string     `json:"middle_name,omitempty" db:"middle_name"`
-	Email      string     `json:"email" db:"email"`
-	Phone      int64      `json:"phone" db:"phone"`
-	IsProducer bool       `json:"is_producer" db:"is_producer"`
-	Address    string     `json:"address" db:"address"`
-	City       string     `json:"city" db:"city"`
-	Country    string     `json:"country" db:"country"`
-	ZipCode    int32      `json:"zip_code" db:"zip_code"`
-	CreatedAt  time.Time  `json:"created_at" db:"created_at"`
-	UpdatedAt  *time.Time `json:"updated_at,omitempty" db:"updated_at"`
+	ID              uuid.UUID  `json:"id" db:"id"`
+	FirstName       string     `json:"first_name" db:"first_name"`
+	LastName        string     `json:"last_name" db:"last_name"`
+	MiddleName      string     `json:"middle_name,omitempty" db:"middle_name"`
+	Email           string     `json:"email" db:"email"`
+	Phone           int64      `json:"phone" db:"phone"`
+	IsProducer      bool       `json:"is_producer" db:"is_producer"`
+	Address         string     `json:"address" db:"address"`
+	City            string     `json:"city" db:"city"`
+	Country         string     `json:"country" db:"country"`
+	ZipCode         int32      `json:"zip_code" db:"zip_code"`
+	IsEmailVerified bool       `json:"is_email_verified" db:"is_email_verified"`
+	CreatedAt       time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt       *time.Time `json:"updated_at,omitempty" db:"updated_at"`
 }
 
 type UserDTO struct {
